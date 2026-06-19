@@ -1,16 +1,38 @@
 import { useEffect, useState } from 'react';
 import { vigilanteService, Vigilador } from '../../services/vigilante.service';
 import { UserPlus, Search, MoreVertical } from 'lucide-react';
+import { VigiladorForm } from './VigiladorForm';
 
 export const PersonnelPage = () => {
   const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const fetchVigiladores = async () => {
+    setLoading(true);
+    try {
+      const data = await vigilanteService.getAll();
+      setVigiladores(data);
+    } catch (error) {
+      console.error('Error al cargar personal:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    vigilanteService.getAll()
-      .then(setVigiladores)
-      .finally(() => setLoading(false));
+    fetchVigiladores();
   }, []);
+
+  const handleCreate = async (data: Partial<Vigilador>) => {
+    try {
+      await vigilanteService.create(data);
+      setIsModalOpen(false);
+      fetchVigiladores();
+    } catch (error) {
+      alert('Error al crear vigilador');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -19,10 +41,20 @@ export const PersonnelPage = () => {
           <h2 className="text-3xl font-display font-bold text-navy">Personal</h2>
           <p className="text-muted">Gestión de vigiladores y credenciales.</p>
         </div>
-        <button className="btn-primary flex items-center gap-2">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="btn-primary flex items-center gap-2"
+        >
           <UserPlus size={18} /> Nuevo Vigilador
         </button>
       </div>
+
+      {isModalOpen && (
+        <VigiladorForm 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleCreate} 
+        />
+      )}
 
       <div className="card">
         <div className="flex items-center gap-4 mb-6">
