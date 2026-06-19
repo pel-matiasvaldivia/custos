@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class FeriadoService {
@@ -14,7 +13,7 @@ export class FeriadoService {
   }
 
   async findAll(tenantId: string) {
-    return this.prisma.feriados.findMany({
+    return this.prisma.feriado.findMany({
       where: { tenant_id: tenantId },
     });
   }

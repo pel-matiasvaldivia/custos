@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
 import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
+import { QuadrantPage } from './pages/quadrant/QuadrantPage';
 
 const Dashboard = () => (
   <div>
@@ -34,6 +35,7 @@ function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/personnel" element={<PersonnelPage />} />
           <Route path="/personnel/:id" element={<VigiladorDetail />} />
+          <Route path="/quadrant" element={<QuadrantPage />} />
           {/* Fallback */}
           <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />
         </Routes>
