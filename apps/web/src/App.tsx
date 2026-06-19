@@ -1,35 +1,44 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Sidebar } from './components/layout/Sidebar';
+import { PersonnelPage } from './pages/personnel/PersonnelPage';
+
+const Dashboard = () => (
+  <div>
+    <h2 className="text-3xl font-display font-bold text-navy mb-2">Bienvenido a CustOS</h2>
+    <p className="text-muted text-lg">Resumen de operaciones y alertas rápidas.</p>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+      <div className="card">
+        <h3 className="text-muted font-medium mb-1 uppercase text-xs tracking-wider">Vigiladores Activos</h3>
+        <p className="text-4xl font-bold text-navy">24</p>
+      </div>
+      <div className="card border-amber/20 bg-amber/5">
+        <h3 className="text-amber font-medium mb-1 uppercase text-xs tracking-wider">Credenciales por Vencer</h3>
+        <p className="text-4xl font-bold text-amber">3</p>
+      </div>
+      <div className="card">
+        <h3 className="text-muted font-medium mb-1 uppercase text-xs tracking-wider">Cobertura Hoy</h3>
+        <p className="text-4xl font-bold text-navy text-emerald">98%</p>
+      </div>
+    </div>
+  </div>
+);
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="flex min-h-screen bg-canvas">
+      <Sidebar />
+      <main className="flex-1 ml-64 p-8">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/personnel" element={<PersonnelPage />} />
+          {/* Fallback */}
+          <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />
+        </Routes>
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
