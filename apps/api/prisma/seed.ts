@@ -27,6 +27,42 @@ async function main() {
   });
 
   console.log('Created admin user:', admin.email);
+
+  // 3. Create Sample Vigiladores
+  const v1 = await prisma.vigilador.create({
+    data: {
+      tenant_id: tenant.id,
+      legajo_nro: 'V001',
+      nombre: 'Juan',
+      apellido: 'Pérez',
+      documento: '28.123.456',
+      estado: 'ACTIVO',
+    },
+  });
+
+  const v2 = await prisma.vigilador.create({
+    data: {
+      tenant_id: tenant.id,
+      legajo_nro: 'V002',
+      nombre: 'María',
+      apellido: 'González',
+      documento: '31.987.654',
+      estado: 'ACTIVO',
+    },
+  });
+
+  const v3 = await prisma.vigilador.create({
+    data: {
+      tenant_id: tenant.id,
+      legajo_nro: 'V003',
+      nombre: 'Ricardo',
+      apellido: 'Tapia',
+      documento: '25.444.555',
+      estado: 'SUSPENDIDO',
+    },
+  });
+
+  console.log('Created sample vigiladores');
 }
 
 main()
