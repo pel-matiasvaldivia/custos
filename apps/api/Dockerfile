@@ -1,0 +1,37 @@
+# Stage 1: Builder
+FROM node:20-alpine as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY packages/contracts ./packages/contracts
+
+RUN npm install --include=dev
+
+COPY apps/api ./apps/api
+
+RUN cd apps/api && npx prisma generate
+RUN cd apps/api && npm run build
+
+# Stage 2: Runner
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install production dependencies only
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+RUN npm install --omit=dev && npm cache clean --force
+
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+
+CMD ["node", "apps/api/dist/main"]

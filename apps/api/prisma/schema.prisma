@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre           String
+  factor_cobertura Decimal  @default(4.20) @db.Decimal(4, 2)
+  margen_objetivo  Decimal  @default(0.2500) @db.Decimal(5, 4)
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @db.Timestamptz
+
+  users            User[]
+  vigiladores      Vigilador[]
+  credenciales     Credencial[]
+  objetivos        Objetivo[]
+  puestos          Puesto[]
+  asignaciones     Asignacion[]
+  asistencias      Asistencia[]
+
+  @@map("tenants")
+}
+
+model User {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  email      String   @unique
+  password   String
+  role       String   @default("OPERADOR")
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @db.Timestamptz
+  deleted_at DateTime? @db.Timestamptz
+
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@map("users")
+}
+
+model Vigilador {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  legajo_nro       String
+  nombre           String
+  apellido         String
+  documento        String
+  estado           String   @default("ACTIVO")
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @db.Timestamptz
+  deleted_at       DateTime? @db.Timestamptz
+
+  tenant           Tenant       @relation(fields: [tenant_id], references: [id])
+  credenciales     Credencial[]
+  asignaciones     Asignacion[]
+
+  @@unique([tenant_id, legajo_nro])
+  @@map("vigiladores")
+}
+
+model Credencial {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id     String   @db.Uuid
+  vigilador_id  String   @db.Uuid
+  tipo          String   // CARNET_VIGILADOR | PSICOFISICO | ANTECEDENTES | ANMAC | CAPACITACION
+  numero        String?
+  organismo     String?
+  emitida_el    DateTime? @db.Date
+  vence_el      DateTime? @db.Date
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  tenant        Tenant    @relation(fields: [tenant_id], references: [id])
+  vigilador     Vigilador @relation(fields: [vigilador_id], references: [id])
+
+  @@map("credenciales")
+}
+
+model Objetivo {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  cliente_id String   @db.Uuid // Simplified for now, will add Cliente model later
+  codigo     String
+  nombre     String
+  direccion  String?
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @default(now()) @db.Timestamptz
+
+  tenant     Tenant   @relation(fields: [tenant_id], references: [id])
+  puestos    Puesto[]
+
+  @@unique([tenant_id, codigo])
+  @@map("objetivos")
+}
+
+model Puesto {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  objetivo_id      String   @db.Uuid
+  nombre           String
+  requiere_arma    Boolean  @default(false)
+  requiere_movil   Boolean  @default(false)
+  esquema_horario  Json     // ej. {"tipo":"24x7","horas_dia":24,"dias":[1,2,3,4,5,6,7]}
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @db.Timestamptz
+
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+  asignaciones     Asignacion[]
+
+  @@map("puestos")
+}
+
+model Asignacion {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  puesto_id        String   @db.Uuid
+  vigilador_id     String   @db.Uuid
+  inicio_plan      DateTime @db.Timestamptz
+  fin_plan         DateTime @db.Timestamptz
+  estado           String   @default("PLANIFICADA")
+  created_at       DateTime @default(now()) @db.Timestamptz
+
+  tenant           Tenant    @relation(fields: [tenant_id], references: [id])
+  puesto           Puesto    @relation(fields: [puesto_id], references: [id])
+  vigilador        Vigilador @relation(fields: [vigilador_id], references: [id])
+  asistencia       Asistencia?
+
+  @@map("asignaciones")
+}
+
+model Asistencia {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  asignacion_id    String   @unique @db.Uuid
+  inicio_real      DateTime? @db.Timestamptz
+  fin_real         DateTime? @db.Timestamptz
+  metodo           String?   // GEO | QR | NFC | MANUAL
+  lat              Decimal?  @db.Decimal(9, 6)
+  lng              Decimal?  @db.Decimal(9, 6)
+
+  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
+  asignacion       Asignacion @relation(fields: [asignacion_id], references: [id])
+
+  @@map("asistencias")
+}

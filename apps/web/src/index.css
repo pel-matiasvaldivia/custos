@@ -1,0 +1,41 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-canvas text-navy font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display;
+  }
+
+  code, kbd, samp, pre {
+    @apply font-mono;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-blue text-surface px-4 py-2 rounded-md hover:bg-brand-deep transition-colors font-medium;
+  }
+  
+  .card {
+    @apply bg-surface border border-line rounded-lg shadow-sm p-4;
+  }
+
+  .status-badge {
+    @apply px-2 py-0.5 rounded-full text-xs font-mono uppercase tracking-wider;
+  }
+
+  .status-badge-ok {
+    @apply bg-emerald/10 text-emerald border border-emerald/20;
+  }
+
+  .status-badge-alert {
+    @apply bg-amber/10 text-amber border border-amber/20;
+  }
+}

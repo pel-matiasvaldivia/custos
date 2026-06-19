@@ -1,0 +1,55 @@
+services:
+  api:
+    image: ghcr.io/pel-matiasvaldivia/custos-api:latest
+    # build:
+    #   context: ..
+    #   dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres_password@postgres:5432/custos_db?schema=public"
+      JWT_SECRET: "secretKey"
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+
+  web:
+    image: ghcr.io/pel-matiasvaldivia/custos-web:latest
+    # build:
+    #   context: ..
+    #   dockerfile: apps/web/Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: custos_db
+      POSTGRES_PASSWORD: postgres_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "58432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6378:6379"
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_user
+      MINIO_ROOT_PASSWORD: minio_password
+    volumes:
+      - miniodata:/data
+    ports:
+      - "9800:9000"
+      - "9801:9001"
+
+volumes:
+  pgdata:
+  miniodata:
