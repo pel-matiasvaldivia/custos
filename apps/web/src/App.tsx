@@ -3,6 +3,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
 import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
 import { QuadrantPage } from './pages/quadrant/QuadrantPage';
+import { QuadrantPage } from './pages/quadrant/QuadrantPage';
 
 const Dashboard = () => (
   <div>
