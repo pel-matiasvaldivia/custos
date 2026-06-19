@@ -63,6 +63,25 @@ async function main() {
   });
 
   console.log('Created sample vigiladores');
+
+  // 4. Create Sample Puestos
+  const p1 = await prisma.puesto.create({
+    data: {
+      tenant_id: tenant.id,
+      nombre: 'Objetivo Centro - Acceso A',
+      ubicacion: 'Av. Corrientes 1234, CABA',
+    },
+  });
+
+  const p2 = await prisma.puesto.create({
+    data: {
+      tenant_id: tenant.id,
+      nombre: 'Fábrica Sur - Portón 2',
+      ubicacion: 'Ruta 3 km 45, Cañuelas',
+    },
+  });
+
+  console.log('Created sample puestos');
 }
 
 main()
