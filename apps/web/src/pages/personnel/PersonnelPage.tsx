@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { vigilanteService, Vigilador } from '../../services/vigilante.service';
 import { UserPlus, Search, MoreVertical } from 'lucide-react';
 import { VigiladorForm } from './VigiladorForm';
+import { Link } from 'react-router-dom';
 
 export const PersonnelPage = () => {
   const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
@@ -86,7 +87,9 @@ export const PersonnelPage = () => {
                 <tr><td colSpan={5} className="py-8 text-center text-muted">No se encontraron vigiladores.</td></tr>
               ) : vigiladores.map((v) => (
                 <tr key={v.id} className="hover:bg-canvas/50 transition-colors text-sm">
-                  <td className="py-4 px-4 font-mono font-medium">{v.legajo_nro}</td>
+                  <td className="py-4 px-4 font-mono font-medium text-brand-blue">
+                    <Link to={`/personnel/${v.id}`} className="hover:underline">{v.legajo_nro}</Link>
+                  </td>
                   <td className="py-4 px-4 font-medium">{v.apellido}, {v.nombre}</td>
                   <td className="py-4 px-4 text-muted">{v.documento}</td>
                   <td className="py-4 px-4">
