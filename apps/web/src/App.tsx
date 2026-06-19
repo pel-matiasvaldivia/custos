@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
