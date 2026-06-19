@@ -11,7 +11,7 @@ services:
       - postgres
       - redis
     ports:
-      - "3000:3000"
+      - "3888:3000"
 
   web:
     image: ghcr.io/pel-matiasvaldivia/custos-web:latest
@@ -21,7 +21,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "1888:80"
 
   postgres:
     image: postgres:16
@@ -30,13 +30,13 @@ services:
       POSTGRES_PASSWORD: postgres_password
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "58432:5432"
+    expose:
+      - "5432"
 
   redis:
     image: redis:7
-    ports:
-      - "6378:6379"
+    expose:
+      - "6379"
 
   minio:
     image: minio/minio
