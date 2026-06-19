@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { vigilanteService, Vigilador } from '../../services/vigilante.service';
 import { UserPlus, Search, MoreVertical } from 'lucide-react';
 

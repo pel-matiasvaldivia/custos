@@ -1,4 +1,3 @@
-import React from 'react';
 import { Users, LayoutDashboard, Calendar, Shield, Settings, LogOut } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -24,7 +23,7 @@ export const Sidebar = () => {
           <NavLink
             key={item.path}
             to={item.path}
-            className={({ isActive }) =>
+            className={({ isActive }: { isActive: boolean }) =>
               `flex items-center gap-3 px-3 py-2 rounded-md transition-colors font-medium ${
                 isActive 
                   ? 'bg-brand-blue text-surface' 
