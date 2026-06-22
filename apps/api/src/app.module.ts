@@ -8,6 +8,8 @@ import { CredencialModule } from './credencial/credencial.module';
 import { PuestoModule } from './puesto/puesto.module';
 import { AsignacionModule } from './asignacion/asignacion.module';
 import { FeriadoModule } from './feriado/feriado.module';
+import { CostosModule } from './costos/costos.module';
+import { CotizacionModule } from './cotizacion/cotizacion.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { FeriadoModule } from './feriado/feriado.module';
     PuestoModule,
     AsignacionModule,
     FeriadoModule,
+    CostosModule,
+    CotizacionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
