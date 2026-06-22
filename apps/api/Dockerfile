@@ -22,7 +22,8 @@ FROM node:20-slim
 
 WORKDIR /app
 
-# Install production dependencies only
+# Install production dependencies and openssl
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 RUN npm install --omit=dev && npm cache clean --force
