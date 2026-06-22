@@ -26,9 +26,10 @@ WORKDIR /app
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 RUN npm install --omit=dev && npm cache clean --force
+COPY apps/api/prisma ./apps/api/prisma
+RUN cd apps/api && npx prisma generate
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 
 EXPOSE 3000
 
