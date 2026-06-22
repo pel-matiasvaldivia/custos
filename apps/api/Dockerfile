@@ -12,9 +12,11 @@ COPY packages/contracts ./packages/contracts
 
 RUN npm install --include=dev
 
-COPY apps/api ./apps/api
+# Sync Prisma Client
+COPY apps/api/prisma ./apps/api/prisma
+RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
 
-RUN cd apps/api && npx prisma generate
+COPY apps/api ./apps/api
 RUN cd apps/api && npm run build
 
 # Stage 2: Runner
