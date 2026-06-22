@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:20-alpine as builder
+FROM node:20-slim as builder
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN cd apps/api && npx prisma generate
 RUN cd apps/api && npm run build
 
 # Stage 2: Runner
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
