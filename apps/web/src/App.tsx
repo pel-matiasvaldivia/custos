@@ -3,6 +3,9 @@ import { Sidebar } from './components/layout/Sidebar';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
 import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
 import { QuadrantPage } from './pages/quadrant/QuadrantPage';
+import { QuotesPage } from './pages/quoting/QuotesPage';
+import { QuoteWizard } from './pages/quoting/QuoteWizard';
+import { CostConfigPage } from './pages/quoting/CostConfigPage';
 
 const Dashboard = () => (
   <div>
@@ -36,6 +39,9 @@ function App() {
           <Route path="/personnel" element={<PersonnelPage />} />
           <Route path="/personnel/:id" element={<VigiladorDetail />} />
           <Route path="/quadrant" element={<QuadrantPage />} />
+          <Route path="/quotes" element={<QuotesPage />} />
+          <Route path="/quotes/new" element={<QuoteWizard />} />
+          <Route path="/settings" element={<CostConfigPage />} />
           {/* Fallback */}
           <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />
         </Routes>

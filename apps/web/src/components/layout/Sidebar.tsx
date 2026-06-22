@@ -5,6 +5,7 @@ const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Personal', path: '/personnel' },
   { icon: Calendar, label: 'Cuadrante', path: '/quadrant' },
+  { icon: Shield, label: 'Cotizaciones', path: '/quotes' },
   { icon: Shield, label: 'Objetivos', path: '/objectives' },
   { icon: Settings, label: 'Configuración', path: '/settings' },
 ];
