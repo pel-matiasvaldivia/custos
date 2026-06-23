@@ -4,15 +4,34 @@ import { Plus, Search, Filter, MessageSquare, Clock, User, MapPin } from 'lucide
 export const NovedadesPage = () => {
   const [novedades, setNovedades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ tipo: 'GENERAL', prioridad: 'NORMAL', descripcion: '' });
 
-  useEffect(() => {
+  const fetchData = () => {
+    setLoading(true);
     fetch('/api/v1/novedades')
       .then(res => res.json())
       .then(data => {
         setNovedades(data);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchData();
   }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch('/api/v1/novedades', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+    setIsModalOpen(false);
+    setFormData({ tipo: 'GENERAL', prioridad: 'NORMAL', descripcion: '' });
+    fetchData();
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -29,11 +48,75 @@ export const NovedadesPage = () => {
           <h2 className="text-3xl font-display font-bold text-navy">Novedades del Servicio</h2>
           <p className="text-muted text-lg">Reportes e incidencias en tiempo real desde los puestos.</p>
         </div>
-        <button className="btn btn-primary flex items-center gap-2">
+        <button onClick={() => setIsModalOpen(true)} className="btn btn-primary flex items-center gap-2">
           <Plus size={20} />
           Reportar Novedad
         </button>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-navy/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="card w-full max-w-lg animate-in fade-in zoom-in duration-200">
+            <h3 className="text-2xl font-bold text-navy mb-6">Reportar Novedad</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="label text-xs uppercase font-black">Tipo de Novedad</label>
+                <select 
+                  className="input"
+                  value={formData.tipo}
+                  onChange={e => setFormData({...formData, tipo: e.target.value})}
+                >
+                  <option value="GENERAL">General</option>
+                  <option value="ALARMA">Activación de Alarma</option>
+                  <option value="RELEVAMIENTO">Relevamiento de Puesto</option>
+                  <option value="EMERGENCIA">Emergencia / Siniestro</option>
+                </select>
+              </div>
+              <div>
+                <label className="label text-xs uppercase font-black">Prioridad</label>
+                <div className="flex gap-2">
+                  {['NORMAL', 'ALTA', 'CRITICA'].map(p => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setFormData({...formData, prioridad: p})}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
+                        formData.prioridad === p 
+                        ? 'bg-brand-blue text-surface shadow-lg' 
+                        : 'bg-canvas text-muted hover:bg-surface/10'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="label text-xs uppercase font-black">Descripción Detallada</label>
+                <textarea 
+                  className="input h-32 py-3" 
+                  placeholder="Describa lo sucedido..."
+                  value={formData.descripcion}
+                  onChange={e => setFormData({...formData, descripcion: e.target.value})}
+                  required
+                />
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 btn btn-secondary"
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="flex-1 btn btn-primary">
+                  Enviar Reporte
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4">
         <div className="relative flex-1">
