@@ -30,6 +30,8 @@ model Tenant {
   configuracion_costos ConfiguracionCostos?
   cotizaciones         Cotizacion[]
   novedades            Novedad[]
+  puntos_control       PuntoControl[]
+  rondas               Ronda[]
 
   @@map("tenants")
 }
@@ -65,6 +67,7 @@ model Vigilador {
   credenciales     Credencial[]
   asignaciones     Asignacion[]
   novedades        Novedad[]
+  rondas           Ronda[]
 
   @@unique([tenant_id, legajo_nro])
   @@map("vigiladores")
@@ -120,6 +123,8 @@ model Puesto {
   objetivo         Objetivo? @relation(fields: [objetivo_id], references: [id])
   asignaciones     Asignacion[]
   novedades        Novedad[]
+  puntos_control   PuntoControl[]
+  rondas           Ronda[]
 
   @@map("puestos")
 }
@@ -233,4 +238,54 @@ model Novedad {
   vigilador        Vigilador? @relation(fields: [vigilador_id], references: [id])
 
   @@map("novedades")
+}
+
+model PuntoControl {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  puesto_id        String   @db.Uuid
+  nombre           String
+  codigo_qr        String?  @unique
+  nfc_id           String?  @unique
+  lat              Float?
+  lng              Float?
+  created_at       DateTime @default(now()) @db.Timestamptz
+
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  puesto           Puesto   @relation(fields: [puesto_id], references: [id])
+  marcas           MarcaRonda[]
+
+  @@map("puntos_control")
+}
+
+model Ronda {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  puesto_id        String   @db.Uuid
+  vigilador_id     String   @db.Uuid
+  nombre           String
+  hora_inicio      DateTime @default(now()) @db.Timestamptz
+  hora_fin         DateTime? @db.Timestamptz
+  estado           String   @default("EN_PROGRESO") // EN_PROGRESO | COMPLETADA | INCOMPLETA
+
+  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
+  puesto           Puesto     @relation(fields: [puesto_id], references: [id])
+  vigilador        Vigilador  @relation(fields: [vigilador_id], references: [id])
+  marcas           MarcaRonda[]
+
+  @@map("rondas")
+}
+
+model MarcaRonda {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ronda_id         String   @db.Uuid
+  punto_control_id String   @db.Uuid
+  timestamp        DateTime @default(now()) @db.Timestamptz
+  lat              Float?
+  lng              Float?
+
+  ronda            Ronda        @relation(fields: [ronda_id], references: [id])
+  punto_control    PuntoControl @relation(fields: [punto_control_id], references: [id])
+
+  @@map("marcas_ronda")
 }
