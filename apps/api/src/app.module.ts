@@ -11,6 +11,7 @@ import { FeriadoModule } from './feriado/feriado.module';
 import { CostosModule } from './costos/costos.module';
 import { CotizacionModule } from './cotizacion/cotizacion.module';
 import { NovedadModule } from './novedad/novedad.module';
+import { RondaModule } from './ronda/ronda.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NovedadModule } from './novedad/novedad.module';
     CostosModule,
     CotizacionModule,
     NovedadModule,
+    RondaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

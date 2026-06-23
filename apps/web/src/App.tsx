@@ -8,6 +8,7 @@ import { QuoteWizard } from './pages/quoting/QuoteWizard';
 import { CostConfigPage } from './pages/quoting/CostConfigPage';
 import { KioskPage } from './pages/kiosk/KioskPage';
 import { NovedadesPage } from './pages/novedades/NovedadesPage';
+import { MonitoringPage } from './pages/monitoring/MonitoringPage';
 
 const Dashboard = () => (
   <div>
@@ -45,6 +46,7 @@ function App() {
           <Route path="/quotes/new" element={<QuoteWizard />} />
           <Route path="/settings" element={<CostConfigPage />} />
           <Route path="/novedades" element={<NovedadesPage />} />
+          <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="/kiosk" element={<KioskPage />} />
           {/* Fallback */}
           <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />
