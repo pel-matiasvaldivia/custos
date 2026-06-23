@@ -33,4 +33,19 @@ export class PuestoService {
       data,
     });
   }
+
+  /**
+   * CENTRAL STAFFING FORMULA
+   * dotacion = H_cubrir / (horas_nominales_mes * (1 - tasa_ausentismo))
+   */
+  async calculateStaffing(hCubrir: number, hNominales: number = 192, tasaAusentismo: number = 0.10) {
+    const hEfectivas = hNominales * (1 - tasaAusentismo);
+    const dotacion = hCubrir / hEfectivas;
+    return {
+      hCubrir,
+      hEfectivas,
+      dotacion: parseFloat(dotacion.toFixed(2)),
+      vigiladoresRequeridos: Math.ceil(dotacion),
+    };
+  }
 }

@@ -65,6 +65,23 @@ export class AsignacionService {
   }
   
   async asignVigilante(id: string, tenantId: string, vigiladorId: string) {
+    // HARD BLOCK: Check for expired credentials
+    const now = new Date();
+    const expiredCredentials = await this.prisma.credencial.findMany({
+      where: {
+        vigilador_id: vigiladorId,
+        tenant_id: tenantId,
+        vence_el: {
+          lt: now,
+        },
+      },
+    });
+
+    if (expiredCredentials.length > 0) {
+      const types = expiredCredentials.map(c => c.tipo).join(', ');
+      throw new Error(`BLOQUEO DURO: El vigilador tiene credenciales vencidas (${types}).`);
+    }
+
     return this.prisma.asignacion.update({
       where: { id, tenant_id: tenantId },
       data: {
