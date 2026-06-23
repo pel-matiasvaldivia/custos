@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
+COPY apps/web/package*.json ./apps/web/
 COPY packages/contracts ./packages/contracts
 
 RUN npm install --include=dev
@@ -25,11 +26,17 @@ WORKDIR /app
 
 # Install production dependencies and openssl
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Copy all package.json files to allow workspace resolution
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
+COPY apps/web/package*.json ./apps/web/
+COPY packages/contracts/package*.json ./packages/contracts/
+
 RUN npm install --omit=dev && npm cache clean --force
+
 COPY apps/api/prisma ./apps/api/prisma
-RUN cd apps/api && npx prisma generate
+RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
