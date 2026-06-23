@@ -1,21 +1,6 @@
-@import "tailwindcss";
-
-@theme {
-  --color-navy: #0e1f3a;
-  --color-canvas: #f4f6fb;
-  --color-surface: #ffffff;
-  --color-brand-blue: #1b57d6;
-  --color-brand-deep: #1545ae;
-  --color-brand-tint: #eef3fe;
-  --color-emerald: #0e9f6e;
-  --color-amber: #e8a33d;
-  --color-line: #e2e8f2;
-  --color-muted: #5c6b86;
-
-  --font-display: "Space Grotesk", sans-serif;
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "IBM Plex Mono", monospace;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
   body {
@@ -24,10 +9,6 @@
   
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
-  }
-
-  code, kbd, samp, pre {
-    @apply font-mono;
   }
 }
 
@@ -40,15 +21,19 @@
     @apply bg-surface border border-line rounded-lg shadow-sm p-4;
   }
 
-  .status-badge {
-    @apply px-2 py-0.5 rounded-full text-xs font-mono uppercase tracking-wider;
+  .input {
+    @apply w-full bg-white border border-line rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-brand-blue/10 transition-all;
   }
 
-  .status-badge-ok {
-    @apply bg-emerald/10 text-emerald border border-emerald/20;
+  .label {
+    @apply block text-sm font-bold text-navy mb-1;
   }
 
-  .status-badge-alert {
-    @apply bg-amber/10 text-amber border border-amber/20;
+  .btn {
+    @apply px-4 py-2 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply bg-canvas text-muted hover:bg-surface border border-line;
   }
 }

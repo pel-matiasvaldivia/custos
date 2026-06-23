@@ -7,18 +7,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        navy: "#0E1F3A",
-        canvas: "#F4F6FB",
-        surface: "#FFFFFF",
-        brand: {
-          blue: "#1B57D6",
-          deep: "#1545AE",
-          tint: "#EEF3FE",
-        },
-        emerald: "#0E9F6E",
-        amber: "#E8A33D",
-        line: "#E2E8F2",
-        muted: "#5C6B86",
+        navy: '#0e1f3a',
+        canvas: '#f4f6fb',
+        surface: '#ffffff',
+        'brand-blue': '#1b57d6',
+        'brand-deep': '#1545ae',
+        'brand-tint': '#eef3fe',
+        emerald: '#0e9f6e',
+        amber: '#e8a33d',
+        line: '#e2e8f2',
+        muted: '#5c6b86',
       },
       fontFamily: {
         display: ["Space Grotesk", "sans-serif"],

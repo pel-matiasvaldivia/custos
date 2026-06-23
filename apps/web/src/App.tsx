@@ -9,6 +9,9 @@ import { CostConfigPage } from './pages/quoting/CostConfigPage';
 import { KioskPage } from './pages/kiosk/KioskPage';
 import { NovedadesPage } from './pages/novedades/NovedadesPage';
 import { MonitoringPage } from './pages/monitoring/MonitoringPage';
+import ComprasPage from './pages/compras/ComprasPage';
+import OnboardingPage from './pages/onboarding/OnboardingPage';
+import LandingPage from './pages/landing/LandingPage';
 
 const Dashboard = () => (
   <div>
@@ -38,7 +41,8 @@ function App() {
       <Sidebar />
       <main className="flex-1 ml-64 p-8">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/personnel" element={<PersonnelPage />} />
           <Route path="/personnel/:id" element={<VigiladorDetail />} />
           <Route path="/quadrant" element={<QuadrantPage />} />
@@ -47,6 +51,8 @@ function App() {
           <Route path="/settings" element={<CostConfigPage />} />
           <Route path="/novedades" element={<NovedadesPage />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
+          <Route path="/compras" element={<ComprasPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/kiosk" element={<KioskPage />} />
           {/* Fallback */}
           <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />

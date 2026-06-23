@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Search, CheckCircle2, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const QuotesPage = () => {

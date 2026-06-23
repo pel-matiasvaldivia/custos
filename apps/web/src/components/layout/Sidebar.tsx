@@ -1,9 +1,21 @@
-import { Users, LayoutDashboard, Calendar, Shield, Settings, LogOut, AlertCircle, Activity } from 'lucide-react';
+import { 
+  Users, 
+  Calendar, 
+  LayoutDashboard, 
+  LogOut,
+  ShoppingCart,
+  Shield,
+  Settings,
+  AlertCircle,
+  Activity
+} from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Activity, label: 'Monitoreo', path: '/monitoring' },
+  { icon: ShoppingCart, label: 'Compras', path: '/compras' },
+  { icon: Settings, label: 'Onboarding', path: '/onboarding' },
   { icon: Users, label: 'Personal', path: '/personnel' },
   { icon: Calendar, label: 'Cuadrante', path: '/quadrant' },
   { icon: Shield, label: 'Cotizaciones', path: '/quotes' },
