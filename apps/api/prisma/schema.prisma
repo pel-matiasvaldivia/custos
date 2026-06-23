@@ -29,6 +29,7 @@ model Tenant {
   feriados             Feriado[]
   configuracion_costos ConfiguracionCostos?
   cotizaciones         Cotizacion[]
+  novedades            Novedad[]
 
   @@map("tenants")
 }
@@ -63,6 +64,7 @@ model Vigilador {
   tenant           Tenant       @relation(fields: [tenant_id], references: [id])
   credenciales     Credencial[]
   asignaciones     Asignacion[]
+  novedades        Novedad[]
 
   @@unique([tenant_id, legajo_nro])
   @@map("vigiladores")
@@ -117,6 +119,7 @@ model Puesto {
   tenant           Tenant   @relation(fields: [tenant_id], references: [id])
   objetivo         Objetivo? @relation(fields: [objetivo_id], references: [id])
   asignaciones     Asignacion[]
+  novedades        Novedad[]
 
   @@map("puestos")
 }
@@ -212,4 +215,22 @@ model CotizacionItem {
   cotizacion       Cotizacion @relation(fields: [cotizacion_id], references: [id])
 
   @@map("cotizacion_items")
+}
+
+model Novedad {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  puesto_id        String?  @db.Uuid
+  vigilador_id     String?  @db.Uuid
+  tipo             String   // GENERAL | ALARMA | RELEVAMIENTO | EMERGENCIA
+  prioridad        String   @default("NORMAL") // BAJA | NORMAL | ALTA | CRITICA
+  descripcion      String
+  adjuntos         String[] // URLs in MinIO
+  created_at       DateTime @default(now()) @db.Timestamptz
+
+  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
+  puesto           Puesto?    @relation(fields: [puesto_id], references: [id])
+  vigilador        Vigilador? @relation(fields: [vigilador_id], references: [id])
+
+  @@map("novedades")
 }
