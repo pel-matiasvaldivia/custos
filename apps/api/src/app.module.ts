@@ -15,6 +15,7 @@ import { NovedadModule } from './novedad/novedad.module';
 import { RondaModule } from './ronda/ronda.module';
 import { ComprasModule } from './compras/compras.module';
 import { TenantModule } from './tenant/tenant.module';
+import { CentroOperacionesModule } from './modules/centro-operaciones/centro-operaciones.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { TenantModule } from './tenant/tenant.module';
     RondaModule,
     ComprasModule,
     TenantModule,
+    CentroOperacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

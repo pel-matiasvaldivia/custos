@@ -1,131 +1,265 @@
 import { useState, useEffect } from 'react';
-import { Shield, Users, AlertCircle, Map, LayoutGrid, Clock, Radar, Activity } from 'lucide-react';
+import { 
+  Shield, 
+  AlertCircle, 
+  Radar, 
+  Activity, 
+  Clock, 
+  ChevronRight, 
+  UserCheck, 
+  Search,
+  Building2,
+  Box,
+  Eye,
+  MoreVertical
+} from 'lucide-react';
+import { useSocket } from '../../hooks/useSocket';
+import axios from 'axios';
+
+// Mock/Context - Replace with real auth context when available
+const TENANT_ID = 'your-tenant-id'; 
 
 export const MonitoringPage = () => {
-  const [stats] = useState({
-    activeGuards: 12,
-    activeRondas: 4,
-    criticalIncidents: 1,
-    coverage: '98%'
-  });
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const { isConnected, on } = useSocket('co', TENANT_ID);
 
   useEffect(() => {
-    // Real-time Simulation / Polling
-    const interval = setInterval(() => {
-      // Fetch data logic here
-    }, 5000);
-    return () => clearInterval(interval);
+    fetchActiveIncidents();
   }, []);
 
+  const fetchActiveIncidents = async () => {
+    try {
+      const res = await axios.get('/api/v1/centro-operaciones/incidentes/activos');
+      setIncidents(res.data);
+    } catch (err) {
+      console.error('Error fetching incidents', err);
+    }
+  };
+
+  // Listen for real-time events
+  on('event.new', (event: any) => {
+    setEvents(prev => [event, ...prev.slice(0, 49)]); // Keep last 50
+  });
+
+  on('incident.new', (incident: any) => {
+    setIncidents(prev => [incident, ...prev]);
+  });
+
+  on('incident.updated', (updated: any) => {
+    setIncidents(prev => prev.map(inc => inc.id === updated.id ? { ...inc, ...updated } : inc));
+  });
+
+  on('incident.resolved', (resolved: any) => {
+    setIncidents(prev => prev.filter(inc => inc.id !== resolved.id));
+  });
+
+  const handleTake = async (id: string) => {
+    try {
+      await axios.post(`/api/v1/centro-operaciones/incidentes/${id}/tomar`);
+    } catch (err) {
+      alert('Error al tomar incidente');
+    }
+  };
+
   return (
-    <div className="space-y-8 font-display">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 font-display bg-canvas min-h-screen">
+      {/* Header SOC */}
+      <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-4xl font-black text-navy tracking-tighter uppercase italic">Centro de Monitoreo <span className="text-brand-blue">CustOS</span></h2>
-          <div className="flex items-center gap-2 text-muted mt-2">
-            <Activity size={16} className="text-emerald animate-pulse" />
-            <span className="text-sm font-bold uppercase tracking-widest leading-none">Sistema en Línea / Tiempo Real</span>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg">
+              <Radar size={22} className="text-brand-blue animate-pulse" />
+            </div>
+            <h2 className="text-4xl font-black text-navy tracking-tighter uppercase italic">
+              SOC <span className="text-brand-blue">Console</span>
+            </h2>
+          </div>
+          <div className="flex items-center gap-3 text-muted ml-1">
+            <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${isConnected ? 'bg-emerald/10 text-emerald' : 'bg-red-500/10 text-red-500'}`}>
+              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald animate-pulse' : 'bg-red-500'}`} />
+              {isConnected ? 'Sistema en Vivo' : 'Desconectado'}
+            </div>
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Presencia: Central Operativa</span>
           </div>
         </div>
-        <div className="flex gap-4">
-          <button className="btn btn-secondary flex items-center gap-2">
-            <Map size={18} /> Ver Mapa
-          </button>
-          <button className="btn btn-primary flex items-center gap-2">
-            <LayoutGrid size={18} /> Grilla Total
+        
+        <div className="flex gap-3">
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
+            <input 
+              type="text" 
+              placeholder="Buscar objetivo o abonado..." 
+              className="bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-blue/10 w-64 transition-all"
+            />
+          </div>
+          <button className="bg-slate-900 text-white p-2.5 rounded-xl hover:bg-black transition-all">
+            <MoreVertical size={20} />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Vigiladores Activos', value: stats.activeGuards, icon: Users, color: 'text-brand-blue' },
-          { label: 'Rondas en Curso', value: stats.activeRondas, icon: Radar, color: 'text-emerald' },
-          { label: 'Alertas Críticas', value: stats.criticalIncidents, icon: AlertCircle, color: 'text-red-500' },
-          { label: 'Cobertura Global', value: stats.coverage, icon: Shield, color: 'text-navy' }
-        ].map((s, i) => (
-          <div key={i} className="card p-6 border-b-4 border-b-brand-blue/20 hover:border-b-brand-blue transition-all group">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-xs font-black text-muted uppercase tracking-widest mb-1">{s.label}</p>
-                <h3 className={`text-4xl font-black ${s.color} group-hover:scale-105 transition-transform origin-left`}>{s.value}</h3>
-              </div>
-              <s.icon className={`${s.color} opacity-20`} size={32} />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        
+        {/* Main Incident Feed */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex gap-6">
+              <FilterTab label="Pendientes" count={incidents.filter(i => i.estado === 'NUEVO').length} active />
+              <FilterTab label="En Atención" count={incidents.filter(i => i.estado === 'EN_ATENCION').length} />
+              <FilterTab label="Verificando" count={incidents.filter(i => i.estado === 'VERIFICANDO').length} />
+            </div>
+            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Prioridad: Critica &gt; Alta
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="section-header flex items-center justify-between">
-            <h3 className="text-xl font-bold text-navy flex items-center gap-2">
-              <Radar size={20} className="text-brand-blue" /> Rondas Activas
-            </h3>
-            <span className="text-xs text-muted font-mono uppercase">Actualizado hace 2s</span>
-          </div>
-          <div className="card divide-y border-surface/5 p-0 overflow-hidden">
-            {[1, 2, 3].map((_, i) => (
-              <div key={i} className="p-4 hover:bg-canvas transition-colors flex items-center justify-between group">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-brand-blue/10 rounded-lg flex items-center justify-center text-brand-blue">
-                    <Users size={20} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-navy text-sm">Objetivo {i + 1}: Puerto Madero</h4>
-                    <p className="text-xs text-muted">Vigilador: Juan Perez • Iniciada 14:{20 + i * 5}</p>
-                  </div>
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div className="flex gap-1">
-                    {[1, 1, 1, 0, 0].map((dot, j) => (
-                      <div key={j} className={`w-2 h-2 rounded-full ${dot ? 'bg-emerald shadow-[0_0_5px_theme(colors.emerald.DEFAULT)]' : 'bg-surface/20'}`} />
-                    ))}
-                  </div>
-                  <span className="text-[10px] uppercase font-black text-muted tracking-tighter">Progreso: 60%</span>
-                </div>
+          <div className="space-y-4">
+            {incidents.length === 0 ? (
+              <div className="py-20 text-center space-y-4 bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+                <Shield size={48} className="mx-auto text-slate-200" />
+                <p className="text-slate-400 font-bold uppercase tracking-widest">No hay incidentes activos</p>
               </div>
+            ) : incidents.map(inc => (
+              <IncidentCard key={inc.id} incident={inc} onTake={() => handleTake(inc.id)} />
             ))}
           </div>
         </div>
 
+        {/* Real-time Event Stream Side Panel */}
         <div className="space-y-6">
-          <div className="section-header flex items-center justify-between">
-            <h3 className="text-xl font-bold text-navy flex items-center gap-2">
-              <AlertCircle size={20} className="text-red-500" /> Alertas Recientes
-            </h3>
-          </div>
-          <div className="space-y-4">
-            <div className="card bg-red-50 border-red-500/20 p-4 border-l-4 border-l-red-500 animate-pulse">
-              <div className="flex gap-3">
-                <div className="bg-red-500 text-white rounded p-1 h-fit">
-                  <AlertCircle size={16} />
-                </div>
-                <div>
-                  <h4 className="font-black text-red-900 text-xs uppercase tracking-tight">Incidente Crítico</h4>
-                  <p className="text-xs text-red-800 mt-1">Puerta de Emergencia abierta sin autorización en Sector B.</p>
-                  <p className="text-[10px] text-red-500 mt-1 font-mono">HACE 2 MINUTOS • PUESTO ALFA</p>
-                </div>
+          <div className="bg-slate-900 rounded-[2rem] p-6 text-white h-[calc(100vh-200px)] flex flex-col shadow-2xl overflow-hidden relative">
+            {/* Glossy overlay */}
+            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-brand-blue/20 to-transparent pointer-events-none" />
+            
+            <div className="flex items-center justify-between mb-6 relative z-10">
+              <h3 className="text-sm font-black uppercase tracking-widest flex items-center gap-2">
+                <Activity size={16} className="text-brand-blue" /> Event stream
+              </h3>
+              <div className="text-[10px] bg-white/10 px-2 py-0.5 rounded font-mono text-white/50 uppercase tracking-widest">
+                Real-time
               </div>
             </div>
-            <div className="card p-4 space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted border-b pb-2 mb-2">
-                <span>Últimas Novedades</span>
-                <Clock size={12} />
-              </div>
-              {[1, 2, 3].map((_, i) => (
-                <div key={i} className="flex gap-3 text-sm">
-                  <div className="w-1.5 h-1.5 rounded-full bg-brand-blue mt-1.5 shrink-0" />
-                  <div>
-                    <span className="text-navy font-bold">Cambio de Guardia </span>
-                    <span className="text-muted">en Objetivo Central. Todo en orden.</span>
+
+            <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide">
+              {events.length === 0 && <p className="text-white/20 text-[10px] uppercase font-bold italic py-8">Esperando señales...</p>}
+              {events.map((ev, i) => (
+                <div key={i} className="group animate-in slide-in-from-right duration-300">
+                  <div className="flex justify-between items-start text-[10px] mb-1">
+                    <span className="font-mono text-white/40">{new Date(ev.ts_evento).toLocaleTimeString()}</span>
+                    <span className={`font-black uppercase tracking-widest ${ev.severidad === 'CRITICA' ? 'text-red-400' : ev.severidad === 'ALTA' ? 'text-orange-400' : 'text-brand-blue'}`}>
+                      {ev.tipo}
+                    </span>
+                  </div>
+                  <div className="bg-white/5 group-hover:bg-white/10 p-3 rounded-xl border border-white/5 transition-colors">
+                    <p className="text-xs font-bold text-white/80">{ev.objetivo?.nombre || 'Dispositivo ' + ev.dispositivo_id.slice(0, 4)}</p>
+                    <p className="text-[10px] text-white/40 mt-1 uppercase tracking-tight">{ev.origen} | ZONA {ev.zona_id || 'GENERAL'}</p>
                   </div>
                 </div>
               ))}
             </div>
+            
+            <div className="pt-4 border-t border-white/5 mt-4">
+              <button className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-colors">
+                Ver historial completo
+              </button>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   );
 };
+
+function FilterTab({ label, count, active = false }: { label: string; count: number; active?: boolean }) {
+  return (
+    <button className={`flex items-center gap-2 px-1 pb-4 border-b-2 transition-all ${active ? 'border-brand-blue text-navy' : 'border-transparent text-slate-400 hover:text-navy hover:border-slate-200'}`}>
+      <span className="text-xs font-black uppercase tracking-widest">{label}</span>
+      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${active ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-400'}`}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function IncidentCard({ incident, onTake }: { incident: any, onTake: () => void }) {
+  const isNuevo = incident.estado === 'NUEVO';
+  const isCritica = incident.severidad === 'CRITICA';
+
+  return (
+    <div className={`bg-white rounded-[2rem] border overflow-hidden transition-all hover:shadow-xl group ${isNuevo ? (isCritica ? 'border-red-500 shadow-red-500/5' : 'border-orange-500 shadow-orange-500/5') : 'border-slate-100'}`}>
+      <div className="p-6">
+        <div className="flex justify-between items-start gap-4">
+          <div className="flex gap-4">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${isNuevo ? (isCritica ? 'bg-red-500 text-white animate-pulse' : 'bg-orange-500 text-white') : 'bg-slate-100 text-slate-400'}`}>
+              <AlertCircle size={30} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${isCritica ? 'bg-red-500 text-white' : 'bg-orange-100 text-orange-600'}`}>
+                  {incident.severidad}
+                </span>
+                <span className="text-xs font-mono text-slate-400">#{incident.codigo}</span>
+              </div>
+              <h3 className="text-xl font-black text-navy uppercase italic tracking-tighter leading-none">
+                {incident.tipo}
+              </h3>
+              <div className="flex items-center gap-4 mt-3">
+                <p className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                  <Building2 size={14} className="text-brand-blue" /> {incident.objetivo?.nombre}
+                </p>
+                <p className="flex items-center gap-1.5 text-xs font-bold text-slate-600">
+                  <Clock size={14} /> {new Date(incident.abierto_el).toLocaleTimeString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-end gap-2">
+            {isNuevo ? (
+              <button 
+                onClick={onTake}
+                className="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all active:scale-95 flex items-center gap-2"
+              >
+                Atender Ahora <ChevronRight size={14} />
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-slate-400 uppercase leading-none">Operador</p>
+                  <p className="text-xs font-bold text-navy">Asignado</p>
+                </div>
+                <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 ring-4 ring-emerald-50">
+                  <UserCheck size={20} />
+                </div>
+                <button className="bg-brand-blue text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-blue-dark transition-all flex items-center gap-2">
+                  Gestión <Eye size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mini footer with events summary */}
+      <div className="bg-slate-50 px-6 py-3 border-t flex justify-between items-center">
+        <div className="flex -space-x-2">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center">
+              <Box size={10} className="text-slate-400" />
+            </div>
+          ))}
+          <span className="pl-4 text-[10px] font-bold text-slate-400 uppercase self-center italic">+{incident.eventos?.length || 0} eventos correlacionados</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {incident.estado === 'EN_ATENCION' && (
+             <span className="flex items-center gap-1 text-[10px] font-black text-emerald uppercase tracking-widest animate-pulse">
+               <Activity size={10} /> Escuchando...
+             </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

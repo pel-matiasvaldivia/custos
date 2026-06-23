@@ -44,6 +44,11 @@ model Tenant {
   solicitudes_compra   SolicitudCompra[]
   ordenes_compra       OrdenCompra[]
   vehiculos            Vehiculo[]
+  dispositivos         Dispositivo[]
+  eventos              Evento[]
+  incidentes           Incidente[]
+  procedimientos       Procedimiento[]
+  programaciones_horarias ProgramacionHoraria[]
 
   @@map("tenants")
 }
@@ -117,6 +122,11 @@ model Objetivo {
 
   tenant     Tenant   @relation(fields: [tenant_id], references: [id])
   puestos    Puesto[]
+  dispositivos Dispositivo[]
+  eventos      Evento[]
+  incidentes   Incidente[]
+  contactos    ContactoEmergencia[]
+  programaciones ProgramacionHoraria[]
 
   @@unique([tenant_id, codigo])
   @@map("objetivos")
@@ -380,4 +390,159 @@ model Vehiculo {
   tenant           Tenant   @relation(fields: [tenant_id], references: [id])
 
   @@map("vehiculos")
+}
+
+model Dispositivo {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  objetivo_id      String   @db.Uuid
+  tipo             String   // PANEL_ALARMA | ENERGIZADOR_CERCO | DVR | NVR | CAMARA_IP | COMUNICADOR | BOTON_PANICO
+  protocolo        String   // SIA_DC09 | CONTACT_ID | ONVIF | ISAPI | DAHUA | MQTT | MODBUS | SNMP | HTTP
+  marca            String?
+  modelo           String?
+  nro_abonado      String?  // cuenta del panel
+  params           Json     @default("{}") // ip, puerto, usuario, secreto_ref, aes_key_ref, supervision_seg
+  estado           String   @default("FUERA_DE_LINEA") // EN_LINEA | FUERA_DE_LINEA | EN_FALLA | DESHABILITADO
+  ultimo_latido    DateTime? @db.Timestamptz
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @default(now()) @db.Timestamptz
+  deleted_at       DateTime? @db.Timestamptz
+
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+  zonas            Zona[]
+  eventos          Evento[]
+
+  @@unique([tenant_id, nro_abonado])
+  @@map("dispositivos")
+}
+
+model Zona {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  dispositivo_id   String   @db.Uuid
+  numero_zona      String
+  descripcion      String
+  tipo             String   // ROBO | FUEGO | PANICO | TAMPER | TECNICA | CERCO | APERTURA
+  particion        String?
+  puesto_id        String?  @db.Uuid
+
+  dispositivo      Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  eventos          Evento[]
+
+  @@unique([tenant_id, dispositivo_id, numero_zona])
+  @@map("zonas")
+}
+
+model Evento {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  objetivo_id      String   @db.Uuid
+  dispositivo_id   String   @db.Uuid
+  zona_id          String?  @db.Uuid
+  ts_evento        DateTime @default(now()) @db.Timestamptz
+  origen           String   // PANEL | CERCO | CCTV | RONDA | SISTEMA
+  codigo_crudo     String?
+  tipo             String   // taxonomía normalizada
+  severidad        String   // CRITICA | ALTA | MEDIA | BAJA
+  particion        String?
+  usuario_panel    String?
+  id_origen        String?  // idempotencia (abonado+seq | msgId)
+  en_prueba        Boolean  @default(false)
+  incidente_id     String?  @db.Uuid
+  crudo            Json     @default("{}")
+
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+  dispositivo      Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  zona             Zona?    @relation(fields: [zona_id], references: [id])
+  incidente        Incidente? @relation(fields: [incidente_id], references: [id])
+
+  @@index([tenant_id, objetivo_id, ts_evento(sort: Desc)])
+  @@map("eventos")
+}
+
+model Incidente {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  objetivo_id      String   @db.Uuid
+  codigo           String   // INC-2026-0042
+  tipo             String
+  severidad        String
+  estado           String   @default("NUEVO") // NUEVO | EN_ATENCION | VERIFICANDO | DESPACHADO | RESUELTO
+  operador_id      String?  @db.Uuid
+  sop_id           String?  @db.Uuid
+  abierto_el       DateTime @default(now()) @db.Timestamptz
+  tomado_el        DateTime? @db.Timestamptz
+  despachado_el    DateTime? @db.Timestamptz
+  resuelto_el      DateTime? @db.Timestamptz
+  disposicion      String?  // REAL | FALSA | TECNICA | PRUEBA | SIN_NOVEDAD
+  resumen          String?
+
+  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
+  objetivo         Objetivo   @relation(fields: [objetivo_id], references: [id])
+  eventos          Evento[]
+  bitacora         IncidenteBitacora[]
+
+  @@unique([tenant_id, codigo])
+  @@map("incidentes")
+}
+
+model IncidenteBitacora {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  incidente_id     String   @db.Uuid
+  ts               DateTime @default(now()) @db.Timestamptz
+  actor_id         String?  @db.Uuid
+  accion           String   // VERIFICACION_VIDEO | LLAMADA_CONTACTO | DESPACHO_MOVIL | AVISO_POLICIA | NOTA | CIERRE
+  detalle          Json     @default("{}")
+
+  incidente        Incidente @relation(fields: [incidente_id], references: [id])
+
+  @@map("incidente_bitacora")
+}
+
+model Procedimiento {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  nombre           String
+  aplica_a         Json     // {tipos:["INTRUSION"], cliente_id?, objetivo_id?}
+  pasos            Json     // [{orden, accion, instruccion, obligatorio}]
+  activo           Boolean  @default(true)
+
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@map("procedimientos")
+}
+
+model ContactoEmergencia {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  objetivo_id      String   @db.Uuid
+  orden            Int
+  nombre           String
+  telefono         String
+  password_normal  String?
+  password_coaccion String?
+  rol              String?  // TITULAR | ENCARGADO | EMERGENCIAS
+
+  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+
+  @@map("contactos_emergencia")
+}
+
+model ProgramacionHoraria {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  objetivo_id      String   @db.Uuid
+  particion        String?
+  dia_semana       Int      // 1..7
+  abre_esperado    String?  // HH:mm
+  cierra_esperado  String?  // HH:mm
+  tolerancia_min   Int      @default(15)
+
+  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+
+  @@map("programaciones_horarias")
 }
