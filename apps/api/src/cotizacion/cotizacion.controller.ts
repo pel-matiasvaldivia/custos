@@ -14,11 +14,11 @@ export class CotizacionController {
 
   @Get()
   findAll(@Request() req: any) {
-    return this.cotizacionService.findAll(req.user.tenantId);
+    return this.cotizacionService.findAll(req.user.tenantId, req.user.role);
   }
 
   @Get(':id')
   findOne(@Request() req: any, @Param('id') id: string) {
-    return this.cotizacionService.findOne(id, req.user.tenantId);
+    return this.cotizacionService.findOne(id, req.user.tenantId, req.user.role);
   }
 }

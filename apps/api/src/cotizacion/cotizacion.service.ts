@@ -55,18 +55,46 @@ export class CotizacionService {
     });
   }
 
-  async findAll(tenantId: string) {
-    return this.prisma.cotizacion.findMany({
+  async findAll(tenantId: string, role: string) {
+    const cotizaciones = await this.prisma.cotizacion.findMany({
       where: { tenant_id: tenantId },
       include: { items: true },
       orderBy: { created_at: 'desc' },
     });
+
+    if (role === 'OPERADOR') {
+      return cotizaciones.map(c => {
+        const { total_mensual, ...rest } = c;
+        return {
+          ...rest,
+          items: c.items.map(i => {
+            const { costo_hora, subtotal, ...itemRest } = i;
+            return itemRest;
+          })
+        };
+      });
+    }
+
+    return cotizaciones;
   }
 
-  async findOne(id: string, tenantId: string) {
-    return this.prisma.cotizacion.findFirst({
+  async findOne(id: string, tenantId: string, role: string) {
+    const cotizacion = await this.prisma.cotizacion.findFirst({
       where: { id, tenant_id: tenantId },
       include: { items: true },
     });
+
+    if (cotizacion && role === 'OPERADOR') {
+      const { total_mensual, ...rest } = cotizacion;
+      return {
+        ...rest,
+        items: cotizacion.items.map(i => {
+          const { costo_hora, subtotal, ...itemRest } = i;
+          return itemRest;
+        })
+      };
+    }
+
+    return cotizacion;
   }
 }
