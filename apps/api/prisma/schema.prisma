@@ -13,7 +13,15 @@ datasource db {
 
 model Tenant {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre           String
+  nombre           String   // Nombre Comercial
+  razon_social     String?
+  cuit             String?  @unique
+  condicion_iva    String?  // RESPONSABLE_INSCRIPTO | MONOTRIBUTO | EXENTO | CONSUMIDOR_FINAL
+  direccion        String?
+  logo_url         String?
+  email_contacto   String?
+  telefono_contacto String?
+  
   factor_cobertura Decimal  @default(4.20) @db.Decimal(4, 2)
   margen_objetivo  Decimal  @default(0.2500) @db.Decimal(5, 4)
   created_at       DateTime @default(now()) @db.Timestamptz
@@ -40,9 +48,11 @@ model User {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id  String   @db.Uuid
   email      String   @unique
-  password   String
-  role       String   @default("OPERADOR")
-  created_at DateTime @default(now()) @db.Timestamptz
+  password         String
+  role             String   @default("OPERADOR") // ADMIN | GERENCIA | SUPERVISOR | OPERADOR | RRHH | COMPRAS
+  failed_attempts  Int      @default(0)
+  locked_until     DateTime? @db.Timestamptz
+  created_at       DateTime @default(now()) @db.Timestamptz
   updated_at DateTime @default(now()) @db.Timestamptz
   deleted_at DateTime? @db.Timestamptz
 
