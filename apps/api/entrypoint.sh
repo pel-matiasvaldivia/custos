@@ -10,7 +10,7 @@ npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
 
 # Seeding (creates superadmin if not exists)
 echo "Running database seed..."
-npx prisma db seed
+npx prisma db seed --schema=apps/api/prisma/schema.prisma
 
 # Start the application
 echo "Starting application..."
