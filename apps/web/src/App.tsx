@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet } from 'react-router-dom';
+import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
 import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
@@ -15,6 +15,9 @@ import { MobileDashboard } from './pages/mobile/MobileDashboard';
 import ComprasPage from './pages/compras/ComprasPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import LandingPage from './pages/landing/LandingPage';
+import LoginPage from './pages/auth/LoginPage';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 /* ─── Dashboard placeholder ─── */
 const Dashboard = () => (
@@ -48,33 +51,55 @@ const AppLayout = () => (
   </div>
 );
 
+/* ─── Root redirect: / → /login or /dashboard ─── */
+const RootRedirect = () => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  return <Navigate to={user ? '/dashboard' : '/login'} replace />;
+};
+
+/* ─── Route tree ─── */
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* ROOT: smart redirect */}
+      <Route path="/" element={<RootRedirect />} />
+
+      {/* PUBLIC */}
+      <Route path="/landing" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/mobile" element={<MobileDashboard />} />
+
+      {/* PROTECTED: requires login */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/personnel" element={<PersonnelPage />} />
+          <Route path="/personnel/:id" element={<VigiladorDetail />} />
+          <Route path="/quadrant" element={<QuadrantPage />} />
+          <Route path="/quotes" element={<QuotesPage />} />
+          <Route path="/quotes/new" element={<QuoteWizard />} />
+          <Route path="/settings" element={<CostConfigPage />} />
+          <Route path="/novedades" element={<NovedadesPage />} />
+          <Route path="/monitoring" element={<MonitoringPage />} />
+          <Route path="/monitoring/devices" element={<DevicesPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/compras" element={<ComprasPage />} />
+          <Route path="/onboarding" element={<OnboardingPage />} />
+          <Route path="/kiosk" element={<KioskPage />} />
+          <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />
+        </Route>
+      </Route>
+    </Routes>
+  );
+}
+
 /* ─── Root App ─── */
 function App() {
   return (
-    <Routes>
-      {/* ── PUBLIC: Landing page — fully standalone, NO sidebar ── */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/mobile" element={<MobileDashboard />} />
-
-      {/* ── PROTECTED: ERP with sidebar layout ── */}
-      <Route element={<AppLayout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/personnel" element={<PersonnelPage />} />
-        <Route path="/personnel/:id" element={<VigiladorDetail />} />
-        <Route path="/quadrant" element={<QuadrantPage />} />
-        <Route path="/quotes" element={<QuotesPage />} />
-        <Route path="/quotes/new" element={<QuoteWizard />} />
-        <Route path="/settings" element={<CostConfigPage />} />
-        <Route path="/novedades" element={<NovedadesPage />} />
-        <Route path="/monitoring" element={<MonitoringPage />} />
-        <Route path="/monitoring/devices" element={<DevicesPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
-        <Route path="/compras" element={<ComprasPage />} />
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/kiosk" element={<KioskPage />} />
-        <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />
-      </Route>
-    </Routes>
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
 
