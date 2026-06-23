@@ -10,6 +10,7 @@ import { AsignacionModule } from './asignacion/asignacion.module';
 import { FeriadoModule } from './feriado/feriado.module';
 import { CostosModule } from './costos/costos.module';
 import { CotizacionModule } from './cotizacion/cotizacion.module';
+import { NovedadModule } from './novedad/novedad.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CotizacionModule } from './cotizacion/cotizacion.module';
     FeriadoModule,
     CostosModule,
     CotizacionModule,
+    NovedadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
