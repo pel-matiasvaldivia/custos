@@ -18,7 +18,7 @@ import {
 import { useSocket } from '../../hooks/useSocket';
 import { VideoPlayer } from './VideoPlayer';
 import { MapView } from '../../components/monitoring/MapView';
-import axios from 'axios';
+import api from '../../services/api';
 
 // Mock/Context - Replace with real auth context when available
 const TENANT_ID = 'your-tenant-id'; 
@@ -39,7 +39,7 @@ export const MonitoringPage = () => {
 
   const fetchDevices = async () => {
     try {
-      const res = await axios.get('/api/v1/centro-operaciones/dispositivos');
+      const res = await api.get('/centro-operaciones/dispositivos');
       setDevices(res.data);
     } catch (err) {
       console.error('Error fetching devices', err);
@@ -48,7 +48,7 @@ export const MonitoringPage = () => {
 
   const fetchActiveIncidents = async () => {
     try {
-      const res = await axios.get('/api/v1/centro-operaciones/incidentes/activos');
+      const res = await api.get('/centro-operaciones/incidentes/activos');
       setIncidents(res.data);
     } catch (err) {
       console.error('Error fetching incidents', err);
@@ -89,7 +89,7 @@ export const MonitoringPage = () => {
 
   const handleTake = async (id: string) => {
     try {
-      await axios.post(`/api/v1/centro-operaciones/incidentes/${id}/tomar`);
+      await api.post(`/centro-operaciones/incidentes/${id}/tomar`);
     } catch (err) {
       alert('Error al tomar incidente');
     }

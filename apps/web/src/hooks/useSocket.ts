@@ -8,7 +8,7 @@ export const useSocket = (namespace: string, tenantId?: string) => {
   useEffect(() => {
     if (!tenantId) return;
 
-    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3888';
+    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
     
     socketRef.current = io(`${socketUrl}/${namespace}`, {
       query: { tenantId },

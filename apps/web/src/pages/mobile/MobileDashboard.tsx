@@ -11,7 +11,7 @@ import {
   Activity,
   User
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 
 export const MobileDashboard = () => {
   const [scanning, setScanning] = useState(false);
@@ -25,7 +25,7 @@ export const MobileDashboard = () => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setLocation(coords);
         // Send to backend (debounced in real app)
-        axios.post('/api/v1/mobile/tracking', { location: coords }).catch(() => {});
+        api.post('/mobile/tracking', { location: coords }).catch(() => {});
       });
       return () => navigator.geolocation.clearWatch(watchId);
     }
@@ -34,7 +34,7 @@ export const MobileDashboard = () => {
   const handlePanic = async () => {
     setIsPanicActive(true);
     try {
-      await axios.post('/api/v1/mobile/panic', { location });
+      await api.post('/mobile/panic', { location });
       // Visual feedback
       setTimeout(() => setIsPanicActive(false), 3000);
     } catch (err) {
@@ -48,7 +48,7 @@ export const MobileDashboard = () => {
     // Simulate QR reading after 1.5s
     setTimeout(async () => {
       try {
-        await axios.post('/api/v1/mobile/checkpoint', { 
+        await api.post('/mobile/checkpoint', { 
             checkpointId: '8092023a-f4ef-4b41-b847-1925b3991202', // Dummy UUID
             location 
         });

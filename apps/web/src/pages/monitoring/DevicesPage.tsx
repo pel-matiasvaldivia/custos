@@ -13,7 +13,7 @@ import {
   Activity,
   MoreHorizontal
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../../services/api';
 
 export const DevicesPage = () => {
   const [devices, setDevices] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export const DevicesPage = () => {
 
   const fetchDevices = async () => {
     try {
-      const res = await axios.get('/api/v1/centro-operaciones/dispositivos');
+      const res = await api.get('/centro-operaciones/dispositivos');
       setDevices(res.data);
     } catch (err) {
       console.error('Error fetching devices', err);
