@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -8,7 +12,7 @@ export class ComprasService {
   // Thresholds
   async getThreshold(tenantId: string) {
     return this.prisma.umbralAprobacion.findFirst({
-      where: { tenant_id: tenantId }
+      where: { tenant_id: tenantId },
     });
   }
 
@@ -22,7 +26,7 @@ export class ComprasService {
         monto_estimado: data.monto_estimado,
         contrato_id: data.contrato_id,
         vehiculo_id: data.vehiculo_id,
-      }
+      },
     });
   }
 
@@ -31,8 +35,11 @@ export class ComprasService {
     const threshold = await this.getThreshold(tenantId);
     const supervisorLimit = threshold?.monto_max_supervisor || 50000; // Default if not set
 
-    const total = data.items.reduce((acc: number, item: any) => acc + (item.cantidad * item.precio_unitario), 0);
-    
+    const total = data.items.reduce(
+      (acc: number, item: any) => acc + item.cantidad * item.precio_unitario,
+      0,
+    );
+
     let estado = 'APROBADA';
     if (total > Number(supervisorLimit)) {
       estado = 'EN_APROBACION';
@@ -53,39 +60,45 @@ export class ComprasService {
             subtotal: i.cantidad * i.precio_unitario,
             contrato_id: i.contrato_id,
             vehiculo_id: i.vehiculo_id,
-          }))
-        }
+          })),
+        },
       },
-      include: { items: true }
+      include: { items: true },
     });
   }
 
-  async recibirParcial(tenantId: string, ocId: string, itemsRecibidos: { itemId: string, cantidad: number }[]) {
+  async recibirParcial(
+    tenantId: string,
+    ocId: string,
+    itemsRecibidos: { itemId: string; cantidad: number }[],
+  ) {
     // Basic logic to update reception
     for (const item of itemsRecibidos) {
       await this.prisma.ordenCompraItem.update({
         where: { id: item.itemId },
         data: {
-          cantidad_recibida: { increment: item.cantidad }
-        }
+          cantidad_recibida: { increment: item.cantidad },
+        },
       });
     }
 
     // Check if fully received
     const oc = await this.prisma.ordenCompra.findUnique({
       where: { id: ocId },
-      include: { items: true }
+      include: { items: true },
     });
 
     if (!oc) throw new NotFoundException('Orden de compra no encontrada');
 
-    const fullyReceived = oc.items.every(i => Number(i.cantidad_recibida) >= Number(i.cantidad));
-    
+    const fullyReceived = oc.items.every(
+      (i) => Number(i.cantidad_recibida) >= Number(i.cantidad),
+    );
+
     return this.prisma.ordenCompra.update({
       where: { id: ocId },
       data: {
-        estado: fullyReceived ? 'RECIBIDA' : 'RECIBIDA_PARCIAL'
-      }
+        estado: fullyReceived ? 'RECIBIDA' : 'RECIBIDA_PARCIAL',
+      },
     });
   }
 
@@ -93,14 +106,14 @@ export class ComprasService {
     const oc = await this.prisma.ordenCompra.update({
       where: { id: ocId },
       data: {
-        total_pagado: { increment: monto }
-      }
+        total_pagado: { increment: monto },
+      },
     });
 
     if (Number(oc.total_pagado) >= Number(oc.total)) {
       return this.prisma.ordenCompra.update({
         where: { id: ocId },
-        data: { estado: 'PAGADA' }
+        data: { estado: 'PAGADA' },
       });
     }
 
@@ -111,7 +124,7 @@ export class ComprasService {
     return this.prisma.ordenCompra.findMany({
       where: { tenant_id: tenantId },
       include: { items: true, solicitud: true },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
   }
 }

@@ -1,15 +1,28 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ComprasService } from './compras.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/v1/compras')
+@Controller('compras')
 @UseGuards(JwtAuthGuard)
 export class ComprasController {
   constructor(private readonly comprasService: ComprasService) {}
 
   @Post('solicitudes')
   createSolicitud(@Request() req: any, @Body() data: any) {
-    return this.comprasService.createSolicitud(req.user.tenantId, req.user.userId, data);
+    return this.comprasService.createSolicitud(
+      req.user.tenantId,
+      req.user.userId,
+      data,
+    );
   }
 
   @Post('ordenes')
@@ -24,7 +37,11 @@ export class ComprasController {
 
   @Patch('ordenes/:id/recibir')
   recibir(@Request() req: any, @Param('id') id: string, @Body() data: any) {
-    return this.comprasService.recibirParcial(req.user.tenantId, id, data.items);
+    return this.comprasService.recibirParcial(
+      req.user.tenantId,
+      id,
+      data.items,
+    );
   }
 
   @Patch('ordenes/:id/pagar')

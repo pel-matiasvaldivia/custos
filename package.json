@@ -4,7 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "dev": "npm run dev --workspaces --parallel",
+    "test": "npm run test --workspaces --if-present"
   },
   "keywords": [],
   "author": "",

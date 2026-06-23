@@ -1,9 +1,17 @@
-import { Controller, Get, Post, Body, Param, Put, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Prisma } from '@prisma/client';
 
-@Controller('api/v1/system/tenants')
+@Controller('system/tenants')
 @UseGuards(JwtAuthGuard)
 // In a real app, I'd add a @Roles('SUPERADMIN') guard here
 export class TenantController {

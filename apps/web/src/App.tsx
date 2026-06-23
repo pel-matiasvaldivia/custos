@@ -9,6 +9,9 @@ import { CostConfigPage } from './pages/quoting/CostConfigPage';
 import { KioskPage } from './pages/kiosk/KioskPage';
 import { NovedadesPage } from './pages/novedades/NovedadesPage';
 import { MonitoringPage } from './pages/monitoring/MonitoringPage';
+import { DevicesPage } from './pages/monitoring/DevicesPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
+import { MobileDashboard } from './pages/mobile/MobileDashboard';
 import ComprasPage from './pages/compras/ComprasPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import LandingPage from './pages/landing/LandingPage';
@@ -51,6 +54,7 @@ function App() {
     <Routes>
       {/* ── PUBLIC: Landing page — fully standalone, NO sidebar ── */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/mobile" element={<MobileDashboard />} />
 
       {/* ── PROTECTED: ERP with sidebar layout ── */}
       <Route element={<AppLayout />}>
@@ -63,6 +67,8 @@ function App() {
         <Route path="/settings" element={<CostConfigPage />} />
         <Route path="/novedades" element={<NovedadesPage />} />
         <Route path="/monitoring" element={<MonitoringPage />} />
+        <Route path="/monitoring/devices" element={<DevicesPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
         <Route path="/compras" element={<ComprasPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/kiosk" element={<KioskPage />} />

@@ -7,13 +7,19 @@ import {
   Shield,
   Settings,
   AlertCircle,
-  Activity
+  Activity,
+  Smartphone,
+  BarChart3,
+  Zap
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Activity, label: 'Monitoreo', path: '/monitoring' },
+  { icon: Smartphone, label: 'Equipamiento', path: '/monitoring/devices' },
+  { icon: BarChart3, label: 'Reportes', path: '/reports' },
+  { icon: Zap, label: 'Vigilancia Móvil', path: '/mobile' },
   { icon: ShoppingCart, label: 'Compras', path: '/compras' },
   { icon: Settings, label: 'Onboarding', path: '/onboarding' },
   { icon: Users, label: 'Personal', path: '/personnel' },

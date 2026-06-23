@@ -16,6 +16,8 @@ import { RondaModule } from './ronda/ronda.module';
 import { ComprasModule } from './compras/compras.module';
 import { TenantModule } from './tenant/tenant.module';
 import { CentroOperacionesModule } from './modules/centro-operaciones/centro-operaciones.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { VigilanciaMovilModule } from './modules/vigilancia-movil/vigilancia-movil.module';
 
 @Module({
   imports: [
@@ -33,14 +35,14 @@ import { CentroOperacionesModule } from './modules/centro-operaciones/centro-ope
     ComprasModule,
     TenantModule,
     CentroOperacionesModule,
+    ReportsModule,
+    VigilanciaMovilModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(TenantMiddleware)
-      .forRoutes('*');
+    consumer.apply(TenantMiddleware).forRoutes('*');
   }
 }

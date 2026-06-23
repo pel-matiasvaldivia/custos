@@ -39,7 +39,11 @@ export class CredencialService {
     });
   }
 
-  async update(id: string, tenantId: string, data: Prisma.CredencialUncheckedUpdateInput) {
+  async update(
+    id: string,
+    tenantId: string,
+    data: Prisma.CredencialUncheckedUpdateInput,
+  ) {
     const cred = await this.prisma.credencial.findFirst({
       where: { id, tenant_id: tenantId },
     });

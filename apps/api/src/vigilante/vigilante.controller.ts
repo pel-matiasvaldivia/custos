@@ -1,8 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { VigilanteService } from './vigilante.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // I need to create this guard
 
-@Controller('api/v1/vigilantes')
+@Controller('vigilantes')
 @UseGuards(JwtAuthGuard)
 export class VigilanteController {
   constructor(private readonly vigilanteService: VigilanteService) {}
@@ -26,7 +36,11 @@ export class VigilanteController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
     return this.vigilanteService.update(id, req.user.tenantId, body);
   }
 

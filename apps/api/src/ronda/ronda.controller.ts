@@ -1,8 +1,17 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { RondaService } from './ronda.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/v1/rondas')
+@Controller('rondas')
 @UseGuards(JwtAuthGuard)
 export class RondaController {
   constructor(private readonly rondaService: RondaService) {}
@@ -14,7 +23,10 @@ export class RondaController {
 
   @Get('checkpoints/:puestoId')
   getCheckpoints(@Request() req: any, @Param('puestoId') puestoId: string) {
-    return this.rondaService.getCheckpointsByPuesto(req.user.tenantId, puestoId);
+    return this.rondaService.getCheckpointsByPuesto(
+      req.user.tenantId,
+      puestoId,
+    );
   }
 
   @Post('start')
@@ -23,7 +35,11 @@ export class RondaController {
   }
 
   @Post(':id/mark')
-  markCheckpoint(@Request() req: any, @Param('id') id: string, @Body() data: any) {
+  markCheckpoint(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
     return this.rondaService.markCheckpoint(req.user.tenantId, id, data);
   }
 

@@ -67,8 +67,8 @@ export class RondaService {
         puesto: true,
         vigilador: true,
         marcas: {
-          include: { punto_control: true }
-        }
+          include: { punto_control: true },
+        },
       },
     });
   }

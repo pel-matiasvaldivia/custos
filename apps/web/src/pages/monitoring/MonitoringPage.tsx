@@ -11,9 +11,13 @@ import {
   Building2,
   Box,
   Eye,
-  MoreVertical
+  MoreVertical,
+  LayoutGrid,
+  Map as MapIcon
 } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
+import { VideoPlayer } from './VideoPlayer';
+import { MapView } from '../../components/monitoring/MapView';
 import axios from 'axios';
 
 // Mock/Context - Replace with real auth context when available
@@ -22,11 +26,25 @@ const TENANT_ID = 'your-tenant-id';
 export const MonitoringPage = () => {
   const [incidents, setIncidents] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
+  const [guards, setGuards] = useState<Record<string, any>>({});
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [activeVideo, setActiveVideo] = useState<any | null>(null);
+  const [devices, setDevices] = useState<any[]>([]);
   const { isConnected, on } = useSocket('co', TENANT_ID);
 
   useEffect(() => {
     fetchActiveIncidents();
+    fetchDevices();
   }, []);
+
+  const fetchDevices = async () => {
+    try {
+      const res = await axios.get('/api/v1/centro-operaciones/dispositivos');
+      setDevices(res.data);
+    } catch (err) {
+      console.error('Error fetching devices', err);
+    }
+  };
 
   const fetchActiveIncidents = async () => {
     try {
@@ -44,6 +62,14 @@ export const MonitoringPage = () => {
 
   on('incident.new', (incident: any) => {
     setIncidents(prev => [incident, ...prev]);
+    // Auto-verify if CRITICAL
+    if (incident.severidad === 'CRITICA') {
+      setActiveVideo({
+        id: incident.id,
+        title: `Verificación: ${incident.tipo} - ${incident.objetivo?.nombre || 'ALERTA'}`,
+        streamUrl: '' // fetched on demand
+      });
+    }
   });
 
   on('incident.updated', (updated: any) => {
@@ -52,6 +78,13 @@ export const MonitoringPage = () => {
 
   on('incident.resolved', (resolved: any) => {
     setIncidents(prev => prev.filter(inc => inc.id !== resolved.id));
+  });
+
+  on('vigilante.location', (data: any) => {
+    setGuards(prev => ({
+      ...prev,
+      [data.vigilanteId]: data
+    }));
   });
 
   const handleTake = async (id: string) => {
@@ -99,37 +132,64 @@ export const MonitoringPage = () => {
         </div>
       </div>
 
+      {/* View Switcher */}
+      <div className="flex gap-2 bg-white/50 backdrop-blur p-1 rounded-2xl border border-slate-200/50 w-fit">
+          <button 
+            onClick={() => setViewMode('grid')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-navy text-white shadow-lg' : 'text-slate-400 hover:text-navy'}`}
+          >
+            <LayoutGrid size={14} /> Vista Grilla
+          </button>
+          <button 
+            onClick={() => setViewMode('map')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'map' ? 'bg-brand-blue text-white shadow-lg' : 'text-slate-400 hover:text-brand-blue'}`}
+          >
+            <MapIcon size={14} /> Mapa en Vivo
+          </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
         {/* Main Incident Feed */}
-        <div className="lg:col-span-3 space-y-6">
-          <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-            <div className="flex gap-6">
-              <FilterTab label="Pendientes" count={incidents.filter(i => i.estado === 'NUEVO').length} active />
-              <FilterTab label="En Atención" count={incidents.filter(i => i.estado === 'EN_ATENCION').length} />
-              <FilterTab label="Verificando" count={incidents.filter(i => i.estado === 'VERIFICANDO').length} />
-            </div>
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Prioridad: Critica &gt; Alta
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {incidents.length === 0 ? (
-              <div className="py-20 text-center space-y-4 bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
-                <Shield size={48} className="mx-auto text-slate-200" />
-                <p className="text-slate-400 font-bold uppercase tracking-widest">No hay incidentes activos</p>
+        <div className="lg:col-span-3">
+          {viewMode === 'grid' ? (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex gap-6">
+                  <FilterTab label="Pendientes" count={incidents.filter(i => i.estado === 'NUEVO').length} active />
+                  <FilterTab label="En Atención" count={incidents.filter(i => i.estado === 'EN_ATENCION').length} />
+                  <FilterTab label="Verificando" count={incidents.filter(i => i.estado === 'VERIFICANDO').length} />
+                </div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Prioridad: Critica &gt; Alta
+                </div>
               </div>
-            ) : incidents.map(inc => (
-              <IncidentCard key={inc.id} incident={inc} onTake={() => handleTake(inc.id)} />
-            ))}
-          </div>
+
+              <div className="space-y-4">
+                {incidents.length === 0 ? (
+                  <div className="py-20 text-center space-y-4 bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem]">
+                    <Shield size={48} className="mx-auto text-slate-200" />
+                    <p className="text-slate-400 font-bold uppercase tracking-widest">No hay incidentes activos</p>
+                  </div>
+                ) : incidents.map(inc => (
+                  <IncidentCard key={inc.id} incident={inc} onTake={() => handleTake(inc.id)} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="h-[calc(100vh-250px)] w-full">
+              <MapView 
+                objectives={devices.map(d => d.objetivo).filter((v, i, a) => v && a.findIndex(t => t?.id === v.id) === i)} 
+                incidents={incidents}
+                guards={guards}
+              />
+            </div>
+          )}
         </div>
 
         {/* Real-time Event Stream Side Panel */}
         <div className="space-y-6">
           <div className="bg-slate-900 rounded-[2rem] p-6 text-white h-[calc(100vh-200px)] flex flex-col shadow-2xl overflow-hidden relative">
-            {/* Glossy overlay */}
             <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-brand-blue/20 to-transparent pointer-events-none" />
             
             <div className="flex items-center justify-between mb-6 relative z-10">
@@ -166,8 +226,52 @@ export const MonitoringPage = () => {
             </div>
           </div>
         </div>
-
       </div>
+
+      {/* Video Verification Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-xl z-[100] flex items-center justify-center p-8 animate-in fade-in duration-500">
+            <div className="w-full max-w-5xl space-y-6">
+                <div className="flex justify-between items-end text-white">
+                    <div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-blue block mb-2">Video-Verificación Prioritaria</span>
+                        <h3 className="text-4xl font-black italic uppercase tracking-tighter">{activeVideo.title}</h3>
+                    </div>
+                    <button 
+                        onClick={() => setActiveVideo(null)}
+                        className="bg-white/10 hover:bg-white/20 px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                    >
+                        Cerrar Verificación
+                    </button>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2">
+                        <VideoPlayer streamUrl={activeVideo.streamUrl} title={activeVideo.title} />
+                    </div>
+                    <div className="space-y-6">
+                        <div className="bg-white/5 rounded-[2rem] p-6 border border-white/10 h-full">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-white/40 mb-4 italic">Protocolo Sugerido</h4>
+                            <div className="space-y-4">
+                                <Step number={1} text="Verificar presencia de personas no autorizadas" active />
+                                <Step number={2} text="Llamar a contacto de emergencia (Titular)" />
+                                <Step number={3} text="Despachar móvil de verificación" />
+                                <Step number={4} text="Avisar a centro de despacho policial" />
+                            </div>
+                            <div className="mt-8 pt-8 border-t border-white/10">
+                                <button className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-red-600/20">
+                                    Disparar Pánico / Despacho
+                                </button>
+                                <button className="w-full mt-3 bg-white/5 hover:bg-white/10 text-white/60 py-4 rounded-xl font-black uppercase tracking-widest text-xs transition-all">
+                                    Falsa Alarma
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -262,4 +366,15 @@ function IncidentCard({ incident, onTake }: { incident: any, onTake: () => void 
       </div>
     </div>
   );
+}
+
+function Step({ number, text, active = false }: { number: number, text: string, active?: boolean }) {
+    return (
+        <div className={`flex gap-4 items-center p-3 rounded-xl transition-all ${active ? 'bg-brand-blue/20 border border-brand-blue/30' : 'opacity-40'}`}>
+            <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${active ? 'bg-brand-blue text-white' : 'bg-white/10 text-white'}`}>
+                {number}
+            </div>
+            <p className="text-xs font-bold text-white/90 leading-tight">{text}</p>
+        </div>
+    )
 }

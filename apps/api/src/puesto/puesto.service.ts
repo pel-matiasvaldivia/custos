@@ -26,7 +26,11 @@ export class PuestoService {
     });
   }
 
-  async update(id: string, tenantId: string, data: Prisma.PuestoUncheckedUpdateInput) {
+  async update(
+    id: string,
+    tenantId: string,
+    data: Prisma.PuestoUncheckedUpdateInput,
+  ) {
     await this.findOne(id, tenantId);
     return this.prisma.puesto.update({
       where: { id },
@@ -38,7 +42,11 @@ export class PuestoService {
    * CENTRAL STAFFING FORMULA
    * dotacion = H_cubrir / (horas_nominales_mes * (1 - tasa_ausentismo))
    */
-  async calculateStaffing(hCubrir: number, hNominales: number = 192, tasaAusentismo: number = 0.10) {
+  async calculateStaffing(
+    hCubrir: number,
+    hNominales: number = 192,
+    tasaAusentismo: number = 0.1,
+  ) {
     const hEfectivas = hNominales * (1 - tasaAusentismo);
     const dotacion = hCubrir / hEfectivas;
     return {

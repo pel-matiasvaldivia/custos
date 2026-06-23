@@ -2,7 +2,7 @@ import { Controller, Get, Body, Put, UseGuards, Request } from '@nestjs/common';
 import { CostosService } from './costos.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/v1/costos')
+@Controller('config/costos')
 @UseGuards(JwtAuthGuard)
 export class CostosController {
   constructor(private readonly costosService: CostosService) {}

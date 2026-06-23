@@ -32,7 +32,11 @@ export class VigilanteService {
     });
   }
 
-  async update(id: string, tenantId: string, data: Prisma.VigiladorUncheckedUpdateInput) {
+  async update(
+    id: string,
+    tenantId: string,
+    data: Prisma.VigiladorUncheckedUpdateInput,
+  ) {
     // Ensure it belongs to the tenant
     await this.findOne(id, tenantId);
     return this.prisma.vigilador.update({

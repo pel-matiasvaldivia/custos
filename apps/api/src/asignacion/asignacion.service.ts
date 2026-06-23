@@ -39,7 +39,7 @@ export class AsignacionService {
               hora_fin: '20:00',
               estado: 'PENDIENTE',
             },
-          })
+          }),
         );
       }
     }
@@ -63,7 +63,7 @@ export class AsignacionService {
       orderBy: { fecha: 'asc' },
     });
   }
-  
+
   async asignVigilante(id: string, tenantId: string, vigiladorId: string) {
     // HARD BLOCK: Check for expired credentials
     const now = new Date();
@@ -78,8 +78,10 @@ export class AsignacionService {
     });
 
     if (expiredCredentials.length > 0) {
-      const types = expiredCredentials.map(c => c.tipo).join(', ');
-      throw new Error(`BLOQUEO DURO: El vigilador tiene credenciales vencidas (${types}).`);
+      const types = expiredCredentials.map((c) => c.tipo).join(', ');
+      throw new Error(
+        `BLOQUEO DURO: El vigilador tiene credenciales vencidas (${types}).`,
+      );
     }
 
     return this.prisma.asignacion.update({

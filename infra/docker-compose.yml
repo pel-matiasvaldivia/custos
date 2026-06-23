@@ -50,6 +50,15 @@ services:
       - "9800:9000"
       - "9801:9001"
 
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    ports:
+      - "1935:1935" # RTMP
+      - "8554:8554" # RTSP
+      - "8888:8888" # HLS
+      - "8889:8889" # WebRTC
+      - "9997:9997" # API
+
 volumes:
   pgdata:
   miniodata:

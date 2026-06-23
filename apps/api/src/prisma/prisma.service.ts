@@ -14,14 +14,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
   async $connect() {
     await super.$connect();
-    
+
     // Add extension to set app.current_tenant on every query
     this.$use(async (params, next) => {
       const tenantId = this.tenantContext.getTenantId();
       if (tenantId) {
-        await this.$executeRawUnsafe(
-          `SET app.current_tenant = '${tenantId}'`
-        );
+        await this.$executeRawUnsafe(`SET app.current_tenant = '${tenantId}'`);
       }
       return next(params);
     });

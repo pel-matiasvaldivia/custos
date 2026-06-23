@@ -1,8 +1,17 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { PuestoService } from './puesto.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/v1/puestos')
+@Controller('puestos')
 @UseGuards(JwtAuthGuard)
 export class PuestoController {
   constructor(private readonly puestoService: PuestoService) {}
@@ -21,7 +30,11 @@ export class PuestoController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
     return this.puestoService.update(id, req.user.tenantId, body);
   }
 }

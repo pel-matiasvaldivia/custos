@@ -16,10 +16,10 @@ export class CostosService {
       config = await this.prisma.configuracionCostos.create({
         data: {
           tenant_id: tenantId,
-          costo_hora_base: new Prisma.Decimal(2500.00),
+          costo_hora_base: new Prisma.Decimal(2500.0),
           cargas_sociales: new Prisma.Decimal(0.45),
-          costos_uniforme: new Prisma.Decimal(15000.00),
-          otros_costos: new Prisma.Decimal(5000.00),
+          costos_uniforme: new Prisma.Decimal(15000.0),
+          otros_costos: new Prisma.Decimal(5000.0),
           factor_ajuste: new Prisma.Decimal(1.0),
         },
       });

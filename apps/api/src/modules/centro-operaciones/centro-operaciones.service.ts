@@ -12,7 +12,14 @@ export class CentroOperacionesService {
   ) {}
 
   async processEvent(data: any) {
-    const { tenant_id, objetivo_id, dispositivo_id, tipo, severidad, id_origen } = data;
+    const {
+      tenant_id,
+      objetivo_id,
+      dispositivo_id,
+      tipo,
+      severidad,
+      id_origen,
+    } = data;
 
     // 1. Deduplication (Idempotencia)
     if (id_origen) {
@@ -41,8 +48,21 @@ export class CentroOperacionesService {
       },
     });
 
-    // 3. Simple Correlation Logic: If CRITICA or ALTA, check for open incident or create one
-    if (severidad === 'CRITICA' || severidad === 'ALTA' || tipo === 'INTRUSION') {
+    // 3. Update Device Health
+    await this.prisma.dispositivo.update({
+      where: { id: dispositivo_id },
+      data: {
+        ultimo_latido: new Date(),
+        estado: 'EN_LINEA',
+      },
+    });
+
+    // 4. Simple Correlation Logic: If CRITICA or ALTA, check for open incident or create one
+    if (
+      severidad === 'CRITICA' ||
+      severidad === 'ALTA' ||
+      tipo === 'INTRUSION'
+    ) {
       await this.handleIncidentTrigger(event);
     }
 
@@ -55,7 +75,7 @@ export class CentroOperacionesService {
   private async handleIncidentTrigger(event: any) {
     // Check for open incident in the last 5 minutes for the same objective
     const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
-    
+
     let incident = await this.prisma.incidente.findFirst({
       where: {
         tenant_id: event.tenant_id,
@@ -67,9 +87,11 @@ export class CentroOperacionesService {
     });
 
     if (!incident) {
-      const count = await this.prisma.incidente.count({ where: { tenant_id: event.tenant_id } });
+      const count = await this.prisma.incidente.count({
+        where: { tenant_id: event.tenant_id },
+      });
       const codigo = `INC-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, '0')}`;
-      
+
       incident = await this.prisma.incidente.create({
         data: {
           tenant_id: event.tenant_id,
@@ -94,7 +116,10 @@ export class CentroOperacionesService {
   async getActiveIncidents(tenantId: string) {
     return this.prisma.incidente.findMany({
       where: { tenant_id: tenantId, estado: { not: 'RESUELTO' } },
-      include: { objetivo: true, eventos: { orderBy: { ts_evento: 'desc' }, take: 5 } },
+      include: {
+        objetivo: true,
+        eventos: { orderBy: { ts_evento: 'desc' }, take: 5 },
+      },
       orderBy: { abierto_el: 'desc' },
     });
   }
@@ -118,11 +143,18 @@ export class CentroOperacionesService {
       },
     });
 
-    this.coGateway.emitToTenant(incident.tenant_id, 'incident.updated', incident);
+    this.coGateway.emitToTenant(
+      incident.tenant_id,
+      'incident.updated',
+      incident,
+    );
     return incident;
   }
 
-  async resolveIncident(incidentId: string, data: { disposicion: string, resumen: string }) {
+  async resolveIncident(
+    incidentId: string,
+    data: { disposicion: string; resumen: string },
+  ) {
     const incident = await this.prisma.incidente.update({
       where: { id: incidentId },
       data: {
@@ -142,7 +174,19 @@ export class CentroOperacionesService {
       },
     });
 
-    this.coGateway.emitToTenant(incident.tenant_id, 'incident.resolved', incident);
+    this.coGateway.emitToTenant(
+      incident.tenant_id,
+      'incident.resolved',
+      incident,
+    );
     return incident;
+  }
+
+  async getDevices(tenantId: string) {
+    return this.prisma.dispositivo.findMany({
+      where: { tenant_id: tenantId },
+      include: { objetivo: true },
+      orderBy: { created_at: 'desc' },
+    });
   }
 }

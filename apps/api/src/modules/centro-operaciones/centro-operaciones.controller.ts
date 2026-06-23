@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { CentroOperacionesService } from './centro-operaciones.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
@@ -20,9 +28,14 @@ export class CentroOperacionesController {
   @Post('incidentes/:id/resolver')
   async resolveIncident(
     @Param('id') id: string,
-    @Body() data: { disposicion: string, resumen: string }
+    @Body() data: { disposicion: string; resumen: string },
   ) {
     return this.coService.resolveIncident(id, data);
+  }
+
+  @Get('dispositivos')
+  async getDevices(@Request() req: any) {
+    return this.coService.getDevices(req.user.tenantId);
   }
 
   // Debug/Test endpoint to inject manual events

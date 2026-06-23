@@ -12,13 +12,13 @@ export class CotizacionService {
 
   async create(tenantId: string, data: any) {
     const config = await this.costosService.findOne(tenantId);
-    
+
     // Simple calculation logic for the items
     const items = data.items.map((item: any) => {
       const horasMensuales = item.horas_mensuales || 720; // Default 24/7 if not specified
       const costoHora = item.costo_hora || config.costo_hora_base;
       const margen = item.margen || new Prisma.Decimal(0.25); // Target 25% if not specified
-      
+
       const subtotal = new Prisma.Decimal(horasMensuales)
         .mul(costoHora)
         .mul(new Prisma.Decimal(1).add(config.cargas_sociales))
@@ -63,14 +63,14 @@ export class CotizacionService {
     });
 
     if (role === 'OPERADOR') {
-      return cotizaciones.map(c => {
+      return cotizaciones.map((c) => {
         const { total_mensual, ...rest } = c;
         return {
           ...rest,
-          items: c.items.map(i => {
+          items: c.items.map((i) => {
             const { costo_hora, subtotal, ...itemRest } = i;
             return itemRest;
-          })
+          }),
         };
       });
     }
@@ -88,10 +88,10 @@ export class CotizacionService {
       const { total_mensual, ...rest } = cotizacion;
       return {
         ...rest,
-        items: cotizacion.items.map(i => {
+        items: cotizacion.items.map((i) => {
           const { costo_hora, subtotal, ...itemRest } = i;
           return itemRest;
-        })
+        }),
       };
     }
 

@@ -1,8 +1,16 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { CotizacionService } from './cotizacion.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('api/v1/cotizaciones')
+@Controller('cotizaciones')
 @UseGuards(JwtAuthGuard)
 export class CotizacionController {
   constructor(private readonly cotizacionService: CotizacionService) {}
