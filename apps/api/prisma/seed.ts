@@ -4,7 +4,32 @@ import * as bcrypt from 'bcrypt';
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Create a Tenant
+  // 0. Create Master Superadmin Tenant & User
+  const superHash = await bcrypt.hash('CustosSuperAdmin2026!', 10);
+  const masterTenant = await prisma.tenant.upsert({
+    where: { cuit: '00-00000000-0' }, // Dummy unique CUIT for master
+    update: {},
+    create: {
+      nombre: 'CustOS Global Administration',
+      cuit: '00-00000000-0',
+      factor_cobertura: 4.20,
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'superadmin@custos.com.ar' },
+    update: { role: 'SUPERADMIN' },
+    create: {
+      tenant_id: masterTenant.id,
+      email: 'superadmin@custos.com.ar',
+      password: superHash,
+      role: 'SUPERADMIN',
+    }
+  });
+
+  console.log('Master Superadmin initialized.');
+
+  // 1. Create a Sample Tenant for demo
   const tenant = await prisma.tenant.create({
     data: {
       nombre: 'Empresa de Seguridad Local',

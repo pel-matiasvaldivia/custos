@@ -33,8 +33,11 @@ RUN cd apps/api && npx prisma generate
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
+COPY apps/api/entrypoint.sh ./apps/api/entrypoint.sh
+RUN chmod +x ./apps/api/entrypoint.sh
+
 EXPOSE 3000
 
 ENV NODE_ENV=production
 
-CMD ["node", "apps/api/dist/src/main.js"]
+ENTRYPOINT ["./apps/api/entrypoint.sh"]
