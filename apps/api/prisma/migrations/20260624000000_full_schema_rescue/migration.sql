@@ -75,6 +75,7 @@ CREATE TABLE "puestos" (
     "tenant_id" UUID NOT NULL,
     "objetivo_id" UUID NOT NULL,
     "nombre" TEXT NOT NULL,
+    "ubicacion" TEXT,
     "requiere_arma" BOOLEAN NOT NULL DEFAULT false,
     "requiere_movil" BOOLEAN NOT NULL DEFAULT false,
     "esquema_horario" JSONB NOT NULL,
