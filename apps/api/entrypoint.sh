@@ -14,4 +14,4 @@ npx prisma db seed --schema=apps/api/prisma/schema.prisma || echo "Seed encounte
 
 # Start the application
 echo "Starting application..."
-exec node apps/api/dist/src/main.js
+exec node --max-old-space-size=2048 apps/api/dist/src/main.js
