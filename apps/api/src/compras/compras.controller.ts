@@ -10,12 +10,15 @@ import {
 } from '@nestjs/common';
 import { ComprasService } from './compras.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('compras')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ComprasController {
   constructor(private readonly comprasService: ComprasService) {}
 
+  // Crear solicitud: acción operativa, cualquier rol autenticado puede pedir.
   @Post('solicitudes')
   createSolicitud(@Request() req: any, @Body() data: any) {
     return this.comprasService.createSolicitud(
@@ -25,17 +28,25 @@ export class ComprasController {
     );
   }
 
+  // OC y montos: sólo roles con visibilidad financiera.
   @Post('ordenes')
+  @Roles('ADMIN', 'GERENCIA', 'COMPRAS')
   createOrden(@Request() req: any, @Body() data: any) {
-    return this.comprasService.createOrdenCompra(req.user.tenantId, data);
+    return this.comprasService.createOrdenCompra(
+      req.user.tenantId,
+      data,
+      req.user.userId,
+    );
   }
 
   @Get('ordenes')
+  @Roles('ADMIN', 'GERENCIA', 'COMPRAS')
   findAll(@Request() req: any) {
     return this.comprasService.findAllOC(req.user.tenantId);
   }
 
   @Patch('ordenes/:id/recibir')
+  @Roles('ADMIN', 'GERENCIA', 'COMPRAS')
   recibir(@Request() req: any, @Param('id') id: string, @Body() data: any) {
     return this.comprasService.recibirParcial(
       req.user.tenantId,
@@ -45,6 +56,7 @@ export class ComprasController {
   }
 
   @Patch('ordenes/:id/pagar')
+  @Roles('ADMIN', 'GERENCIA', 'COMPRAS')
   pagar(@Request() req: any, @Param('id') id: string, @Body() data: any) {
     return this.comprasService.registrarPago(req.user.tenantId, id, data.monto);
   }

@@ -19,6 +19,9 @@ import { CentroOperacionesModule } from './modules/centro-operaciones/centro-ope
 import { ReportsModule } from './modules/reports/reports.module';
 import { VigilanciaMovilModule } from './modules/vigilancia-movil/vigilancia-movil.module';
 import { RentabilidadModule } from './modules/rentabilidad/rentabilidad.module';
+import { AuditoriaModule } from './modules/auditoria/auditoria.module';
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
+import { FlotaModule } from './modules/flota/flota.module';
 
 @Module({
   imports: [
@@ -39,6 +42,9 @@ import { RentabilidadModule } from './modules/rentabilidad/rentabilidad.module';
     ReportsModule,
     VigilanciaMovilModule,
     RentabilidadModule,
+    AuditoriaModule,
+    NotificacionesModule,
+    FlotaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

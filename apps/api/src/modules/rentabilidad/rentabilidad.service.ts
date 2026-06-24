@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { calcularRentabilidad, ResultadoRentabilidad } from './rentabilidad.domain';
+import { FlotaService } from '../flota/flota.service';
 
 export interface RentabilidadContrato extends ResultadoRentabilidad {
   contratoId: string;
@@ -16,7 +17,10 @@ export interface RentabilidadContrato extends ResultadoRentabilidad {
 
 @Injectable()
 export class RentabilidadService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private flota: FlotaService,
+  ) {}
 
   /**
    * Rentabilidad por contrato del tenant para un período.
@@ -47,9 +51,16 @@ export class RentabilidadService {
 
     const periodo = await this.prisma.periodo.findFirst({
       where: { id: periodoId, tenant_id: tenantId },
-      select: { id: true },
+      select: { id: true, desde: true, hasta: true },
     });
     if (!periodo) throw new NotFoundException('Período no encontrado');
+
+    // Flota imputada por contrato (TCO prorrateado) en el rango del período.
+    const flotaPorContrato = await this.flota.flotaImputadaPorContrato(
+      tenantId,
+      periodo.desde,
+      periodo.hasta,
+    );
 
     const config = await this.prisma.configuracionCostos.findUnique({
       where: { tenant_id: tenantId },
@@ -124,7 +135,6 @@ export class RentabilidadService {
       let facturacion = 0;
       const insumosFaltantes: string[] = [
         'costo_laboral por concepto (tarifas nocturno/extra/feriado)',
-        'flota_imputada (TCO M6)',
       ];
       if (fact) {
         if (fact.modo === 'ABONO_FIJO') {
@@ -139,12 +149,13 @@ export class RentabilidadService {
       // Costo laboral aproximado: hh_reales × costo_hora_base.
       const costoLaboral = hh.reales * costoHoraBase;
       const comprasImputadas = comprasByContrato.get(contratoId) ?? 0;
+      const flotaImputada = flotaPorContrato.get(contratoId) ?? 0;
 
       const base = calcularRentabilidad({
         facturacion,
         costoLaboral,
         comprasImputadas,
-        flotaImputada: 0,
+        flotaImputada,
         umbralErosion,
       });
 

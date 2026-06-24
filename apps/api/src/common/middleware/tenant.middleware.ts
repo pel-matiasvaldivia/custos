@@ -3,6 +3,9 @@ import { Request, Response, NextFunction } from 'express';
 import { TenantContextService } from '../context/tenant-context.service';
 import * as jwt from 'jsonwebtoken';
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
   constructor(private readonly tenantContext: TenantContextService) {}
@@ -12,12 +15,16 @@ export class TenantMiddleware implements NestMiddleware {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];
       try {
-        const decoded: any = jwt.decode(token);
-        if (decoded && decoded.tenantId) {
-          return this.tenantContext.run(decoded.tenantId, () => next());
+        // VERIFY (no decode): valida la firma para que el tenant no sea forjable.
+        const secret = process.env.JWT_SECRET || 'secretKey';
+        const decoded: any = jwt.verify(token, secret);
+        // El claim del payload es `tenant_id` (ver AuthService.login).
+        const tenantId = decoded?.tenant_id;
+        if (tenantId && UUID_RE.test(tenantId)) {
+          return this.tenantContext.run(tenantId, () => next());
         }
-      } catch (e) {
-        // Fallback to next if token is malformed
+      } catch {
+        // Token inválido/expirado → sigue sin contexto de tenant (fail-closed).
       }
     }
     next();

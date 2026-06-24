@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RentabilidadService } from './rentabilidad.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FlotaService } from '../flota/flota.service';
 import { NotFoundException } from '@nestjs/common';
 
 describe('RentabilidadService', () => {
@@ -16,19 +17,29 @@ describe('RentabilidadService', () => {
     ordenCompraItem: { findMany: jest.fn() },
   };
 
+  const mockFlota = {
+    flotaImputadaPorContrato: jest.fn().mockResolvedValue(new Map()),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RentabilidadService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: FlotaService, useValue: mockFlota },
       ],
     }).compile();
 
     service = module.get<RentabilidadService>(RentabilidadService);
     jest.clearAllMocks();
 
+    mockFlota.flotaImputadaPorContrato.mockResolvedValue(new Map());
     mockPrisma.tenant.findUnique.mockResolvedValue({ margen_objetivo: 0.25 });
-    mockPrisma.periodo.findFirst.mockResolvedValue({ id: 'per-1' });
+    mockPrisma.periodo.findFirst.mockResolvedValue({
+      id: 'per-1',
+      desde: new Date('2026-07-01'),
+      hasta: new Date('2026-07-31'),
+    });
     mockPrisma.configuracionCostos.findUnique.mockResolvedValue({
       costo_hora_base: 1000,
     });

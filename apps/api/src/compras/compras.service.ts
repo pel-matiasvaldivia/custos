@@ -4,10 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditoriaService } from '../modules/auditoria/auditoria.service';
 
 @Injectable()
 export class ComprasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditoria: AuditoriaService,
+  ) {}
 
   // Thresholds
   async getThreshold(tenantId: string) {
@@ -31,7 +35,7 @@ export class ComprasService {
   }
 
   // Ordenes de Compra
-  async createOrdenCompra(tenantId: string, data: any) {
+  async createOrdenCompra(tenantId: string, data: any, actorId?: string) {
     const threshold = await this.getThreshold(tenantId);
     const supervisorLimit = threshold?.monto_max_supervisor || 50000; // Default if not set
 
@@ -45,7 +49,7 @@ export class ComprasService {
       estado = 'EN_APROBACION';
     }
 
-    return this.prisma.ordenCompra.create({
+    const oc = await this.prisma.ordenCompra.create({
       data: {
         tenant_id: tenantId,
         solicitud_id: data.solicitud_id,
@@ -65,6 +69,20 @@ export class ComprasService {
       },
       include: { items: true },
     });
+
+    // Acción sensible: alta de OC (queda APROBADA o EN_APROBACION).
+    if (actorId) {
+      await this.auditoria.registrar({
+        tenantId,
+        actorId,
+        entidad: 'ordenes_compra',
+        entidadId: oc.id,
+        accion: 'CREAR',
+        despues: { total: oc.total, estado: oc.estado },
+      });
+    }
+
+    return oc;
   }
 
   async recibirParcial(

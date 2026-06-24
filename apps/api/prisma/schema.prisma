@@ -53,6 +53,8 @@ model Tenant {
   periodos                Periodo[]
   contrato_facturaciones  ContratoFacturacion[]
   conciliaciones_hh       ConciliacionHH[]
+  auditorias              Auditoria[]
+  notificaciones          Notificacion[]
 
   @@map("tenants")
 }
@@ -393,11 +395,121 @@ model Vehiculo {
   marca      String?
   modelo     String?
   year       Int?
+  // Campos M6 (spec MODELOS L488). codigo/tipo nullable por migración aditiva.
+  codigo     String?
+  tipo       String? // COMUN | BLINDADO | MOTO
+  km_actual  Int      @default(0)
+  estado     String   @default("OPERATIVO") // OPERATIVO | EN_TALLER | BAJA
   created_at DateTime @default(now()) @db.Timestamptz
 
-  tenant Tenant @relation(fields: [tenant_id], references: [id])
+  tenant       Tenant                @relation(fields: [tenant_id], references: [id])
+  vencimientos VehiculoVencimiento[]
+  planes       PlanMantenimiento[]
+  ordenes      OrdenTrabajo[]
+  combustible  CargaCombustible[]
+  asignaciones AsignacionMovil[]
 
+  @@unique([tenant_id, codigo])
   @@map("vehiculos")
+}
+
+// ─── M6: Flota (mantenimiento, vencimientos, combustible, TCO) ───────────────
+// DDL del spec MODELOS_M2_A_M6 L501-561.
+model VehiculoVencimiento {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String   @db.Uuid
+  vehiculo_id String   @db.Uuid
+  tipo        String // VTV | SEGURO | PATENTE | HABILITACION_CAUDALES
+  vence_el    DateTime @db.Date
+  estado      String   @default("VIGENTE") // VIGENTE | POR_VENCER | VENCIDO
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
+
+  @@map("vehiculo_vencimientos")
+}
+
+model PlanMantenimiento {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  vehiculo_id  String    @db.Uuid
+  tipo         String // SERVICE | NEUMATICOS | FRENOS ...
+  disparo      String // KM | TIEMPO
+  cada_km      Int?
+  cada_meses   Int?
+  ultimo_km    Int?
+  ultima_fecha DateTime? @db.Date
+  created_at   DateTime  @default(now()) @db.Timestamptz
+
+  vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
+
+  @@map("planes_mantenimiento")
+}
+
+model OrdenTrabajo {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String   @db.Uuid
+  vehiculo_id String   @db.Uuid
+  codigo      String // OT-2026-0077
+  tipo        String // PREVENTIVA | CORRECTIVA
+  estado      String   @default("ABIERTA") // ABIERTA | EN_PROCESO | CERRADA | CANCELADA
+  km_al_abrir Int?
+  taller      String?
+  costo_total Decimal  @default(0) @db.Decimal(14, 2)
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
+  items    OtItem[]
+
+  @@unique([tenant_id, codigo])
+  @@map("ordenes_trabajo")
+}
+
+model OtItem {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id        String   @db.Uuid
+  orden_trabajo_id String   @db.Uuid
+  descripcion      String
+  costo            Decimal  @db.Decimal(14, 2)
+  oc_linea_id      String?  @db.Uuid // si el repuesto vino de una OC de M5
+  created_at       DateTime @default(now()) @db.Timestamptz
+
+  orden OrdenTrabajo @relation(fields: [orden_trabajo_id], references: [id])
+
+  @@map("ot_items")
+}
+
+model CargaCombustible {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String   @db.Uuid
+  vehiculo_id String   @db.Uuid
+  fecha       DateTime @db.Date
+  litros      Decimal  @db.Decimal(8, 2)
+  importe     Decimal  @db.Decimal(14, 2)
+  km          Int
+  rendimiento Decimal? @db.Decimal(6, 2) // km/l calculado
+  contrato_id String?  @db.Uuid
+  objetivo_id String?  @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
+
+  @@map("cargas_combustible")
+}
+
+model AsignacionMovil {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String    @db.Uuid
+  vehiculo_id String    @db.Uuid
+  objetivo_id String?   @db.Uuid
+  contrato_id String?   @db.Uuid
+  desde       DateTime  @db.Timestamptz
+  hasta       DateTime? @db.Timestamptz
+  created_at  DateTime  @default(now()) @db.Timestamptz
+
+  vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
+
+  @@map("asignaciones_movil")
 }
 
 model Dispositivo {
@@ -645,4 +757,42 @@ model ConciliacionHH {
   contrato Contrato @relation(fields: [contrato_id], references: [id])
 
   @@map("conciliacion_hh")
+}
+
+// ─── Plataforma: Auditoría y Notificaciones ─────────────────────────────────
+// auditoria: registro inmutable (append-only, sin soft-delete) de acciones
+// sensibles. DDL del spec MODELOS_M2_A_M6 L609.
+model Auditoria {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String   @db.Uuid
+  actor_id    String   @db.Uuid
+  entidad     String // 'ordenes_compra', 'cotizaciones', ...
+  entidad_id  String   @db.Uuid
+  accion      String // CREAR | EDITAR | APROBAR | ANULAR | CERRAR | REABRIR
+  antes       Json?
+  despues     Json?
+  ocurrida_en DateTime @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id, entidad, entidad_id])
+  @@map("auditoria")
+}
+
+// notificaciones: DDL del spec MODELOS_M2_A_M6 L626.
+model Notificacion {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String    @db.Uuid
+  destinatario_id String    @db.Uuid
+  tipo            String // CREDENCIAL_POR_VENCER | NOVEDAD_CRITICA | OC_APROBAR | VENCIMIENTO_FLOTA | EROSION_MARGEN
+  canal           String // IN_APP | EMAIL | WHATSAPP
+  payload         Json
+  leida           Boolean   @default(false)
+  enviada_en      DateTime? @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@index([tenant_id, destinatario_id, leida])
+  @@map("notificaciones")
 }
