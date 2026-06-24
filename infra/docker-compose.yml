@@ -6,6 +6,7 @@ services:
     #   dockerfile: apps/api/Dockerfile
     environment:
       DATABASE_URL: "postgresql://postgres:postgres_password@postgres:5432/custos_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
       JWT_SECRET: "secretKey"
     depends_on:
       - postgres
