@@ -9,6 +9,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Trust proxy headers from Nginx Proxy Manager
+  app.set('trust proxy', 1);
+
   // Global API prefix
   app.setGlobalPrefix('api/v1');
 

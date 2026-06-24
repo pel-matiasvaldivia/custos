@@ -67,6 +67,8 @@ CREATE TABLE "objetivos" (
     "direccion" TEXT,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lat" DOUBLE PRECISION,
+    "lng" DOUBLE PRECISION,
     CONSTRAINT "objetivos_pkey" PRIMARY KEY ("id")
 );
 
