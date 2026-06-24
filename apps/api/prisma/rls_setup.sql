@@ -22,7 +22,9 @@ BEGIN
             'contratos', 'contrato_facturacion', 'periodos', 'conciliacion_hh',
             'auditoria', 'notificaciones',
             'vehiculo_vencimientos', 'planes_mantenimiento', 'ordenes_trabajo',
-            'ot_items', 'cargas_combustible', 'asignaciones_movil'
+            'ot_items', 'cargas_combustible', 'asignaciones_movil',
+            'reglas_laborales', 'esquemas_turno', 'asignaciones_esquema',
+            'turnos_planificados', 'relevos', 'puesto_cobertura'
         )
     ) LOOP
         -- Enable RLS

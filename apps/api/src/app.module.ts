@@ -22,6 +22,7 @@ import { RentabilidadModule } from './modules/rentabilidad/rentabilidad.module';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { FlotaModule } from './modules/flota/flota.module';
+import { CuadranteModule } from './modules/cuadrante/cuadrante.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { FlotaModule } from './modules/flota/flota.module';
     AuditoriaModule,
     NotificacionesModule,
     FlotaModule,
+    CuadranteModule,
   ],
   controllers: [AppController],
   providers: [AppService],

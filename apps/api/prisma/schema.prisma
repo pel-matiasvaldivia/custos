@@ -55,6 +55,12 @@ model Tenant {
   conciliaciones_hh       ConciliacionHH[]
   auditorias              Auditoria[]
   notificaciones          Notificacion[]
+  esquemas_turno          EsquemaTurno[]
+  asignaciones_esquema    AsignacionEsquema[]
+  turnos_planificados     TurnoPlanificado[]
+  puesto_coberturas       PuestoCobertura[]
+  reglas_laborales        ReglaLaboral?
+  relevos                 Relevo[]
 
   @@map("tenants")
 }
@@ -795,4 +801,111 @@ model Notificacion {
 
   @@index([tenant_id, destinatario_id, leida])
   @@map("notificaciones")
+}
+
+// ─── M1: Motor de tiempo / Cuadrante ─────────────────────────────────────────
+// DDL del spec MODELO_MOTOR_DE_TIEMPO_Y_CUADRANTE.md L95-159.
+// NOTA: por simplicidad y para no colisionar con la tabla `asistencias` del
+// flujo placeholder (Asignacion), la asistencia real se guarda INLINE en
+// turnos_planificados (inicio_real/fin_real/metodo/asistencia_estado).
+
+model ReglaLaboral {
+  id                            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id                     String   @unique @db.Uuid
+  jornada_max_semanal_h         Int      @default(48)
+  tope_semanal_con_extra_h      Int      @default(60)
+  descanso_min_entre_jornadas_h Int      @default(12)
+  max_dias_consecutivos         Int      @default(6)
+  ventana_nocturna_inicio       String   @default("21:00")
+  ventana_nocturna_fin          String   @default("06:00")
+  factor_cobertura              Decimal  @default(4.20) @db.Decimal(4, 2)
+  created_at                    DateTime @default(now()) @db.Timestamptz
+  updated_at                    DateTime @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("reglas_laborales")
+}
+
+model EsquemaTurno {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String    @db.Uuid
+  nombre     String
+  dias_ciclo Int
+  definicion Json // ver §3 del spec
+  created_at DateTime  @default(now()) @db.Timestamptz
+  deleted_at DateTime? @db.Timestamptz
+
+  tenant       Tenant              @relation(fields: [tenant_id], references: [id])
+  asignaciones AsignacionEsquema[]
+
+  @@map("esquemas_turno")
+}
+
+model AsignacionEsquema {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String    @db.Uuid
+  puesto_id      String    @db.Uuid
+  vigilador_id   String    @db.Uuid
+  esquema_id     String    @db.Uuid
+  posicion_ciclo Int       @default(0)
+  fecha_ancla    DateTime  @db.Date
+  vigente_desde  DateTime  @db.Date
+  vigente_hasta  DateTime? @db.Date
+  created_at     DateTime  @default(now()) @db.Timestamptz
+
+  tenant  Tenant             @relation(fields: [tenant_id], references: [id])
+  esquema EsquemaTurno       @relation(fields: [esquema_id], references: [id])
+  turnos  TurnoPlanificado[]
+
+  @@map("asignaciones_esquema")
+}
+
+model TurnoPlanificado {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id             String    @db.Uuid
+  puesto_id             String    @db.Uuid
+  vigilador_id          String    @db.Uuid
+  asignacion_esquema_id String?   @db.Uuid
+  inicio_plan           DateTime  @db.Timestamptz
+  fin_plan              DateTime  @db.Timestamptz
+  tipo_bloque           String? // DIURNO | NOCTURNO | MIXTO
+  estado                String    @default("PLANIFICADA")
+  // Asistencia inline (ver NOTA arriba).
+  inicio_real           DateTime? @db.Timestamptz
+  fin_real              DateTime? @db.Timestamptz
+  metodo                String? // GEO | QR | NFC | MANUAL
+  asistencia_estado     String    @default("PENDIENTE") // PENDIENTE | OK | OBSERVADA | AUSENTE
+
+  tenant            Tenant             @relation(fields: [tenant_id], references: [id])
+  asignacionEsquema AsignacionEsquema? @relation(fields: [asignacion_esquema_id], references: [id])
+
+  @@index([tenant_id, vigilador_id, inicio_plan])
+  @@index([tenant_id, puesto_id, inicio_plan])
+  @@map("turnos_planificados")
+}
+
+model Relevo {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id         String   @db.Uuid
+  turno_original_id String   @db.Uuid
+  turno_relevo_id   String   @db.Uuid
+  motivo            String?
+  created_at        DateTime @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("relevos")
+}
+
+model PuestoCobertura {
+  id                 String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id          String @db.Uuid
+  puesto_id          String @db.Uuid
+  dotacion_requerida Int    @default(1)
+  ventana            Json
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("puesto_cobertura")
 }
