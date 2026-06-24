@@ -2,6 +2,7 @@ import {
   duracionHoras,
   horasNocturnas,
   conciliarHH,
+  horasExtraPorSemana,
   TurnoConciliable,
 } from './conciliacion.domain';
 
@@ -76,6 +77,43 @@ describe('conciliacion.domain', () => {
     it('normales = reales − nocturnas', () => {
       const r = conciliarHH(turnos, { modo: 'POR_REAL', penalizaHueco: false });
       expect(r.hh_normales).toBe(r.hh_reales - r.hh_nocturnas);
+    });
+  });
+
+  describe('horasExtraPorSemana', () => {
+    it('0 si no hay cubiertos', () => {
+      expect(horasExtraPorSemana([], 48)).toBe(0);
+    });
+
+    it('0 si cada vigilador no excede el tope semanal', () => {
+      const turnos: TurnoConciliable[] = [
+        { inicioPlan: D('2026-06-01T08:00'), finPlan: D('2026-06-01T20:00'),
+          inicioReal: D('2026-06-01T08:00'), finReal: D('2026-06-01T20:00'),
+          esCubierto: true, esFeriado: false, vigiladorId: 'v1' },
+        { inicioPlan: D('2026-06-02T08:00'), finPlan: D('2026-06-02T20:00'),
+          inicioReal: D('2026-06-02T08:00'), finReal: D('2026-06-02T20:00'),
+          esCubierto: true, esFeriado: false, vigiladorId: 'v2' },
+      ];
+      expect(horasExtraPorSemana(turnos, 48)).toBe(0);
+    });
+
+    it('detecta extra en el vigilador que excede el tope semanal', () => {
+      // v1: 5 turnos de 12h = 60h → 12h extra. v2: 4 turnos de 12h = 48h → 0.
+      const turnos: TurnoConciliable[] = '12345'.split('').map((_, i) => ({
+        inicioPlan: D(`2026-06-0${i + 1}T08:00`),
+        finPlan: D(`2026-06-0${i + 1}T20:00`),
+        inicioReal: D(`2026-06-0${i + 1}T08:00`),
+        finReal: D(`2026-06-0${i + 1}T20:00`),
+        esCubierto: true, esFeriado: false, vigiladorId: 'v1',
+      }));
+      const v2 = '1234'.split('').map((_, i) => ({
+        inicioPlan: D(`2026-06-0${i + 1}T08:00`),
+        finPlan: D(`2026-06-0${i + 1}T20:00`),
+        inicioReal: D(`2026-06-0${i + 1}T08:00`),
+        finReal: D(`2026-06-0${i + 1}T20:00`),
+        esCubierto: true, esFeriado: false, vigiladorId: 'v2',
+      }));
+      expect(horasExtraPorSemana([...turnos, ...v2], 48)).toBe(12);
     });
   });
 });

@@ -166,6 +166,7 @@ model Puesto {
   puntos_control PuntoControl[]
   rondas         Ronda[]
 
+  @@unique([tenant_id, nombre])
   @@map("puestos")
 }
 

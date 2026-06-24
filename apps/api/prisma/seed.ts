@@ -30,20 +30,25 @@ async function main() {
   console.log('Master Superadmin initialized.');
 
   // 1. Create a Sample Tenant for demo
-  const tenant = await prisma.tenant.create({
-    data: {
+  const tenant = await prisma.tenant.upsert({
+    where: { cuit: '30-12345678-9' },
+    update: {},
+    create: {
       nombre: 'Empresa de Seguridad Local',
+      cuit: '30-12345678-9',
       factor_cobertura: 4.25,
       margen_objetivo: 0.2000,
     },
   });
 
-  console.log('Created tenant:', tenant.nombre);
+  console.log('Sample tenant initialized:', tenant.nombre);
 
   // 2. Create an Admin User
   const passwordHash = await bcrypt.hash('admin123', 10);
-  const admin = await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'admin@custos.com.ar' },
+    update: {},
+    create: {
       tenant_id: tenant.id,
       email: 'admin@custos.com.ar',
       password: passwordHash,
@@ -51,62 +56,51 @@ async function main() {
     },
   });
 
-  console.log('Created admin user:', admin.email);
+  console.log('Sample admin user initialized.');
 
   // 3. Create Sample Vigiladores
-  const v1 = await prisma.vigilador.create({
-    data: {
-      tenant_id: tenant.id,
-      legajo_nro: 'V001',
-      nombre: 'Juan',
-      apellido: 'Pérez',
-      documento: '28.123.456',
-      estado: 'ACTIVO',
-    },
-  });
+  const vigiladores = [
+    { legajo: 'V001', nombre: 'Juan', apellido: 'Pérez', dni: '28.123.456' },
+    { legajo: 'V002', nombre: 'María', apellido: 'González', dni: '31.987.654' },
+    { legajo: 'V003', nombre: 'Ricardo', apellido: 'Tapia', dni: '25.444.555', estado: 'SUSPENDIDO' },
+  ];
 
-  const v2 = await prisma.vigilador.create({
-    data: {
-      tenant_id: tenant.id,
-      legajo_nro: 'V002',
-      nombre: 'María',
-      apellido: 'González',
-      documento: '31.987.654',
-      estado: 'ACTIVO',
-    },
-  });
+  for (const v of vigiladores) {
+    await prisma.vigilador.upsert({
+      where: { tenant_id_legajo_nro: { tenant_id: tenant.id, legajo_nro: v.legajo } },
+      update: {},
+      create: {
+        tenant_id: tenant.id,
+        legajo_nro: v.legajo,
+        nombre: v.nombre,
+        apellido: v.apellido,
+        documento: v.dni,
+        estado: v.estado ?? 'ACTIVO',
+      },
+    });
+  }
 
-  const v3 = await prisma.vigilador.create({
-    data: {
-      tenant_id: tenant.id,
-      legajo_nro: 'V003',
-      nombre: 'Ricardo',
-      apellido: 'Tapia',
-      documento: '25.444.555',
-      estado: 'SUSPENDIDO',
-    },
-  });
-
-  console.log('Created sample vigiladores');
+  console.log('Sample vigiladores initialized.');
 
   // 4. Create Sample Puestos
-  const p1 = await prisma.puesto.create({
-    data: {
-      tenant_id: tenant.id,
-      nombre: 'Objetivo Centro - Acceso A',
-      ubicacion: 'Av. Corrientes 1234, CABA',
-    },
-  });
+  const puestos = [
+    { nombre: 'Objetivo Centro - Acceso A', ubicacion: 'Av. Corrientes 1234, CABA' },
+    { nombre: 'Fábrica Sur - Portón 2', ubicacion: 'Ruta 3 km 45, Cañuelas' },
+  ];
 
-  const p2 = await prisma.puesto.create({
-    data: {
-      tenant_id: tenant.id,
-      nombre: 'Fábrica Sur - Portón 2',
-      ubicacion: 'Ruta 3 km 45, Cañuelas',
-    },
-  });
+  for (const p of puestos) {
+    await prisma.puesto.upsert({
+      where: { tenant_id_nombre: { tenant_id: tenant.id, nombre: p.nombre } },
+      update: {},
+      create: {
+        tenant_id: tenant.id,
+        nombre: p.nombre,
+        ubicacion: p.ubicacion,
+      },
+    });
+  }
 
-  console.log('Created sample puestos');
+  console.log('Sample puestos initialized.');
 }
 
 main()

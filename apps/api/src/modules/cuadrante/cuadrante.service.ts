@@ -11,6 +11,7 @@ import {
   ModoFacturacion,
 } from './conciliacion.domain';
 import { validarTurno, ReglasValidacion } from './validacion.domain';
+import { detectarCobertura, VentanaCobertura } from './cobertura.domain';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 
 function horaNum(hhmm: string): number {
@@ -180,7 +181,11 @@ export class CuadranteService {
     // Reglas (ventana nocturna) del tenant.
     const reglas = await this.prisma.reglaLaboral.findUnique({
       where: { tenant_id: tenantId },
-      select: { ventana_nocturna_inicio: true, ventana_nocturna_fin: true },
+      select: {
+        ventana_nocturna_inicio: true,
+        ventana_nocturna_fin: true,
+        jornada_max_semanal_h: true,
+      },
     });
     const nocheInicio = reglas ? horaNum(reglas.ventana_nocturna_inicio) : 21;
     const nocheFin = reglas ? horaNum(reglas.ventana_nocturna_fin) : 6;
@@ -225,6 +230,7 @@ export class CuadranteService {
           inicio_real: true,
           fin_real: true,
           asistencia_estado: true,
+          vigilador_id: true,
         },
       });
       if (turnos.length === 0) continue;
@@ -236,17 +242,20 @@ export class CuadranteService {
         finReal: t.fin_real,
         esCubierto: t.asistencia_estado === 'OK' && !!t.inicio_real && !!t.fin_real,
         esFeriado: feriadoSet.has(t.inicio_plan.toISOString().slice(0, 10)),
+        vigiladorId: t.vigilador_id,
       }));
 
       const fact = factByContrato.get(contrato.id);
       const modo: ModoFacturacion =
         (fact?.modo as ModoFacturacion) ?? 'POR_PLANIFICADO';
+      const topeSemanalH = reglas?.jornada_max_semanal_h ?? 48;
 
       const hh = conciliarHH(conciliables, {
         modo,
         penalizaHueco: fact?.penaliza_hueco ?? false,
         nocheInicioHora: nocheInicio,
         nocheFinHora: nocheFin,
+        topeSemanalH,
       });
 
       snapshots.push(
@@ -286,5 +295,51 @@ export class CuadranteService {
     }
 
     return { periodo: periodoId, conciliaciones: snapshots.length };
+  }
+
+  /**
+   * Detección de cobertura de un puesto en [desde, hasta]: compara los turnos
+   * planificados contra la ventana y dotación requerida de puesto_cobertura,
+   * reportando huecos y sobre-dotación (spec §6).
+   */
+  async detectarCoberturaPuesto(
+    tenantId: string,
+    puestoId: string,
+    desde: Date,
+    hasta: Date,
+  ) {
+    const cobertura = await this.prisma.puestoCobertura.findFirst({
+      where: { tenant_id: tenantId, puesto_id: puestoId },
+    });
+    if (!cobertura) {
+      throw new NotFoundException(
+        'El puesto no tiene cobertura configurada (puesto_cobertura)',
+      );
+    }
+
+    const turnos = await this.prisma.turnoPlanificado.findMany({
+      where: {
+        tenant_id: tenantId,
+        puesto_id: puestoId,
+        inicio_plan: { lt: hasta },
+        fin_plan: { gt: desde },
+      },
+      select: { inicio_plan: true, fin_plan: true },
+    });
+
+    const resultado = detectarCobertura(
+      turnos.map((t) => ({ inicio: t.inicio_plan, fin: t.fin_plan })),
+      cobertura.dotacion_requerida,
+      cobertura.ventana as unknown as VentanaCobertura,
+      desde,
+      hasta,
+    );
+
+    return {
+      puestoId,
+      dotacionRequerida: cobertura.dotacion_requerida,
+      huecos: resultado.huecos,
+      sobreDotacion: resultado.sobre,
+    };
   }
 }

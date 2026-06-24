@@ -20,6 +20,7 @@ export interface TurnoConciliable {
   finReal: Date | null;
   esCubierto: boolean;
   esFeriado: boolean;
+  vigiladorId?: string; // necesario para hh_extra (agrupación por vigilador)
 }
 
 export interface OpcionesConciliacion {
@@ -29,6 +30,8 @@ export interface OpcionesConciliacion {
   nocheInicioHora?: number;
   /** Hora de fin de la ventana nocturna (default 6). */
   nocheFinHora?: number;
+  /** Tope semanal para horas extra (default 48). */
+  topeSemanalH?: number;
 }
 
 export interface CubetasHH {
@@ -70,6 +73,47 @@ export function horasNocturnas(
     if (esNoche) nocturnas += paso;
   }
   return r2(nocturnas / MS_HORA);
+}
+
+/** Lunes (00:00) de la semana ISO de una fecha. */
+function inicioSemana(d: Date): number {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dow = (x.getDay() + 6) % 7; // lunes=0
+  return x.getTime() - dow * 86_400_000;
+}
+
+/**
+ * Horas extra totales: suma, por vigilador y semana, las horas que exceden
+ * el tope semanal de la ReglaLaboral. La conciliación agrupa turnos de
+ * varios vigiladores, y cada uno tiene su propio tope semanal.
+ */
+export function horasExtraPorSemana(
+  turnos: TurnoConciliable[],
+  topeSemanalH: number,
+): number {
+  const cubiertos = turnos.filter(
+    (t) => t.esCubierto && t.inicioReal && t.finReal && t.vigiladorId,
+  );
+  if (cubiertos.length === 0) return 0;
+
+  // Agrupa por vigilador → semana → suma de horas reales.
+  const porVig = new Map<string, Map<number, number>>();
+  for (const t of cubiertos) {
+    const v = t.vigiladorId!;
+    const sem = inicioSemana(t.inicioReal!);
+    const h = duracionHoras(t.inicioReal!, t.finReal!);
+    if (!porVig.has(v)) porVig.set(v, new Map());
+    const semMap = porVig.get(v)!;
+    semMap.set(sem, (semMap.get(sem) ?? 0) + h);
+  }
+
+  let totalExtra = 0;
+  for (const semanas of porVig.values()) {
+    for (const hSem of semanas.values()) {
+      if (hSem > topeSemanalH) totalExtra += hSem - topeSemanalH;
+    }
+  }
+  return r2(totalExtra);
 }
 
 export function conciliarHH(
@@ -137,9 +181,10 @@ export function conciliarHH(
   // Partición sobre lo real (spec L341).
   const hh_normales = r2(Math.max(0, hh_reales - hh_nocturnas));
 
-  // hh_extra requiere las reglas laborales (tope semanal) que el esquema no
-  // tiene; se deja en 0. // TODO(M1): calcular con ReglaLaboral.
-  const hh_extra = 0;
+  const hh_extra = r2(horasExtraPorSemana(
+    turnos,
+    opts.topeSemanalH ?? 48,
+  ));
 
   return {
     hh_planificadas,

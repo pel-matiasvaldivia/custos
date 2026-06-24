@@ -63,6 +63,7 @@ describe('CuadranteService.cerrarPeriodo', () => {
         inicio_real: new Date('2026-07-01T08:00'),
         fin_real: new Date('2026-07-01T20:00'),
         asistencia_estado: 'OK',
+        vigilador_id: 'v1',
       },
     ]);
     mockPrisma.conciliacionHH.create.mockResolvedValue({ id: 'co1' });

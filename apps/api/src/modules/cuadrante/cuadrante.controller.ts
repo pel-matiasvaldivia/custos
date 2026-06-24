@@ -1,4 +1,14 @@
-import { Controller, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  BadRequestException,
+} from '@nestjs/common';
 import { CuadranteService } from './cuadrante.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard';
@@ -22,6 +32,26 @@ export class CuadranteController {
       asignacionEsquemaId,
       new Date(body.desde),
       new Date(body.hasta),
+    );
+  }
+
+  // Detección de cobertura de un puesto: huecos y sobre-dotación.
+  @Get('cobertura/:puestoId')
+  @Roles('ADMIN', 'GERENCIA', 'SUPERVISOR', 'OPERADOR')
+  cobertura(
+    @Request() req: any,
+    @Param('puestoId') puestoId: string,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+  ) {
+    if (!desde || !hasta) {
+      throw new BadRequestException('Parámetros "desde" y "hasta" obligatorios');
+    }
+    return this.cuadranteService.detectarCoberturaPuesto(
+      req.user.tenantId,
+      puestoId,
+      new Date(desde),
+      new Date(hasta),
     );
   }
 
