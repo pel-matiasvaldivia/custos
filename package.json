@@ -16,5 +16,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "prisma": {
+    "seed": "ts-node apps/api/prisma/seed.ts"
+  }
 }
