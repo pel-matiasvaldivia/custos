@@ -18,6 +18,6 @@
     "packages/*"
   ],
   "prisma": {
-    "seed": "ts-node --transpile-only apps/api/prisma/seed.ts"
+    "seed": "ts-node --transpile-only --compiler-options {\"module\":\"commonjs\",\"moduleResolution\":\"node\"} apps/api/prisma/seed.ts"
   }
 }
