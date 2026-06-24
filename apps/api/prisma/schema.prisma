@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
@@ -12,100 +12,104 @@ datasource db {
 }
 
 model Tenant {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre           String   // Nombre Comercial
-  razon_social     String?
-  cuit             String?  @unique
-  condicion_iva    String?  // RESPONSABLE_INSCRIPTO | MONOTRIBUTO | EXENTO | CONSUMIDOR_FINAL
-  direccion        String?
-  logo_url         String?
-  email_contacto   String?
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre            String // Nombre Comercial
+  razon_social      String?
+  cuit              String? @unique
+  condicion_iva     String? // RESPONSABLE_INSCRIPTO | MONOTRIBUTO | EXENTO | CONSUMIDOR_FINAL
+  direccion         String?
+  logo_url          String?
+  email_contacto    String?
   telefono_contacto String?
-  
+
   factor_cobertura Decimal  @default(4.20) @db.Decimal(4, 2)
   margen_objetivo  Decimal  @default(0.2500) @db.Decimal(5, 4)
   created_at       DateTime @default(now()) @db.Timestamptz
   updated_at       DateTime @default(now()) @db.Timestamptz
 
-  users            User[]
-  vigiladores      Vigilador[]
-  credenciales     Credencial[]
-  objetivos        Objetivo[]
-  puestos          Puesto[]
-  asignaciones     Asignacion[]
-  asistencias      Asistencia[]
-  feriados             Feriado[]
-  configuracion_costos ConfiguracionCostos?
-  cotizaciones         Cotizacion[]
-  novedades            Novedad[]
-  puntos_control       PuntoControl[]
-  rondas               Ronda[]
-  umbrales_aprobacion  UmbralAprobacion[]
-  solicitudes_compra   SolicitudCompra[]
-  ordenes_compra       OrdenCompra[]
-  vehiculos            Vehiculo[]
-  dispositivos         Dispositivo[]
-  eventos              Evento[]
-  incidentes           Incidente[]
-  procedimientos       Procedimiento[]
+  users                   User[]
+  vigiladores             Vigilador[]
+  credenciales            Credencial[]
+  objetivos               Objetivo[]
+  puestos                 Puesto[]
+  asignaciones            Asignacion[]
+  asistencias             Asistencia[]
+  feriados                Feriado[]
+  configuracion_costos    ConfiguracionCostos?
+  cotizaciones            Cotizacion[]
+  novedades               Novedad[]
+  puntos_control          PuntoControl[]
+  rondas                  Ronda[]
+  umbrales_aprobacion     UmbralAprobacion[]
+  solicitudes_compra      SolicitudCompra[]
+  ordenes_compra          OrdenCompra[]
+  vehiculos               Vehiculo[]
+  dispositivos            Dispositivo[]
+  eventos                 Evento[]
+  incidentes              Incidente[]
+  procedimientos          Procedimiento[]
   programaciones_horarias ProgramacionHoraria[]
+  contratos               Contrato[]
+  periodos                Periodo[]
+  contrato_facturaciones  ContratoFacturacion[]
+  conciliaciones_hh       ConciliacionHH[]
 
   @@map("tenants")
 }
 
 model User {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id  String   @db.Uuid
-  email      String   @unique
-  password         String
-  role             String   @default("OPERADOR") // ADMIN | GERENCIA | SUPERVISOR | OPERADOR | RRHH | COMPRAS
-  failed_attempts  Int      @default(0)
-  locked_until     DateTime? @db.Timestamptz
-  created_at       DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-  deleted_at DateTime? @db.Timestamptz
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String    @db.Uuid
+  email           String    @unique
+  password        String
+  role            String    @default("OPERADOR") // ADMIN | GERENCIA | SUPERVISOR | OPERADOR | RRHH | COMPRAS
+  failed_attempts Int       @default(0)
+  locked_until    DateTime? @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  updated_at      DateTime  @default(now()) @db.Timestamptz
+  deleted_at      DateTime? @db.Timestamptz
 
-  tenant     Tenant           @relation(fields: [tenant_id], references: [id])
+  tenant      Tenant            @relation(fields: [tenant_id], references: [id])
   solicitudes SolicitudCompra[]
 
   @@map("users")
 }
 
 model Vigilador {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  legajo_nro       String
-  nombre           String
-  apellido         String
-  documento        String
-  estado           String   @default("ACTIVO")
-  created_at       DateTime @default(now()) @db.Timestamptz
-  updated_at       DateTime @default(now()) @db.Timestamptz
-  deleted_at       DateTime? @db.Timestamptz
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String    @db.Uuid
+  legajo_nro String
+  nombre     String
+  apellido   String
+  documento  String
+  estado     String    @default("ACTIVO")
+  created_at DateTime  @default(now()) @db.Timestamptz
+  updated_at DateTime  @default(now()) @db.Timestamptz
+  deleted_at DateTime? @db.Timestamptz
 
-  tenant           Tenant       @relation(fields: [tenant_id], references: [id])
-  credenciales     Credencial[]
-  asignaciones     Asignacion[]
-  novedades        Novedad[]
-  rondas           Ronda[]
+  tenant       Tenant       @relation(fields: [tenant_id], references: [id])
+  credenciales Credencial[]
+  asignaciones Asignacion[]
+  novedades    Novedad[]
+  rondas       Ronda[]
 
   @@unique([tenant_id, legajo_nro])
   @@map("vigiladores")
 }
 
 model Credencial {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id     String   @db.Uuid
-  vigilador_id  String   @db.Uuid
-  tipo          String   // CARNET_VIGILADOR | PSICOFISICO | ANTECEDENTES | ANMAC | CAPACITACION
-  numero        String?
-  organismo     String?
-  emitida_el    DateTime? @db.Date
-  vence_el      DateTime? @db.Date
-  created_at    DateTime @default(now()) @db.Timestamptz
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  vigilador_id String    @db.Uuid
+  tipo         String // CARNET_VIGILADOR | PSICOFISICO | ANTECEDENTES | ANMAC | CAPACITACION
+  numero       String?
+  organismo    String?
+  emitida_el   DateTime? @db.Date
+  vence_el     DateTime? @db.Date
+  created_at   DateTime  @default(now()) @db.Timestamptz
 
-  tenant        Tenant    @relation(fields: [tenant_id], references: [id])
-  vigilador     Vigilador @relation(fields: [vigilador_id], references: [id])
+  tenant    Tenant    @relation(fields: [tenant_id], references: [id])
+  vigilador Vigilador @relation(fields: [vigilador_id], references: [id])
 
   @@map("credenciales")
 }
@@ -122,183 +126,185 @@ model Objetivo {
   lat        Float?
   lng        Float?
 
-  tenant     Tenant   @relation(fields: [tenant_id], references: [id])
-  puestos    Puesto[]
-  dispositivos Dispositivo[]
-  eventos      Evento[]
-  incidentes   Incidente[]
-  contactos    ContactoEmergencia[]
+  tenant         Tenant                @relation(fields: [tenant_id], references: [id])
+  puestos        Puesto[]
+  dispositivos   Dispositivo[]
+  eventos        Evento[]
+  incidentes     Incidente[]
+  contactos      ContactoEmergencia[]
   programaciones ProgramacionHoraria[]
+  contratos      Contrato[]
 
   @@unique([tenant_id, codigo])
   @@map("objetivos")
 }
 
 model Puesto {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  objetivo_id      String?  @db.Uuid
-  nombre           String
-  ubicacion        String?
-  requiere_arma    Boolean  @default(false)
-  requiere_movil   Boolean  @default(false)
-  esquema_horario  Json?
-  created_at       DateTime @default(now()) @db.Timestamptz
-  updated_at       DateTime @default(now()) @db.Timestamptz
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String   @db.Uuid
+  objetivo_id     String?  @db.Uuid
+  nombre          String
+  ubicacion       String?
+  requiere_arma   Boolean  @default(false)
+  requiere_movil  Boolean  @default(false)
+  esquema_horario Json?
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  objetivo         Objetivo? @relation(fields: [objetivo_id], references: [id])
-  asignaciones     Asignacion[]
-  novedades        Novedad[]
-  puntos_control   PuntoControl[]
-  rondas           Ronda[]
+  tenant         Tenant         @relation(fields: [tenant_id], references: [id])
+  objetivo       Objetivo?      @relation(fields: [objetivo_id], references: [id])
+  asignaciones   Asignacion[]
+  novedades      Novedad[]
+  puntos_control PuntoControl[]
+  rondas         Ronda[]
 
   @@map("puestos")
 }
 
 model Asignacion {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  puesto_id        String   @db.Uuid
-  vigilador_id     String?  @db.Uuid
-  fecha            DateTime @db.Date
-  hora_inicio      String
-  hora_fin         String
-  estado           String   @default("PLANIFICADA")
-  created_at       DateTime @default(now()) @db.Timestamptz
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  puesto_id    String   @db.Uuid
+  vigilador_id String?  @db.Uuid
+  fecha        DateTime @db.Date
+  hora_inicio  String
+  hora_fin     String
+  estado       String   @default("PLANIFICADA")
+  created_at   DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
-  puesto           Puesto     @relation(fields: [puesto_id], references: [id])
-  vigilador        Vigilador? @relation(fields: [vigilador_id], references: [id])
-  asistencia       Asistencia?
+  tenant     Tenant      @relation(fields: [tenant_id], references: [id])
+  puesto     Puesto      @relation(fields: [puesto_id], references: [id])
+  vigilador  Vigilador?  @relation(fields: [vigilador_id], references: [id])
+  asistencia Asistencia?
 
   @@unique([puesto_id, fecha, hora_inicio], name: "puesto_id_fecha_hora_inicio")
   @@map("asignaciones")
 }
 
 model Asistencia {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  asignacion_id    String   @unique @db.Uuid
-  inicio_real      DateTime? @db.Timestamptz
-  fin_real         DateTime? @db.Timestamptz
-  metodo           String?   // GEO | QR | NFC | MANUAL
-  lat              Decimal?  @db.Decimal(9, 6)
-  lng              Decimal?  @db.Decimal(9, 6)
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id     String    @db.Uuid
+  asignacion_id String    @unique @db.Uuid
+  inicio_real   DateTime? @db.Timestamptz
+  fin_real      DateTime? @db.Timestamptz
+  metodo        String? // GEO | QR | NFC | MANUAL
+  lat           Decimal?  @db.Decimal(9, 6)
+  lng           Decimal?  @db.Decimal(9, 6)
 
-  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
-  asignacion       Asignacion @relation(fields: [asignacion_id], references: [id])
+  tenant     Tenant     @relation(fields: [tenant_id], references: [id])
+  asignacion Asignacion @relation(fields: [asignacion_id], references: [id])
 
   @@map("asistencias")
 }
 
 model Feriado {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  nombre           String
-  fecha            DateTime @db.Date
-  created_at       DateTime @default(now()) @db.Timestamptz
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  nombre     String
+  fecha      DateTime @db.Date
+  created_at DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("feriados")
 }
 
 model ConfiguracionCostos {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid @unique
-  costo_hora_base  Decimal  @db.Decimal(12, 2)
-  cargas_sociales  Decimal  @db.Decimal(5, 4) // e.g. 0.45
-  costos_uniforme  Decimal  @db.Decimal(12, 2)
-  otros_costos     Decimal  @db.Decimal(12, 2)
-  factor_ajuste    Decimal  @default(1.0) @db.Decimal(5, 4)
-  updated_at       DateTime @default(now()) @db.Timestamptz
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String   @unique @db.Uuid
+  costo_hora_base Decimal  @db.Decimal(12, 2)
+  cargas_sociales Decimal  @db.Decimal(5, 4) // e.g. 0.45
+  costos_uniforme Decimal  @db.Decimal(12, 2)
+  otros_costos    Decimal  @db.Decimal(12, 2)
+  factor_ajuste   Decimal  @default(1.0) @db.Decimal(5, 4)
+  updated_at      DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("configuracion_costos")
 }
 
 model Cotizacion {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  cliente_nombre   String
-  vencimiento      DateTime @db.Date
-  estado           String   @default("BORRADOR") // BORRADOR | ENVIADA | ACEPTADA | RECHAZADA
-  total_mensual    Decimal  @db.Decimal(14, 2)
-  created_at       DateTime @default(now()) @db.Timestamptz
-  updated_at       DateTime @default(now()) @db.Timestamptz
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  cliente_nombre String
+  vencimiento    DateTime @db.Date
+  estado         String   @default("BORRADOR") // BORRADOR | ENVIADA | ACEPTADA | RECHAZADA
+  total_mensual  Decimal  @db.Decimal(14, 2)
+  created_at     DateTime @default(now()) @db.Timestamptz
+  updated_at     DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  items            CotizacionItem[]
+  tenant    Tenant           @relation(fields: [tenant_id], references: [id])
+  items     CotizacionItem[]
+  contratos Contrato[]
 
   @@map("cotizaciones")
 }
 
 model CotizacionItem {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  cotizacion_id    String   @db.Uuid
-  puesto_nombre    String
-  horas_mensuales  Int
-  costo_hora       Decimal  @db.Decimal(12, 2)
-  margen           Decimal  @db.Decimal(5, 4)
-  subtotal         Decimal  @db.Decimal(14, 2)
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cotizacion_id   String  @db.Uuid
+  puesto_nombre   String
+  horas_mensuales Int
+  costo_hora      Decimal @db.Decimal(12, 2)
+  margen          Decimal @db.Decimal(5, 4)
+  subtotal        Decimal @db.Decimal(14, 2)
 
-  cotizacion       Cotizacion @relation(fields: [cotizacion_id], references: [id])
+  cotizacion Cotizacion @relation(fields: [cotizacion_id], references: [id])
 
   @@map("cotizacion_items")
 }
 
 model Novedad {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  puesto_id        String?  @db.Uuid
-  vigilador_id     String?  @db.Uuid
-  tipo             String   // GENERAL | ALARMA | RELEVAMIENTO | EMERGENCIA
-  prioridad        String   @default("NORMAL") // BAJA | NORMAL | ALTA | CRITICA
-  descripcion      String
-  adjuntos         String[] // URLs in MinIO
-  created_at       DateTime @default(now()) @db.Timestamptz
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  puesto_id    String?  @db.Uuid
+  vigilador_id String?  @db.Uuid
+  tipo         String // GENERAL | ALARMA | RELEVAMIENTO | EMERGENCIA
+  prioridad    String   @default("NORMAL") // BAJA | NORMAL | ALTA | CRITICA
+  descripcion  String
+  adjuntos     String[] // URLs in MinIO
+  created_at   DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
-  puesto           Puesto?    @relation(fields: [puesto_id], references: [id])
-  vigilador        Vigilador? @relation(fields: [vigilador_id], references: [id])
+  tenant    Tenant     @relation(fields: [tenant_id], references: [id])
+  puesto    Puesto?    @relation(fields: [puesto_id], references: [id])
+  vigilador Vigilador? @relation(fields: [vigilador_id], references: [id])
 
   @@map("novedades")
 }
 
 model PuntoControl {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  puesto_id        String   @db.Uuid
-  nombre           String
-  codigo_qr        String?  @unique
-  nfc_id           String?  @unique
-  lat              Float?
-  lng              Float?
-  created_at       DateTime @default(now()) @db.Timestamptz
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  puesto_id  String   @db.Uuid
+  nombre     String
+  codigo_qr  String?  @unique
+  nfc_id     String?  @unique
+  lat        Float?
+  lng        Float?
+  created_at DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  puesto           Puesto   @relation(fields: [puesto_id], references: [id])
-  marcas           MarcaRonda[]
+  tenant Tenant       @relation(fields: [tenant_id], references: [id])
+  puesto Puesto       @relation(fields: [puesto_id], references: [id])
+  marcas MarcaRonda[]
 
   @@map("puntos_control")
 }
 
 model Ronda {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  puesto_id        String   @db.Uuid
-  vigilador_id     String   @db.Uuid
-  nombre           String
-  hora_inicio      DateTime @default(now()) @db.Timestamptz
-  hora_fin         DateTime? @db.Timestamptz
-  estado           String   @default("EN_PROGRESO") // EN_PROGRESO | COMPLETADA | INCOMPLETA
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  puesto_id    String    @db.Uuid
+  vigilador_id String    @db.Uuid
+  nombre       String
+  hora_inicio  DateTime  @default(now()) @db.Timestamptz
+  hora_fin     DateTime? @db.Timestamptz
+  estado       String    @default("EN_PROGRESO") // EN_PROGRESO | COMPLETADA | INCOMPLETA
 
-  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
-  puesto           Puesto     @relation(fields: [puesto_id], references: [id])
-  vigilador        Vigilador  @relation(fields: [vigilador_id], references: [id])
-  marcas           MarcaRonda[]
+  tenant    Tenant       @relation(fields: [tenant_id], references: [id])
+  puesto    Puesto       @relation(fields: [puesto_id], references: [id])
+  vigilador Vigilador    @relation(fields: [vigilador_id], references: [id])
+  marcas    MarcaRonda[]
 
   @@map("rondas")
 }
@@ -311,38 +317,38 @@ model MarcaRonda {
   lat              Float?
   lng              Float?
 
-  ronda            Ronda        @relation(fields: [ronda_id], references: [id])
-  punto_control    PuntoControl @relation(fields: [punto_control_id], references: [id])
+  ronda         Ronda        @relation(fields: [ronda_id], references: [id])
+  punto_control PuntoControl @relation(fields: [punto_control_id], references: [id])
 
   @@map("marcas_ronda")
 }
 
 model UmbralAprobacion {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  monto_max_supervisor Decimal @db.Decimal(14, 2)
-  created_at       DateTime @default(now()) @db.Timestamptz
-  updated_at       DateTime @default(now()) @db.Timestamptz
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id            String   @db.Uuid
+  monto_max_supervisor Decimal  @db.Decimal(14, 2)
+  created_at           DateTime @default(now()) @db.Timestamptz
+  updated_at           DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("umbrales_aprobacion")
 }
 
 model SolicitudCompra {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  user_id          String   @db.Uuid
-  descripcion      String
-  monto_estimado   Decimal  @db.Decimal(14, 2)
-  estado           String   @default("PENDIENTE") // PENDIENTE | APROBADA | RECHAZADA
-  contrato_id      String?  @db.Uuid
-  vehiculo_id      String?  @db.Uuid
-  created_at       DateTime @default(now()) @db.Timestamptz
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  user_id        String   @db.Uuid
+  descripcion    String
+  monto_estimado Decimal  @db.Decimal(14, 2)
+  estado         String   @default("PENDIENTE") // PENDIENTE | APROBADA | RECHAZADA
+  contrato_id    String?  @db.Uuid
+  vehiculo_id    String?  @db.Uuid
+  created_at     DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  user             User     @relation(fields: [user_id], references: [id])
-  ordenes          OrdenCompra[]
+  tenant  Tenant        @relation(fields: [tenant_id], references: [id])
+  user    User          @relation(fields: [user_id], references: [id])
+  ordenes OrdenCompra[]
 
   @@map("solicitudes_compra")
 }
@@ -357,196 +363,286 @@ model OrdenCompra {
   estado           String   @default("EN_APROBACION") // EN_APROBACION | APROBADA | RECIBIDA | RECIBIDA_PARCIAL | PAGADA | RECHAZADA
   created_at       DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant           @relation(fields: [tenant_id], references: [id])
-  solicitud        SolicitudCompra? @relation(fields: [solicitud_id], references: [id])
-  items            OrdenCompraItem[]
+  tenant    Tenant            @relation(fields: [tenant_id], references: [id])
+  solicitud SolicitudCompra?  @relation(fields: [solicitud_id], references: [id])
+  items     OrdenCompraItem[]
 
   @@map("ordenes_compra")
 }
 
 model OrdenCompraItem {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orden_id         String   @db.Uuid
-  descripcion      String
-  cantidad         Decimal  @db.Decimal(10, 2)
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orden_id          String  @db.Uuid
+  descripcion       String
+  cantidad          Decimal @db.Decimal(10, 2)
   cantidad_recibida Decimal @default(0) @db.Decimal(10, 2)
-  precio_unitario  Decimal  @db.Decimal(14, 2)
-  subtotal         Decimal  @db.Decimal(14, 2)
-  contrato_id      String?  @db.Uuid
-  vehiculo_id      String?  @db.Uuid
+  precio_unitario   Decimal @db.Decimal(14, 2)
+  subtotal          Decimal @db.Decimal(14, 2)
+  contrato_id       String? @db.Uuid
+  vehiculo_id       String? @db.Uuid
 
-  orden            OrdenCompra @relation(fields: [orden_id], references: [id])
+  orden OrdenCompra @relation(fields: [orden_id], references: [id])
 
   @@map("orden_compra_items")
 }
 
 model Vehiculo {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  patente          String   @unique
-  marca            String?
-  modelo           String?
-  year             Int?
-  created_at       DateTime @default(now()) @db.Timestamptz
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  patente    String   @unique
+  marca      String?
+  modelo     String?
+  year       Int?
+  created_at DateTime @default(now()) @db.Timestamptz
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("vehiculos")
 }
 
 model Dispositivo {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  objetivo_id      String   @db.Uuid
-  tipo             String   // PANEL_ALARMA | ENERGIZADOR_CERCO | DVR | NVR | CAMARA_IP | COMUNICADOR | BOTON_PANICO
-  protocolo        String   // SIA_DC09 | CONTACT_ID | ONVIF | ISAPI | DAHUA | MQTT | MODBUS | SNMP | HTTP
-  marca            String?
-  modelo           String?
-  nro_abonado      String?  // cuenta del panel
-  params           Json     @default("{}") // ip, puerto, usuario, secreto_ref, aes_key_ref, supervision_seg
-  estado           String   @default("FUERA_DE_LINEA") // EN_LINEA | FUERA_DE_LINEA | EN_FALLA | DESHABILITADO
-  ultimo_latido    DateTime? @db.Timestamptz
-  created_at       DateTime @default(now()) @db.Timestamptz
-  updated_at       DateTime @default(now()) @db.Timestamptz
-  deleted_at       DateTime? @db.Timestamptz
-  lat              Float?
-  lng              Float?
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id     String    @db.Uuid
+  objetivo_id   String    @db.Uuid
+  tipo          String // PANEL_ALARMA | ENERGIZADOR_CERCO | DVR | NVR | CAMARA_IP | COMUNICADOR | BOTON_PANICO
+  protocolo     String // SIA_DC09 | CONTACT_ID | ONVIF | ISAPI | DAHUA | MQTT | MODBUS | SNMP | HTTP
+  marca         String?
+  modelo        String?
+  nro_abonado   String? // cuenta del panel
+  params        Json      @default("{}") // ip, puerto, usuario, secreto_ref, aes_key_ref, supervision_seg
+  estado        String    @default("FUERA_DE_LINEA") // EN_LINEA | FUERA_DE_LINEA | EN_FALLA | DESHABILITADO
+  ultimo_latido DateTime? @db.Timestamptz
+  created_at    DateTime  @default(now()) @db.Timestamptz
+  updated_at    DateTime  @default(now()) @db.Timestamptz
+  deleted_at    DateTime? @db.Timestamptz
+  lat           Float?
+  lng           Float?
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
-  zonas            Zona[]
-  eventos          Evento[]
+  tenant   Tenant   @relation(fields: [tenant_id], references: [id])
+  objetivo Objetivo @relation(fields: [objetivo_id], references: [id])
+  zonas    Zona[]
+  eventos  Evento[]
 
   @@unique([tenant_id, nro_abonado])
   @@map("dispositivos")
 }
 
 model Zona {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  dispositivo_id   String   @db.Uuid
-  numero_zona      String
-  descripcion      String
-  tipo             String   // ROBO | FUEGO | PANICO | TAMPER | TECNICA | CERCO | APERTURA
-  particion        String?
-  puesto_id        String?  @db.Uuid
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String  @db.Uuid
+  dispositivo_id String  @db.Uuid
+  numero_zona    String
+  descripcion    String
+  tipo           String // ROBO | FUEGO | PANICO | TAMPER | TECNICA | CERCO | APERTURA
+  particion      String?
+  puesto_id      String? @db.Uuid
 
-  dispositivo      Dispositivo @relation(fields: [dispositivo_id], references: [id])
-  eventos          Evento[]
+  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  eventos     Evento[]
 
   @@unique([tenant_id, dispositivo_id, numero_zona])
   @@map("zonas")
 }
 
 model Evento {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  objetivo_id      String   @db.Uuid
-  dispositivo_id   String   @db.Uuid
-  zona_id          String?  @db.Uuid
-  ts_evento        DateTime @default(now()) @db.Timestamptz
-  origen           String   // PANEL | CERCO | CCTV | RONDA | SISTEMA
-  codigo_crudo     String?
-  tipo             String   // taxonomía normalizada
-  severidad        String   // CRITICA | ALTA | MEDIA | BAJA
-  particion        String?
-  usuario_panel    String?
-  id_origen        String?  // idempotencia (abonado+seq | msgId)
-  en_prueba        Boolean  @default(false)
-  incidente_id     String?  @db.Uuid
-  crudo            Json     @default("{}")
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  objetivo_id    String   @db.Uuid
+  dispositivo_id String   @db.Uuid
+  zona_id        String?  @db.Uuid
+  ts_evento      DateTime @default(now()) @db.Timestamptz
+  origen         String // PANEL | CERCO | CCTV | RONDA | SISTEMA
+  codigo_crudo   String?
+  tipo           String // taxonomía normalizada
+  severidad      String // CRITICA | ALTA | MEDIA | BAJA
+  particion      String?
+  usuario_panel  String?
+  id_origen      String? // idempotencia (abonado+seq | msgId)
+  en_prueba      Boolean  @default(false)
+  incidente_id   String?  @db.Uuid
+  crudo          Json     @default("{}")
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
-  dispositivo      Dispositivo @relation(fields: [dispositivo_id], references: [id])
-  zona             Zona?    @relation(fields: [zona_id], references: [id])
-  incidente        Incidente? @relation(fields: [incidente_id], references: [id])
+  tenant      Tenant      @relation(fields: [tenant_id], references: [id])
+  objetivo    Objetivo    @relation(fields: [objetivo_id], references: [id])
+  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  zona        Zona?       @relation(fields: [zona_id], references: [id])
+  incidente   Incidente?  @relation(fields: [incidente_id], references: [id])
 
   @@index([tenant_id, objetivo_id, ts_evento(sort: Desc)])
   @@map("eventos")
 }
 
 model Incidente {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  objetivo_id      String   @db.Uuid
-  codigo           String   // INC-2026-0042
-  tipo             String
-  severidad        String
-  estado           String   @default("NUEVO") // NUEVO | EN_ATENCION | VERIFICANDO | DESPACHADO | RESUELTO
-  operador_id      String?  @db.Uuid
-  sop_id           String?  @db.Uuid
-  abierto_el       DateTime @default(now()) @db.Timestamptz
-  tomado_el        DateTime? @db.Timestamptz
-  despachado_el    DateTime? @db.Timestamptz
-  resuelto_el      DateTime? @db.Timestamptz
-  disposicion      String?  // REAL | FALSA | TECNICA | PRUEBA | SIN_NOVEDAD
-  resumen          String?
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id     String    @db.Uuid
+  objetivo_id   String    @db.Uuid
+  codigo        String // INC-2026-0042
+  tipo          String
+  severidad     String
+  estado        String    @default("NUEVO") // NUEVO | EN_ATENCION | VERIFICANDO | DESPACHADO | RESUELTO
+  operador_id   String?   @db.Uuid
+  sop_id        String?   @db.Uuid
+  abierto_el    DateTime  @default(now()) @db.Timestamptz
+  tomado_el     DateTime? @db.Timestamptz
+  despachado_el DateTime? @db.Timestamptz
+  resuelto_el   DateTime? @db.Timestamptz
+  disposicion   String? // REAL | FALSA | TECNICA | PRUEBA | SIN_NOVEDAD
+  resumen       String?
 
-  tenant           Tenant     @relation(fields: [tenant_id], references: [id])
-  objetivo         Objetivo   @relation(fields: [objetivo_id], references: [id])
-  eventos          Evento[]
-  bitacora         IncidenteBitacora[]
+  tenant   Tenant              @relation(fields: [tenant_id], references: [id])
+  objetivo Objetivo            @relation(fields: [objetivo_id], references: [id])
+  eventos  Evento[]
+  bitacora IncidenteBitacora[]
 
   @@unique([tenant_id, codigo])
   @@map("incidentes")
 }
 
 model IncidenteBitacora {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  incidente_id     String   @db.Uuid
-  ts               DateTime @default(now()) @db.Timestamptz
-  actor_id         String?  @db.Uuid
-  accion           String   // VERIFICACION_VIDEO | LLAMADA_CONTACTO | DESPACHO_MOVIL | AVISO_POLICIA | NOTA | CIERRE
-  detalle          Json     @default("{}")
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  incidente_id String   @db.Uuid
+  ts           DateTime @default(now()) @db.Timestamptz
+  actor_id     String?  @db.Uuid
+  accion       String // VERIFICACION_VIDEO | LLAMADA_CONTACTO | DESPACHO_MOVIL | AVISO_POLICIA | NOTA | CIERRE
+  detalle      Json     @default("{}")
 
-  incidente        Incidente @relation(fields: [incidente_id], references: [id])
+  incidente Incidente @relation(fields: [incidente_id], references: [id])
 
   @@map("incidente_bitacora")
 }
 
 model Procedimiento {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  nombre           String
-  aplica_a         Json     // {tipos:["INTRUSION"], cliente_id?, objetivo_id?}
-  pasos            Json     // [{orden, accion, instruccion, obligatorio}]
-  activo           Boolean  @default(true)
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id String  @db.Uuid
+  nombre    String
+  aplica_a  Json // {tipos:["INTRUSION"], cliente_id?, objetivo_id?}
+  pasos     Json // [{orden, accion, instruccion, obligatorio}]
+  activo    Boolean @default(true)
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("procedimientos")
 }
 
 model ContactoEmergencia {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  objetivo_id      String   @db.Uuid
-  orden            Int
-  nombre           String
-  telefono         String
-  password_normal  String?
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id         String  @db.Uuid
+  objetivo_id       String  @db.Uuid
+  orden             Int
+  nombre            String
+  telefono          String
+  password_normal   String?
   password_coaccion String?
-  rol              String?  // TITULAR | ENCARGADO | EMERGENCIAS
+  rol               String? // TITULAR | ENCARGADO | EMERGENCIAS
 
-  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+  objetivo Objetivo @relation(fields: [objetivo_id], references: [id])
 
   @@map("contactos_emergencia")
 }
 
 model ProgramacionHoraria {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id        String   @db.Uuid
-  objetivo_id      String   @db.Uuid
-  particion        String?
-  dia_semana       Int      // 1..7
-  abre_esperado    String?  // HH:mm
-  cierra_esperado  String?  // HH:mm
-  tolerancia_min   Int      @default(15)
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String  @db.Uuid
+  objetivo_id     String  @db.Uuid
+  particion       String?
+  dia_semana      Int // 1..7
+  abre_esperado   String? // HH:mm
+  cierra_esperado String? // HH:mm
+  tolerancia_min  Int     @default(15)
 
-  tenant           Tenant   @relation(fields: [tenant_id], references: [id])
-  objetivo         Objetivo @relation(fields: [objetivo_id], references: [id])
+  tenant   Tenant   @relation(fields: [tenant_id], references: [id])
+  objetivo Objetivo @relation(fields: [objetivo_id], references: [id])
 
   @@map("programaciones_horarias")
+}
+
+// ─── Rentabilidad / Contratos (Fase 5) ──────────────────────────────────────
+// Los specs no definen DDL para `contratos`, solo lo referencian ("ganar la
+// cotización crea el contrato con su contrato_facturacion"). Se modela mínimo,
+// con FKs estructurales a entidades existentes. cliente_nombre es coherente con
+// Cotizacion (este esquema no tiene tabla Cliente). // TODO: si se agrega Cliente,
+// reemplazar cliente_nombre por cliente_id.
+model Contrato {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String    @db.Uuid
+  codigo         String // CON-2026-0001
+  cliente_nombre String
+  objetivo_id    String?   @db.Uuid
+  cotizacion_id  String?   @db.Uuid
+  estado         String    @default("ACTIVO") // ACTIVO | SUSPENDIDO | FINALIZADO
+  inicio         DateTime? @db.Date
+  fin            DateTime? @db.Date
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  updated_at     DateTime  @default(now()) @db.Timestamptz
+  deleted_at     DateTime? @db.Timestamptz
+
+  tenant         Tenant               @relation(fields: [tenant_id], references: [id])
+  objetivo       Objetivo?            @relation(fields: [objetivo_id], references: [id])
+  cotizacion     Cotizacion?          @relation(fields: [cotizacion_id], references: [id])
+  facturacion    ContratoFacturacion?
+  conciliaciones ConciliacionHH[]
+
+  @@unique([tenant_id, codigo])
+  @@map("contratos")
+}
+
+// Definición exacta del spec M1 (MODELO_MOTOR_DE_TIEMPO_Y_CUADRANTE.md L170).
+model ContratoFacturacion {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  contrato_id    String   @unique @db.Uuid
+  modo           String // POR_PLANIFICADO | POR_REAL | ABONO_FIJO
+  tarifa_hora    Decimal? @db.Decimal(14, 2)
+  abono_mensual  Decimal? @db.Decimal(14, 2)
+  redondeo_min   Int      @default(0) // minutos
+  penaliza_hueco Boolean  @default(false)
+  created_at     DateTime @default(now()) @db.Timestamptz
+  updated_at     DateTime @default(now()) @db.Timestamptz
+
+  tenant   Tenant   @relation(fields: [tenant_id], references: [id])
+  contrato Contrato @relation(fields: [contrato_id], references: [id])
+
+  @@map("contrato_facturacion")
+}
+
+// Definición exacta del spec M1 (MODELO_MOTOR_DE_TIEMPO_Y_CUADRANTE.md L161).
+model Periodo {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  tipo       String // QUINCENA | MES
+  desde      DateTime @db.Date
+  hasta      DateTime @db.Date
+  estado     String   @default("ABIERTO") // ABIERTO | EN_CIERRE | CERRADO
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  tenant         Tenant           @relation(fields: [tenant_id], references: [id])
+  conciliaciones ConciliacionHH[]
+
+  @@map("periodos")
+}
+
+// Definición exacta del spec M1 (MODELO_MOTOR_DE_TIEMPO_Y_CUADRANTE.md L181).
+// Snapshot por período; al CERRADO queda congelada = true.
+model ConciliacionHH {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String  @db.Uuid
+  periodo_id      String  @db.Uuid
+  contrato_id     String  @db.Uuid
+  puesto_id       String? @db.Uuid
+  vigilador_id    String? @db.Uuid
+  hh_planificadas Decimal @default(0) @db.Decimal(10, 2)
+  hh_reales       Decimal @default(0) @db.Decimal(10, 2)
+  hh_facturables  Decimal @default(0) @db.Decimal(10, 2)
+  hh_normales     Decimal @default(0) @db.Decimal(10, 2)
+  hh_nocturnas    Decimal @default(0) @db.Decimal(10, 2)
+  hh_extra        Decimal @default(0) @db.Decimal(10, 2)
+  hh_feriado      Decimal @default(0) @db.Decimal(10, 2)
+  congelada       Boolean @default(false)
+
+  tenant   Tenant   @relation(fields: [tenant_id], references: [id])
+  periodo  Periodo  @relation(fields: [periodo_id], references: [id])
+  contrato Contrato @relation(fields: [contrato_id], references: [id])
+
+  @@map("conciliacion_hh")
 }

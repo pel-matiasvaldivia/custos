@@ -12,7 +12,8 @@ BEGIN
             'users', 'vigiladores', 'credenciales', 'objetivos', 'puestos', 
             'asignaciones', 'asistencias', 'feriados', 'configuracion_costos', 
             'cotizaciones', 'cotizacion_items', 'novedades', 'puntos_control', 
-            'rondas', 'marcas_ronda'
+            'rondas', 'marcas_ronda',
+            'contratos', 'contrato_facturacion', 'periodos', 'conciliacion_hh'
         )
     ) LOOP
         -- Enable RLS

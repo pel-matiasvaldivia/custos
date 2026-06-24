@@ -18,6 +18,7 @@ import { TenantModule } from './tenant/tenant.module';
 import { CentroOperacionesModule } from './modules/centro-operaciones/centro-operaciones.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { VigilanciaMovilModule } from './modules/vigilancia-movil/vigilancia-movil.module';
+import { RentabilidadModule } from './modules/rentabilidad/rentabilidad.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { VigilanciaMovilModule } from './modules/vigilancia-movil/vigilancia-mov
     CentroOperacionesModule,
     ReportsModule,
     VigilanciaMovilModule,
+    RentabilidadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
