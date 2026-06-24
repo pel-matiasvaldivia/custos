@@ -82,20 +82,38 @@ async function main() {
 
   console.log('Sample vigiladores initialized.');
 
-  // 4. Create Sample Puestos
+  // 4. Create Sample Objetivo (referencia para los puestos)
+  const objetivo = await prisma.objetivo.upsert({
+    where: { tenant_id_codigo: { tenant_id: tenant.id, codigo: 'OBJ-001' } },
+    update: {},
+    create: {
+      tenant_id: tenant.id,
+      codigo: 'OBJ-001',
+      nombre: 'Objetivo Centro',
+      direccion: 'Av. Corrientes 1234, CABA',
+    },
+  });
+
+  // 5. Create Sample Puestos
   const puestos = [
     { nombre: 'Objetivo Centro - Acceso A', ubicacion: 'Av. Corrientes 1234, CABA' },
     { nombre: 'Fábrica Sur - Portón 2', ubicacion: 'Ruta 3 km 45, Cañuelas' },
   ];
 
   for (const p of puestos) {
-    await prisma.puesto.upsert({
-      where: { tenant_id_nombre: { tenant_id: tenant.id, nombre: p.nombre } },
-      update: {},
-      create: {
+    const existe = await prisma.puesto.findFirst({
+      where: { tenant_id: tenant.id, nombre: p.nombre },
+    });
+    if (existe) continue;
+    await prisma.puesto.create({
+      data: {
         tenant_id: tenant.id,
+        objetivo_id: objetivo.id,
         nombre: p.nombre,
         ubicacion: p.ubicacion,
+        requiere_arma: false,
+        requiere_movil: false,
+        esquema_horario: { horas_dia: 24, dias: [1, 2, 3, 4, 5, 6, 7] },
       },
     });
   }
