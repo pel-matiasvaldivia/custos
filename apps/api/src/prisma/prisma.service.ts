@@ -21,6 +21,14 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     // realmente confiable hace falta envolver cada operación en una transacción
     // con set_config(..., true) (LOCAL). Ver TODO de seguridad en el README.
     this.$use(async (params, next) => {
+      // [CRÍTICO] Guardia de recursión: evita que set_config dispare el middleware otra vez.
+      if (params.action === 'executeRaw') {
+        const query = (params.args as any)?.query || (params.args as any)[0];
+        if (typeof query === 'string' && query.includes('set_config')) {
+          return next(params);
+        }
+      }
+
       const tenantId = this.tenantContext.getTenantId();
       if (tenantId) {
         await this.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, false)`;
