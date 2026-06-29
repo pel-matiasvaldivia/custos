@@ -9,11 +9,10 @@ import {
 } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Prisma } from '@prisma/client';
+import { CreateTenantDto } from './dto/create-tenant.dto';
 
 @Controller('system/tenants')
 @UseGuards(JwtAuthGuard)
-// In a real app, I'd add a @Roles('SUPERADMIN') guard here
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
 
@@ -28,12 +27,12 @@ export class TenantController {
   }
 
   @Post()
-  create(@Body() data: Prisma.TenantCreateInput) {
+  create(@Body() data: CreateTenantDto) {
     return this.tenantService.create(data);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() data: Prisma.TenantUpdateInput) {
+  update(@Param('id') id: string, @Body() data: Partial<CreateTenantDto>) {
     return this.tenantService.update(id, data);
   }
 }

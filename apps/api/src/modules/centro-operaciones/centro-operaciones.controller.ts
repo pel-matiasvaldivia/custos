@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { CentroOperacionesService } from './centro-operaciones.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { ResolveIncidentDto } from './dto/resolve-incident.dto';
 
 @Controller('centro-operaciones')
 @UseGuards(JwtAuthGuard)
@@ -28,7 +29,7 @@ export class CentroOperacionesController {
   @Post('incidentes/:id/resolver')
   async resolveIncident(
     @Param('id') id: string,
-    @Body() data: { disposicion: string; resumen: string },
+    @Body() data: ResolveIncidentDto,
   ) {
     return this.coService.resolveIncident(id, data);
   }
@@ -36,14 +37,5 @@ export class CentroOperacionesController {
   @Get('dispositivos')
   async getDevices(@Request() req: any) {
     return this.coService.getDevices(req.user.tenantId);
-  }
-
-  // Debug/Test endpoint to inject manual events
-  @Post('eventos/test')
-  async testEvent(@Body() data: any, @Request() req: any) {
-    return this.coService.processEvent({
-      ...data,
-      tenant_id: req.user.tenantId,
-    });
   }
 }

@@ -6,11 +6,15 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
 import { VigilanteService } from './vigilante.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // I need to create this guard
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateVigilanteDto } from './dto/create-vigilante.dto';
+import { UpdateVigilanteDto } from './dto/update-vigilante.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('vigilantes')
 @UseGuards(JwtAuthGuard)
@@ -18,8 +22,8 @@ export class VigilanteController {
   constructor(private readonly vigilanteService: VigilanteService) {}
 
   @Get()
-  async findAll(@Request() req: any) {
-    return this.vigilanteService.findAll(req.user.tenantId);
+  async findAll(@Request() req: any, @Query() pagination: PaginationDto) {
+    return this.vigilanteService.findAll(req.user.tenantId, pagination);
   }
 
   @Get(':id')
@@ -28,7 +32,7 @@ export class VigilanteController {
   }
 
   @Post()
-  async create(@Body() body: any, @Request() req: any) {
+  async create(@Body() body: CreateVigilanteDto, @Request() req: any) {
     return this.vigilanteService.create({
       ...body,
       tenant_id: req.user.tenantId,
@@ -38,7 +42,7 @@ export class VigilanteController {
   @Put(':id')
   async update(
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: UpdateVigilanteDto,
     @Request() req: any,
   ) {
     return this.vigilanteService.update(id, req.user.tenantId, body);
