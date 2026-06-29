@@ -19,18 +19,27 @@ export interface OrdenCompra {
   items: ComprasItem[];
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export const comprasService = {
-  getOrdenes: async () => {
-    const response = await api.get<OrdenCompra[]>('/compras/ordenes');
-    return response.data;
+  getOrdenes: async (page = 1, limit = 50): Promise<OrdenCompra[]> => {
+    const response = await api.get<PaginatedResponse<OrdenCompra>>('/compras/ordenes', {
+      params: { page, limit },
+    });
+    return response.data.data;
   },
 
-  createOrden: async (data: any) => {
+  createOrden: async (data: any): Promise<OrdenCompra> => {
     const response = await api.post<OrdenCompra>('/compras/ordenes', data);
     return response.data;
   },
 
-  recibirOrden: async (id: string, items: { itemId: string, cantidad: number }[]) => {
+  recibirOrden: async (id: string, items: { itemId: string; cantidad: number }[]) => {
     const response = await api.patch(`/compras/ordenes/${id}/recibir`, { items });
     return response.data;
   },
