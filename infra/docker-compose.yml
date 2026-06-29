@@ -1,26 +1,27 @@
 services:
   api:
     image: ghcr.io/pel-matiasvaldivia/custos-api:latest
-    # build:
-    #   context: ..
-    #   dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres_password@postgres:5432/custos_db?schema=public"
+      # La app conecta con el rol de mínimos privilegios → RLS aísla de verdad.
+      DATABASE_URL: "postgresql://custos_app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public"
+      # migraciones + seed corren como owner (DDL, RLS, datos sin tenant).
+      MIGRATE_DATABASE_URL: "postgresql://postgres:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public"
       REDIS_URL: "redis://redis:6379"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
-      JWT_SECRET: "secretKey"
+      JWT_SECRET: "${JWT_SECRET}"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "3888:3000"
 
   web:
     image: ghcr.io/pel-matiasvaldivia/custos-web:latest
-    # build:
-    #   context: ..
-    #   dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
     depends_on:
       - api
     ports:
@@ -28,25 +29,35 @@ services:
 
   postgres:
     image: postgres:16
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: custos_db
-      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: "${POSTGRES_DB}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      APP_DB_PASSWORD: "${APP_DB_PASSWORD}"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     expose:
       - "5432"
 
   redis:
     image: redis:7
+    restart: unless-stopped
     expose:
       - "6379"
 
   minio:
     image: minio/minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minio_user
-      MINIO_ROOT_PASSWORD: minio_password
+      MINIO_ROOT_USER: "${MINIO_USER}"
+      MINIO_ROOT_PASSWORD: "${MINIO_PASSWORD}"
     volumes:
       - miniodata:/data
     ports:
@@ -55,6 +66,7 @@ services:
 
   mediamtx:
     image: bluenviron/mediamtx:latest
+    restart: unless-stopped
     ports:
       - "1935:1935" # RTMP
       - "8554:8554" # RTSP

@@ -1,17 +1,20 @@
 #!/bin/sh
 set -e
 
-echo "Starting CustOS API Entrypoint..."
+echo "CustOS API · arranque"
 
-# Wait for database if needed (optional, handled by retry in prisma)
-# Running migrations
-echo "Running database migrations..."
-npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
+SCHEMA=apps/api/prisma/schema.prisma
+# Migraciones y seed corren como rol admin (owner): aplican DDL, habilitan RLS y
+# siembran datos sin scope de tenant. La app corre con DATABASE_URL (rol de
+# mínimos privilegios) para que RLS aísle de verdad — un superusuario OMITE RLS.
+# Si no se define MIGRATE_DATABASE_URL, cae a DATABASE_URL (compatibilidad).
+ADMIN_URL="${MIGRATE_DATABASE_URL:-$DATABASE_URL}"
 
-# Seeding (creates superadmin if not exists)
-echo "Running database seed..."
-npx prisma db seed --schema=apps/api/prisma/schema.prisma || echo "Seed encountered non-fatal error, continuing..."
+echo "Migraciones (rol admin)..."
+DATABASE_URL="$ADMIN_URL" npx prisma migrate deploy --schema="$SCHEMA"
 
-# Start the application
-echo "Starting application..."
+echo "Seed (rol admin)..."
+DATABASE_URL="$ADMIN_URL" npx prisma db seed --schema="$SCHEMA" || echo "Seed con error no fatal, continúa."
+
+echo "Iniciando aplicación (rol de mínimos privilegios)..."
 exec node --max-old-space-size=2048 apps/api/dist/src/main.js
