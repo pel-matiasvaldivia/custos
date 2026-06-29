@@ -8,6 +8,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../../common/config/jwt.config';
 
 @WebSocketGateway({
   namespace: 'co',
@@ -33,8 +34,7 @@ export class COGateway implements OnGatewayConnection, OnGatewayDisconnect {
       (client.handshake.headers?.authorization || '').replace(/^Bearer /, '');
 
     try {
-      const secret = process.env.JWT_SECRET || 'secretKey';
-      const decoded: any = jwt.verify(token, secret);
+      const decoded: any = jwt.verify(token, getJwtSecret());
       const tenantId = decoded?.tenant_id;
       if (!tenantId) throw new Error('JWT sin tenant_id');
 
