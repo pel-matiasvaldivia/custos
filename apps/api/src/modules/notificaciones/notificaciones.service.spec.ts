@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificacionesService } from './notificaciones.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaAdminService } from '../../prisma/prisma-admin.service';
 
 describe('NotificacionesService', () => {
   let service: NotificacionesService;
@@ -14,7 +14,7 @@ describe('NotificacionesService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificacionesService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: PrismaAdminService, useValue: mockPrisma },
       ],
     }).compile();
     service = module.get<NotificacionesService>(NotificacionesService);

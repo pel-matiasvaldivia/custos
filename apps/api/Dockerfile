@@ -36,7 +36,9 @@ COPY packages/contracts/package*.json ./packages/contracts/
 RUN npm install --omit=dev --workspace=api --include-workspace-root && npm cache clean --force
 
 COPY apps/api/prisma ./apps/api/prisma
-RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
+# Reusa el cliente Prisma ya generado en el builder (evita un `generate` extra
+# en runtime: menos tiempo de build y sin descargar engines dos veces).
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 

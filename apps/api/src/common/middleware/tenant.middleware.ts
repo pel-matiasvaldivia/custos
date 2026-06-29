@@ -1,6 +1,7 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { TenantContextService } from '../context/tenant-context.service';
+import { getJwtSecret } from '../config/jwt.config';
 import * as jwt from 'jsonwebtoken';
 
 const UUID_RE =
@@ -16,8 +17,7 @@ export class TenantMiddleware implements NestMiddleware {
       const token = authHeader.split(' ')[1];
       try {
         // VERIFY (no decode): valida la firma para que el tenant no sea forjable.
-        const secret = process.env.JWT_SECRET || 'secretKey';
-        const decoded: any = jwt.verify(token, secret);
+        const decoded: any = jwt.verify(token, getJwtSecret());
         // El claim del payload es `tenant_id` (ver AuthService.login).
         const tenantId = decoded?.tenant_id;
         if (tenantId && UUID_RE.test(tenantId)) {

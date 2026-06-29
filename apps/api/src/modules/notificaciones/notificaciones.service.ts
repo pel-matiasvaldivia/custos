@@ -1,15 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaAdminService } from '../../prisma/prisma-admin.service';
 
 /**
  * Lógica de dominio de notificaciones. Independiente de la cola (BullMQ) para
  * poder testearse sin Redis. El worker la invoca de forma programada.
+ *
+ * Es un job de fan-out cross-tenant (escanea todas las empresas), sin contexto
+ * de tenant: usa el cliente admin (omite RLS) y fija `tenant_id` explícito en
+ * cada filtro y escritura para mantener el aislamiento por código.
  */
 @Injectable()
 export class NotificacionesService {
   private readonly logger = new Logger(NotificacionesService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaAdminService) {}
 
   /**
    * Detecta credenciales que vencen dentro de `diasUmbral` y crea una

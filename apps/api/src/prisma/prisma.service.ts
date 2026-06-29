@@ -1,39 +1,33 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { TenantContextService } from '../common/context/tenant-context.service';
 
+/**
+ * Cada operación corre dentro de una transacción junto a `set_config(..., true)`
+ * (LOCAL): el tenant queda atado a la conexión SOLO durante esa query. Es
+ * atómico y no se filtra entre tenants bajo concurrencia ni queda pegado en
+ * conexiones del pool. Sin contexto de tenant, la query corre sin scope y RLS
+ * la bloquea (fail-closed).
+ */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit {
-  constructor(private readonly tenantContext: TenantContextService) {
+export class PrismaService extends PrismaClient {
+  constructor(tenantContext: TenantContextService) {
     super();
-  }
-
-  async onModuleInit() {
-    await this.$connect();
-  }
-
-  async $connect() {
-    await super.$connect();
-
-    // Setea app.current_tenant en cada query para las políticas RLS.
-    // Usa set_config parametrizado (no interpola SQL → sin inyección).
-    // NOTA: con pool de conexiones esto NO es transaccional; para que RLS sea
-    // realmente confiable hace falta envolver cada operación en una transacción
-    // con set_config(..., true) (LOCAL). Ver TODO de seguridad en el README.
-    this.$use(async (params, next) => {
-      // [CRÍTICO] Guardia de recursión: evita que set_config dispare el middleware otra vez.
-      if (params.action === 'executeRaw') {
-        const query = (params.args as any)?.query || (params.args as any)[0];
-        if (typeof query === 'string' && query.includes('set_config')) {
-          return next(params);
-        }
-      }
-
-      const tenantId = this.tenantContext.getTenantId();
-      if (tenantId) {
-        await this.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, false)`;
-      }
-      return next(params);
-    });
+    const base = this;
+    return this.$extends({
+      query: {
+        $allModels: {
+          async $allOperations({ args, query }) {
+            const tenantId = tenantContext.getTenantId();
+            if (!tenantId) return query(args);
+            const [, result] = await base.$transaction([
+              base.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`,
+              query(args),
+            ] as any);
+            return result;
+          },
+        },
+      },
+    }) as unknown as PrismaService;
   }
 }
