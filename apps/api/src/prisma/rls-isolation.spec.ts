@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from './prisma.service';
+import { PrismaAdminService } from './prisma-admin.service';
 import { TenantContextService } from '../common/context/tenant-context.service';
 
 /**
@@ -75,5 +76,20 @@ suite('RLS · aislamiento multi-tenant', () => {
         }),
       ),
     ).rejects.toThrow();
+  });
+
+  // El cliente admin (login, jobs de fan-out, receptor SIA) DEBE ver todos los
+  // tenants: omite RLS a propósito. Si esto fallara, el login se rompería.
+  it('el cliente admin ve a través de los tenants (omite RLS)', async () => {
+    process.env.MIGRATE_DATABASE_URL = ADMIN_URL;
+    const adminClient = new PrismaAdminService();
+    try {
+      const todos = await adminClient.vigilador.findMany({
+        where: { tenant_id: { in: [TA, TB] } },
+      });
+      expect(todos.length).toBe(2);
+    } finally {
+      await adminClient.$disconnect();
+    }
   });
 });

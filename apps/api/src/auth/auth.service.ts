@@ -1,12 +1,14 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaAdminService } from '../prisma/prisma-admin.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AuthService {
+  // El login es pre-auth: busca al usuario por email global, sin contexto de
+  // tenant. Usa el cliente admin (omite RLS); el resto del sistema usa RLS.
   constructor(
-    private prisma: PrismaService,
+    private prisma: PrismaAdminService,
     private jwtService: JwtService,
   ) {}
 

@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import * as net from 'net';
 import { CentroOperacionesService } from '../centro-operaciones.service';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { PrismaAdminService } from '../../../prisma/prisma-admin.service';
+import { TenantContextService } from '../../../common/context/tenant-context.service';
 
 @Injectable()
 export class SiaReceiverService implements OnModuleInit, OnModuleDestroy {
@@ -14,9 +15,13 @@ export class SiaReceiverService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SiaReceiverService.name);
   private readonly PORT = 9100;
 
+  // El receptor TCP no tiene contexto de tenant: resuelve el dispositivo→tenant
+  // con el cliente admin (cross-tenant) y luego procesa el evento DENTRO del
+  // contexto del tenant resuelto, para que las escrituras respeten RLS.
   constructor(
     private readonly coService: CentroOperacionesService,
-    private readonly prisma: PrismaService,
+    private readonly prisma: PrismaAdminService,
+    private readonly tenantContext: TenantContextService,
   ) {}
 
   onModuleInit() {
@@ -45,8 +50,10 @@ export class SiaReceiverService implements OnModuleInit, OnModuleDestroy {
             const sequence = raw.match(/\"(\d+)\"/)?.[1] || '0000';
             socket.write(`\n<ACK>${sequence}\r`);
 
-            // Process normalized event
-            await this.coService.processEvent(event);
+            // Procesa el evento bajo el contexto del tenant resuelto (RLS).
+            await this.tenantContext.run(event.tenant_id, () =>
+              this.coService.processEvent(event),
+            );
           }
         } catch (err) {
           this.logger.error(`Error parsing DC-09: ${err.message}`);
