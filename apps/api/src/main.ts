@@ -5,6 +5,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -45,6 +46,9 @@ async function bootstrap() {
       legacyHeaders: false,
     }),
   );
+
+  // Global exception filter for consistent error responses
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Validation pipe with transformation and whitelist
   app.useGlobalPipes(

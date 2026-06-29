@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -11,6 +12,8 @@ import { CotizacionService } from './cotizacion.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { CreateCotizacionDto } from './dto/create-cotizacion.dto';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Controller('cotizaciones')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,14 +23,14 @@ export class CotizacionController {
   // Cotizar es una acción comercial: no la realiza un OPERADOR.
   @Post()
   @Roles('ADMIN', 'GERENCIA')
-  create(@Request() req: any, @Body() data: any) {
+  create(@Request() req: any, @Body() data: CreateCotizacionDto) {
     return this.cotizacionService.create(req.user.tenantId, data);
   }
 
   // Lectura abierta; el service recorta montos para OPERADOR.
   @Get()
-  findAll(@Request() req: any) {
-    return this.cotizacionService.findAll(req.user.tenantId, req.user.role);
+  findAll(@Request() req: any, @Query() pagination: PaginationDto) {
+    return this.cotizacionService.findAll(req.user.tenantId, req.user.role, pagination);
   }
 
   @Get(':id')

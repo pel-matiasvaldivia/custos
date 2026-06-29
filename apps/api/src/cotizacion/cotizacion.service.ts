@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CostosService } from '../costos/costos.service';
 import { Prisma } from '@prisma/client';
+import { PaginationDto } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class CotizacionService {
@@ -55,27 +56,36 @@ export class CotizacionService {
     });
   }
 
-  async findAll(tenantId: string, role: string) {
-    const cotizaciones = await this.prisma.cotizacion.findMany({
-      where: { tenant_id: tenantId },
-      include: { items: true },
-      orderBy: { created_at: 'desc' },
-    });
+  async findAll(tenantId: string, role: string, pagination?: PaginationDto) {
+    const skip = pagination?.skip ?? 0;
+    const take = pagination?.limit ?? 50;
 
-    if (role === 'OPERADOR') {
-      return cotizaciones.map((c) => {
-        const { total_mensual, ...rest } = c;
-        return {
-          ...rest,
-          items: c.items.map((i) => {
-            const { costo_hora, subtotal, ...itemRest } = i;
-            return itemRest;
-          }),
-        };
-      });
-    }
+    const [cotizaciones, total] = await Promise.all([
+      this.prisma.cotizacion.findMany({
+        where: { tenant_id: tenantId },
+        include: { items: true },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take,
+      }),
+      this.prisma.cotizacion.count({ where: { tenant_id: tenantId } }),
+    ]);
 
-    return cotizaciones;
+    const data =
+      role === 'OPERADOR'
+        ? cotizaciones.map((c) => {
+            const { total_mensual, ...rest } = c;
+            return {
+              ...rest,
+              items: c.items.map((i) => {
+                const { costo_hora, subtotal, ...itemRest } = i;
+                return itemRest;
+              }),
+            };
+          })
+        : cotizaciones;
+
+    return { data, total, page: pagination?.page ?? 1, limit: take };
   }
 
   async findOne(id: string, tenantId: string, role: string) {
