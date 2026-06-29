@@ -3,11 +3,11 @@ import { Type } from 'class-transformer';
 
 class ItemRecepcionDto {
   @IsUUID()
-  id: string;
+  itemId: string;
 
   @IsNumber()
   @Min(0)
-  cantidad_recibida: number;
+  cantidad: number;
 }
 
 export class RecibirOrdenDto {
