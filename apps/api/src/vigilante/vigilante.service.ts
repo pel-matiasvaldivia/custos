@@ -13,13 +13,13 @@ export class VigilanteService {
 
     const [data, total] = await Promise.all([
       this.prisma.vigilador.findMany({
-        where: { tenant_id: tenantId },
+        where: { tenant_id: tenantId, deleted_at: null },
         include: { credenciales: true },
         skip,
         take,
         orderBy: { created_at: 'desc' },
       }),
-      this.prisma.vigilador.count({ where: { tenant_id: tenantId } }),
+      this.prisma.vigilador.count({ where: { tenant_id: tenantId, deleted_at: null } }),
     ]);
 
     return { data, total, page: pagination?.page ?? 1, limit: take };
@@ -27,7 +27,7 @@ export class VigilanteService {
 
   async findOne(id: string, tenantId: string) {
     const vigilador = await this.prisma.vigilador.findFirst({
-      where: { id, tenant_id: tenantId },
+      where: { id, tenant_id: tenantId, deleted_at: null },
       include: {
         credenciales: true,
       },
@@ -47,7 +47,6 @@ export class VigilanteService {
     tenantId: string,
     data: Prisma.VigiladorUncheckedUpdateInput,
   ) {
-    // Ensure it belongs to the tenant
     await this.findOne(id, tenantId);
     return this.prisma.vigilador.update({
       where: { id },
@@ -57,8 +56,9 @@ export class VigilanteService {
 
   async delete(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    return this.prisma.vigilador.delete({
+    return this.prisma.vigilador.update({
       where: { id },
+      data: { deleted_at: new Date() },
     });
   }
 }
