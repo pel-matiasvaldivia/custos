@@ -14,6 +14,11 @@ export class VehiculoController {
     return this.vehiculoService.findAll(req.user.tenantId, pagination);
   }
 
+  @Get('disponibles')
+  async findDisponibles(@Request() req: any) {
+    return this.vehiculoService.findDisponibles(req.user.tenantId);
+  }
+
   @Post()
   async create(@Body() body: CreateVehiculoDto, @Request() req: any) {
     return this.vehiculoService.create({

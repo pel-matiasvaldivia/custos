@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsIn } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsIn, IsNumber, Min } from 'class-validator';
 
 export class CreateVehiculoDto {
   @IsString()
@@ -24,4 +24,9 @@ export class CreateVehiculoDto {
   @IsOptional()
   @IsIn(['COMUN', 'BLINDADO', 'MOTO'])
   tipo?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  costo_hora?: number;
 }

@@ -20,11 +20,12 @@ export const VehiculoAsignarForm = ({ objetivoId, onClose, onAsignado }: Props) 
   const [patente, setPatente] = useState('');
   const [marca, setMarca] = useState('');
   const [modelo, setModelo] = useState('');
+  const [costoHora, setCostoHora] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    vehiculoService.getAll().then((data) => {
+    vehiculoService.getDisponibles().then((data) => {
       setVehiculos(data);
       if (data.length > 0) setVehiculoId(data[0].id);
       else setModoNuevo(true);
@@ -38,7 +39,12 @@ export const VehiculoAsignarForm = ({ objetivoId, onClose, onAsignado }: Props) 
     try {
       let id = vehiculoId;
       if (modoNuevo) {
-        const creado = await vehiculoService.create({ patente, marca: marca || undefined, modelo: modelo || undefined });
+        const creado = await vehiculoService.create({
+          patente,
+          marca: marca || undefined,
+          modelo: modelo || undefined,
+          costo_hora: costoHora ? Number(costoHora) : undefined,
+        });
         id = creado.id;
       }
       await objetivoService.asignarVehiculo(objetivoId, id);
@@ -62,14 +68,16 @@ export const VehiculoAsignarForm = ({ objetivoId, onClose, onAsignado }: Props) 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {!modoNuevo && vehiculos.length > 0 ? (
             <div className="space-y-1">
-              <label className={labelClase}>Vehículo</label>
+              <label className={labelClase}>Vehículo disponible</label>
               <select className={campoClase} value={vehiculoId} onChange={(e) => setVehiculoId(e.target.value)}>
                 {vehiculos.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.patente} {v.marca ? `· ${v.marca} ${v.modelo || ''}` : ''}
+                    {v.costo_hora ? ` · $${v.costo_hora}/h` : ''}
                   </option>
                 ))}
               </select>
+              <p className="text-xs text-muted">Solo se listan vehículos operativos sin asignación activa.</p>
               <button
                 type="button"
                 onClick={() => setModoNuevo(true)}
@@ -93,6 +101,16 @@ export const VehiculoAsignarForm = ({ objetivoId, onClose, onAsignado }: Props) 
                   <label className={labelClase}>Modelo</label>
                   <input className={campoClase} value={modelo} onChange={(e) => setModelo(e.target.value)} />
                 </div>
+              </div>
+              <div className="space-y-1">
+                <label className={labelClase}>Costo por hora</label>
+                <input
+                  type="number"
+                  className={campoClase}
+                  value={costoHora}
+                  onChange={(e) => setCostoHora(e.target.value)}
+                  placeholder="Para estimar el costo de operación"
+                />
               </div>
               {vehiculos.length > 0 && (
                 <button

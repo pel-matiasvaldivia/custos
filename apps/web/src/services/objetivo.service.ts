@@ -51,6 +51,7 @@ export interface Vehiculo {
   modelo?: string | null;
   tipo?: string | null;
   estado: string;
+  costo_hora?: string | null;
 }
 
 export interface VehiculoAsignado {
@@ -58,6 +59,8 @@ export interface VehiculoAsignado {
   vehiculo_id: string;
   desde: string;
   hasta?: string | null;
+  horas_estimadas_mes?: number | null;
+  costo_estimado_mensual?: string | null;
   vehiculo: Vehiculo;
 }
 
@@ -75,6 +78,13 @@ export interface HerramientaResumen {
   entregada_el: string;
 }
 
+export interface Dotacion {
+  horasMensuales: number;
+  vigiladoresRequeridos: number;
+  vigiladoresActivosTotal: number;
+  suficiente: boolean;
+}
+
 export interface ObjetivoDetalle {
   objetivo: Objetivo;
   puestos: Puesto[];
@@ -82,6 +92,7 @@ export interface ObjetivoDetalle {
   vehiculosAsignados: VehiculoAsignado[];
   personal: PersonalResumen[];
   herramientas: HerramientaResumen[];
+  dotacion: Dotacion;
 }
 
 export interface CreateObjetivoData {
@@ -123,5 +134,12 @@ export const objetivoService = {
 
   liberarVehiculo: async (objetivoId: string, asignacionId: string): Promise<void> => {
     await api.delete(`/objetivos/${objetivoId}/vehiculos/${asignacionId}`);
+  },
+
+  notificarPersonalInsuficiente: async (objetivoId: string): Promise<{ notificados: number }> => {
+    const response = await api.post<{ notificados: number }>(
+      `/objetivos/${objetivoId}/notificar-personal-insuficiente`,
+    );
+    return response.data;
   },
 };

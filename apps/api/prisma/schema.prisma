@@ -448,6 +448,7 @@ model Vehiculo {
   tipo       String? // COMUN | BLINDADO | MOTO
   km_actual  Int      @default(0)
   estado     String   @default("OPERATIVO") // OPERATIVO | EN_TALLER | BAJA
+  costo_hora Decimal? @db.Decimal(10, 2)
   created_at DateTime @default(now()) @db.Timestamptz
 
   tenant       Tenant                @relation(fields: [tenant_id], references: [id])
@@ -590,6 +591,8 @@ model AsignacionMovil {
   contrato_id String?   @db.Uuid
   desde       DateTime  @db.Timestamptz
   hasta       DateTime? @db.Timestamptz
+  horas_estimadas_mes    Float?
+  costo_estimado_mensual Decimal? @db.Decimal(14, 2)
   created_at  DateTime  @default(now()) @db.Timestamptz
 
   vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
