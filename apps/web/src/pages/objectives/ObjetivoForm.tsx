@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, AlertTriangle } from 'lucide-react';
 import { objetivoService, Objetivo } from '../../services/objetivo.service';
 import { ClientePicker } from '../../components/clients/ClientePicker';
 
@@ -9,16 +9,18 @@ const labelClase = 'text-xs font-medium text-muted uppercase tracking-wider';
 
 interface Props {
   objetivo?: Objetivo | null;
+  hasContratoActivo?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
+export const ObjetivoForm = ({ objetivo, hasContratoActivo = false, onClose, onSaved }: Props) => {
   const [clienteId, setClienteId] = useState(objetivo?.cliente_id || '');
   const [clienteNombre, setClienteNombre] = useState(objetivo?.cliente_nombre || '');
   const [codigo, setCodigo] = useState(objetivo?.codigo || '');
   const [nombre, setNombre] = useState(objetivo?.nombre || '');
   const [direccion, setDireccion] = useState(objetivo?.direccion || '');
+  const [estado, setEstado] = useState<'ACTIVO' | 'INACTIVO'>(objetivo?.estado || 'ACTIVO');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,6 +35,7 @@ export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
         codigo,
         nombre,
         direccion: direccion || undefined,
+        ...(objetivo ? { estado } : {}),
       };
       if (objetivo) {
         await objetivoService.update(objetivo.id, data);
@@ -40,8 +43,9 @@ export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
         await objetivoService.create(data);
       }
       onSaved();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'No se pudo guardar el objetivo.');
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || 'No se pudo guardar el objetivo.');
     } finally {
       setEnviando(false);
     }
@@ -80,6 +84,28 @@ export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
             <label className={labelClase}>Dirección</label>
             <input className={campoClase} value={direccion} onChange={(e) => setDireccion(e.target.value)} />
           </div>
+
+          {objetivo && (
+            <div className="space-y-1">
+              <label className={labelClase}>Estado</label>
+              <select
+                className={campoClase}
+                value={estado}
+                onChange={(e) => setEstado(e.target.value as 'ACTIVO' | 'INACTIVO')}
+              >
+                <option value="INACTIVO">INACTIVO</option>
+                <option value="ACTIVO" disabled={!hasContratoActivo}>
+                  ACTIVO{!hasContratoActivo ? ' (requiere contrato activo)' : ''}
+                </option>
+              </select>
+              {!hasContratoActivo && (
+                <p className="flex items-center gap-1 text-xs text-amber mt-1">
+                  <AlertTriangle size={12} />
+                  Sin contrato activo vinculado no se puede activar el objetivo.
+                </p>
+              )}
+            </div>
+          )}
 
           {error && (
             <div className="p-3 bg-amber/10 border border-amber/30 rounded-md text-sm text-amber">{error}</div>

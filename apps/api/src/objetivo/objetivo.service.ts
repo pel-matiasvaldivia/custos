@@ -239,6 +239,19 @@ export class ObjetivoService {
     data: Prisma.ObjetivoUncheckedUpdateInput,
   ) {
     await this.findOne(id, tenantId);
+
+    if (data.estado === 'ACTIVO') {
+      const contratoActivo = await this.prisma.contrato.findFirst({
+        where: { objetivo_id: id, tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
+        select: { id: true },
+      });
+      if (!contratoActivo) {
+        throw new BadRequestException(
+          'No se puede activar el objetivo sin un contrato activo vinculado.',
+        );
+      }
+    }
+
     if (data.cliente_id) {
       const clienteNombre = await this.resolverClienteNombre(
         tenantId,
