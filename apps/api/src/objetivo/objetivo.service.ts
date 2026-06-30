@@ -228,9 +228,21 @@ export class ObjetivoService {
         'Debe indicar cliente_id o cliente_nombre.',
       );
     }
-    return this.prisma.objetivo.create({
-      data: { ...data, cliente_nombre: clienteNombre },
-    });
+    try {
+      return await this.prisma.objetivo.create({
+        data: { ...data, cliente_nombre: clienteNombre },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Ya existe un objetivo con el código "${data.codigo}" en este tenant.`,
+        );
+      }
+      throw e;
+    }
   }
 
   async update(
@@ -260,7 +272,19 @@ export class ObjetivoService {
       );
       data = { ...data, cliente_nombre: clienteNombre };
     }
-    return this.prisma.objetivo.update({ where: { id }, data });
+    try {
+      return await this.prisma.objetivo.update({ where: { id }, data });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          `Ya existe un objetivo con ese código en este tenant.`,
+        );
+      }
+      throw e;
+    }
   }
 
   async asignarVehiculo(
