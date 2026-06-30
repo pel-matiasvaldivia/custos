@@ -65,4 +65,8 @@ export const vigilanteService = {
     const response = await api.get<Completitud>(`/vigilantes/${id}/completitud`);
     return response.data;
   },
+
+  setPin: async (id: string, pin: string): Promise<void> => {
+    await api.post(`/vigilantes/${id}/pin`, { pin });
+  },
 };
