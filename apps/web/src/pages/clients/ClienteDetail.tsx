@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Plus, Pencil, Building2 } from 'lucide-react';
+import { ArrowLeft, FileText, Plus, Pencil, Building2, FileSignature } from 'lucide-react';
 import { clienteService, Cliente } from '../../services/cliente.service';
 import { contratoService } from '../../services/contrato.service';
 import { objetivoService, Contrato, Objetivo } from '../../services/objetivo.service';
 import { ClienteForm } from './ClienteForm';
 import { ContratoForm } from '../objectives/ContratoForm';
+import { ContratoDocumentoModal } from './ContratoDocumentoModal';
 
 export const ClienteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export const ClienteDetail = () => {
   const [loading, setLoading] = useState(true);
   const [modalEditar, setModalEditar] = useState(false);
   const [modalContrato, setModalContrato] = useState(false);
+  const [contratoDocumento, setContratoDocumento] = useState<Contrato | null>(null);
 
   const cargar = async () => {
     if (!id) return;
@@ -97,10 +99,23 @@ export const ClienteDetail = () => {
                         <p className="text-xs text-muted mt-0.5">
                           {c.objetivo_id ? `Objetivo: ${objetivoNombre(c.objetivo_id) || c.objetivo_id}` : 'Sin objetivo asignado'}
                         </p>
+                        {c.documento_generado_at && (
+                          <p className="text-xs text-emerald mt-0.5">
+                            Documento generado el {new Date(c.documento_generado_at).toLocaleDateString('es-AR')}
+                          </p>
+                        )}
                       </div>
-                      <span className={`status-badge ${c.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
-                        {c.estado}
-                      </span>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`status-badge ${c.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
+                          {c.estado}
+                        </span>
+                        <button
+                          onClick={() => setContratoDocumento(c)}
+                          className="text-brand-blue hover:text-brand-deep transition-colors text-xs font-medium flex items-center gap-1"
+                        >
+                          <FileSignature size={14} /> {c.documento_key ? 'Ver documento' : 'Generar documento'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -150,6 +165,16 @@ export const ClienteDetail = () => {
           onClose={() => setModalContrato(false)}
           onCreated={() => {
             setModalContrato(false);
+            cargar();
+          }}
+        />
+      )}
+
+      {contratoDocumento && (
+        <ContratoDocumentoModal
+          contrato={contratoDocumento}
+          onClose={() => setContratoDocumento(null)}
+          onGenerado={() => {
             cargar();
           }}
         />
