@@ -1,5 +1,6 @@
 import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
+import { NotificationBell } from './components/layout/NotificationBell';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
 import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
 import { QuadrantPage } from './pages/quadrant/QuadrantPage';
@@ -45,9 +46,14 @@ const Dashboard = () => (
 const AppLayout = () => (
   <div className="flex min-h-screen bg-canvas">
     <Sidebar />
-    <main className="flex-1 ml-64 p-8">
-      <Outlet />
-    </main>
+    <div className="flex-1 ml-64 flex flex-col">
+      <header className="h-16 border-b border-line bg-surface flex items-center justify-end px-8 shrink-0">
+        <NotificationBell />
+      </header>
+      <main className="flex-1 p-8">
+        <Outlet />
+      </main>
+    </div>
   </div>
 );
 
