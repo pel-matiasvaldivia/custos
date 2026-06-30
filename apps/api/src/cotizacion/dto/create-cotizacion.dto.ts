@@ -39,10 +39,6 @@ export class CreateCotizacionDto {
   @IsDateString()
   vencimiento: string;
 
-  @IsNumber()
-  @Min(0)
-  total_mensual: number;
-
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CotizacionItemDto)

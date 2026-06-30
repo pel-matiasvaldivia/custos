@@ -13,7 +13,7 @@ export class VigilanciaMovilController {
     @Request() req: any,
   ) {
     return this.mobileService.registrarPuntoControl(
-      req.user.id,
+      req.user.userId,
       data.checkpointId,
       data.location,
     );
@@ -25,7 +25,7 @@ export class VigilanciaMovilController {
     @Request() req: any,
   ) {
     return this.mobileService.dispararPanico(
-      req.user.id,
+      req.user.userId,
       req.user.tenantId,
       data.location,
     );
@@ -37,7 +37,7 @@ export class VigilanciaMovilController {
     @Request() req: any,
   ) {
     return this.mobileService.updateLocation(
-      req.user.id,
+      req.user.userId,
       req.user.tenantId,
       data.location,
     );

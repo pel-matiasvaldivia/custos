@@ -13,7 +13,7 @@ describe('VigilanteService', () => {
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
-      delete: jest.fn(),
+      count: jest.fn(),
     },
   };
 
@@ -31,31 +31,50 @@ describe('VigilanteService', () => {
   });
 
   describe('findAll', () => {
-    it('should return array of vigilantes for tenant', async () => {
+    it('should return paginated vigilantes for tenant', async () => {
       const mockVigilantes = [
         { id: '1', nombre: 'Juan', apellido: 'Perez', tenant_id: 'tenant-1' },
         { id: '2', nombre: 'Maria', apellido: 'Gomez', tenant_id: 'tenant-1' },
       ];
       mockPrisma.vigilador.findMany.mockResolvedValue(mockVigilantes);
+      mockPrisma.vigilador.count.mockResolvedValue(2);
 
       const result = await service.findAll('tenant-1');
 
-      expect(result).toEqual(mockVigilantes);
-      expect(prisma.vigilador.findMany).toHaveBeenCalledWith({
-        where: { tenant_id: 'tenant-1' },
-        include: { credenciales: true },
-      });
+      expect(result).toEqual({ data: mockVigilantes, total: 2, page: 1, limit: 50 });
+      expect(prisma.vigilador.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { tenant_id: 'tenant-1', deleted_at: null },
+          include: { credenciales: true },
+        }),
+      );
+    });
+
+    it('should apply pagination params', async () => {
+      mockPrisma.vigilador.findMany.mockResolvedValue([]);
+      mockPrisma.vigilador.count.mockResolvedValue(0);
+
+      await service.findAll('tenant-1', { page: 2, limit: 10, skip: 10 });
+
+      expect(prisma.vigilador.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ skip: 10, take: 10 }),
+      );
     });
   });
 
   describe('findOne', () => {
-    it('should return vigilante when found', async () => {
-      const mockVigilante = { id: '1', nombre: 'Juan', tenant_id: 'tenant-1' };
+    it('should return vigilante when found and not deleted', async () => {
+      const mockVigilante = { id: '1', nombre: 'Juan', tenant_id: 'tenant-1', deleted_at: null };
       mockPrisma.vigilador.findFirst.mockResolvedValue(mockVigilante);
 
       const result = await service.findOne('1', 'tenant-1');
 
       expect(result).toEqual(mockVigilante);
+      expect(prisma.vigilador.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: '1', tenant_id: 'tenant-1', deleted_at: null },
+        }),
+      );
     });
 
     it('should throw NotFoundException when not found', async () => {
@@ -88,7 +107,7 @@ describe('VigilanteService', () => {
 
   describe('update', () => {
     it('should update vigilante after verifying tenant', async () => {
-      const existing = { id: '1', tenant_id: 'tenant-1', nombre: 'Juan' };
+      const existing = { id: '1', tenant_id: 'tenant-1', nombre: 'Juan', deleted_at: null };
       mockPrisma.vigilador.findFirst.mockResolvedValue(existing);
       mockPrisma.vigilador.update.mockResolvedValue({
         ...existing,
@@ -112,14 +131,28 @@ describe('VigilanteService', () => {
   });
 
   describe('delete', () => {
-    it('should delete vigilante after verifying tenant', async () => {
-      const existing = { id: '1', tenant_id: 'tenant-1' };
+    it('should soft-delete vigilante by setting deleted_at', async () => {
+      const existing = { id: '1', tenant_id: 'tenant-1', deleted_at: null };
       mockPrisma.vigilador.findFirst.mockResolvedValue(existing);
-      mockPrisma.vigilador.delete.mockResolvedValue({});
+      mockPrisma.vigilador.update.mockResolvedValue({
+        ...existing,
+        deleted_at: new Date(),
+      });
 
       await service.delete('1', 'tenant-1');
 
-      expect(prisma.vigilador.delete).toHaveBeenCalledWith({ where: { id: '1' } });
+      expect(prisma.vigilador.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: { deleted_at: expect.any(Date) },
+      });
+    });
+
+    it('should throw NotFoundException when vigilante not found', async () => {
+      mockPrisma.vigilador.findFirst.mockResolvedValue(null);
+
+      await expect(service.delete('999', 'tenant-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, ArrowLeft, Save, Calculator, Users } from 'lucide-react';
+import api from '../../services/api';
 
 export const QuoteWizard = () => {
   const navigate = useNavigate();
@@ -15,12 +16,12 @@ export const QuoteWizard = () => {
   });
 
   useEffect(() => {
-    fetch('/api/v1/costos')
-      .then(res => res.json())
-      .then(data => {
-        setConfig(data);
+    api.get('/config/costos')
+      .then(res => {
+        setConfig(res.data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const addItem = () => {
@@ -53,11 +54,18 @@ export const QuoteWizard = () => {
   };
 
   const handleSave = async () => {
-    await fetch('/api/v1/cotizaciones', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(quote),
-    });
+    const payload = {
+      cliente_nombre: quote.cliente_nombre,
+      vencimiento: quote.vencimiento,
+      items: quote.items.map(item => ({
+        puesto_nombre: item.puesto_nombre,
+        horas_mensuales: item.horas_mensuales,
+        margen: item.margen,
+        costo_hora: Number(config.costo_hora_base),
+        subtotal: calculateSubtotal(item),
+      })),
+    };
+    await api.post('/cotizaciones', payload);
     navigate('/quotes');
   };
 

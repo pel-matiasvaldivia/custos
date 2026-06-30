@@ -41,8 +41,9 @@ export class COGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.tenantId = tenantId;
       client.join(`tenant:${tenantId}`);
       this.logger.log(`Cliente ${client.id} unido a la sala del tenant`);
-    } catch {
-      this.logger.warn(`Cliente ${client.id} rechazado: token inválido`);
+    } catch (err: unknown) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Cliente ${client.id} rechazado: ${reason}`);
       client.disconnect();
     }
   }

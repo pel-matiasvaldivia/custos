@@ -23,7 +23,7 @@ export class CentroOperacionesController {
 
   @Post('incidentes/:id/tomar')
   async takeIncident(@Param('id') id: string, @Request() req: any) {
-    return this.coService.takeIncident(id, req.user.id);
+    return this.coService.takeIncident(id, req.user.userId);
   }
 
   @Post('incidentes/:id/resolver')

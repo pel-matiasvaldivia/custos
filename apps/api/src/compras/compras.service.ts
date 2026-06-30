@@ -91,8 +91,18 @@ export class ComprasService {
     ocId: string,
     itemsRecibidos: { itemId: string; cantidad: number }[],
   ) {
-    // Basic logic to update reception
+    const oc = await this.prisma.ordenCompra.findFirst({
+      where: { id: ocId, tenant_id: tenantId },
+      include: { items: true },
+    });
+
+    if (!oc) throw new NotFoundException('Orden de compra no encontrada');
+
+    const itemIds = new Set(oc.items.map((i) => i.id));
     for (const item of itemsRecibidos) {
+      if (!itemIds.has(item.itemId)) {
+        throw new NotFoundException(`Item ${item.itemId} no pertenece a esta orden`);
+      }
       await this.prisma.ordenCompraItem.update({
         where: { id: item.itemId },
         data: {
@@ -101,15 +111,12 @@ export class ComprasService {
       });
     }
 
-    // Check if fully received
-    const oc = await this.prisma.ordenCompra.findUnique({
+    const updatedOc = await this.prisma.ordenCompra.findUnique({
       where: { id: ocId },
       include: { items: true },
     });
 
-    if (!oc) throw new NotFoundException('Orden de compra no encontrada');
-
-    const fullyReceived = oc.items.every(
+    const fullyReceived = updatedOc!.items.every(
       (i) => Number(i.cantidad_recibida) >= Number(i.cantidad),
     );
 

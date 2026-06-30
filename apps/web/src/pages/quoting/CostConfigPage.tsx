@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, Calculator, AlertCircle } from 'lucide-react';
+import api from '../../services/api';
 
 export const CostConfigPage = () => {
   const [config, setConfig] = useState({
@@ -13,22 +14,18 @@ export const CostConfigPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch('/api/v1/costos')
-      .then(res => res.json())
-      .then(data => {
-        setConfig(data);
+    api.get('/config/costos')
+      .then(res => {
+        setConfig(res.data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    await fetch('/api/v1/costos', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config),
-    });
+    await api.put('/config/costos', config);
     setSaving(false);
   };
 

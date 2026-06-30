@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { COGateway } from '../centro-operaciones/gateways/co.gateway';
 
@@ -16,32 +16,24 @@ export class VigilanciaMovilService {
     checkpointId: string,
     location?: { lat: number; lng: number },
   ) {
-    // Check if checkpoint exists
-    const checkpoint = await this.prisma.dispositivo.findFirst({
-      where: { id: checkpointId, tipo: 'PUNTO_CONTROL' },
+    const checkpoint = await this.prisma.puntoControl.findUnique({
+      where: { id: checkpointId },
+      include: { puesto: true },
     });
 
-    if (!checkpoint) throw new Error('Punto de control no válido');
+    if (!checkpoint) throw new NotFoundException('Punto de control no válido');
 
-    // Create a normalized EVENT for the SOC instead of a custom bitacora for now
-    const event = await this.prisma.evento.create({
-      data: {
-        tenant_id: checkpoint.tenant_id,
-        objetivo_id: checkpoint.objetivo_id,
-        dispositivo_id: checkpointId,
-        origen: 'RONDA',
-        tipo: 'RONDA_CHECKPOINT',
-        severidad: 'INFO',
-        crudo: { vigilante_id: vigilanteId, location },
-        ts_evento: new Date(),
-      },
-      include: { objetivo: true },
-    });
+    const payload = {
+      vigilante_id: vigilanteId,
+      punto_control_id: checkpointId,
+      puesto_id: checkpoint.puesto_id,
+      location,
+      ts: new Date(),
+    };
 
-    // Notify SOC Gateway
-    this.coGateway.emitToTenant(checkpoint.tenant_id, 'event.new', event);
+    this.coGateway.emitToTenant(checkpoint.tenant_id, 'ronda.checkpoint', payload);
 
-    return event;
+    return payload;
   }
 
   async dispararPanico(
@@ -53,13 +45,11 @@ export class VigilanciaMovilService {
       `PANIC TRIGGERED by Vigilante ${vigilanteId} at ${location.lat}, ${location.lng}`,
     );
 
-    // Fetch the objective the vigilante is assigned to (simplified: first objective of tenant for this mock)
     const objective = await this.prisma.objetivo.findFirst({
       where: { tenant_id: tenantId },
     });
-    if (!objective) throw new Error('No objective found for tenant');
+    if (!objective) throw new NotFoundException('No se encontró objetivo para el tenant');
 
-    // Create a CRITICAL Incident in the SOC
     const incident = await this.prisma.incidente.create({
       data: {
         tenant_id: tenantId,
@@ -74,7 +64,6 @@ export class VigilanciaMovilService {
       include: { objetivo: true },
     });
 
-    // Emit to SOC Console immediately
     this.coGateway.emitToTenant(tenantId, 'incident.new', incident);
 
     return incident;

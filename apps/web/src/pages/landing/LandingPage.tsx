@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 import {
   ShieldCheck,
   Zap,
@@ -52,12 +53,7 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
   const handleCreate = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/system/tenants', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      if (!res.ok) throw new Error('No se pudo crear la empresa');
+      await api.post('/system/tenants', form);
       navigate('/dashboard');
     } catch {
       alert('Hubo un error al crear la empresa. Intentá de nuevo.');

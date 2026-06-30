@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, MessageSquare, Clock, User, MapPin } from 'lucide-react';
+import api from '../../services/api';
 
 export const NovedadesPage = () => {
   const [novedades, setNovedades] = useState<any[]>([]);
@@ -9,12 +10,12 @@ export const NovedadesPage = () => {
 
   const fetchData = () => {
     setLoading(true);
-    fetch('/api/v1/novedades')
-      .then(res => res.json())
-      .then(data => {
-        setNovedades(data);
+    api.get<{ data: any[] }>('/novedades')
+      .then(res => {
+        setNovedades(res.data.data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -23,11 +24,7 @@ export const NovedadesPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/v1/novedades', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
+    await api.post('/novedades', formData);
     setIsModalOpen(false);
     setFormData({ tipo: 'GENERAL', prioridad: 'NORMAL', descripcion: '' });
     fetchData();
@@ -61,7 +58,7 @@ export const NovedadesPage = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="label text-xs uppercase font-black">Tipo de Novedad</label>
-                <select 
+                <select
                   className="input"
                   value={formData.tipo}
                   onChange={e => setFormData({...formData, tipo: e.target.value})}
@@ -81,8 +78,8 @@ export const NovedadesPage = () => {
                       type="button"
                       onClick={() => setFormData({...formData, prioridad: p})}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${
-                        formData.prioridad === p 
-                        ? 'bg-brand-blue text-surface shadow-lg' 
+                        formData.prioridad === p
+                        ? 'bg-brand-blue text-surface shadow-lg'
                         : 'bg-canvas text-muted hover:bg-surface/10'
                       }`}
                     >
@@ -93,8 +90,8 @@ export const NovedadesPage = () => {
               </div>
               <div>
                 <label className="label text-xs uppercase font-black">Descripción Detallada</label>
-                <textarea 
-                  className="input h-32 py-3" 
+                <textarea
+                  className="input h-32 py-3"
                   placeholder="Describa lo sucedido..."
                   value={formData.descripcion}
                   onChange={e => setFormData({...formData, descripcion: e.target.value})}
@@ -102,8 +99,8 @@ export const NovedadesPage = () => {
                 />
               </div>
               <div className="flex gap-4 pt-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 btn btn-secondary"
                 >

@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, CheckCircle2, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import api from '../../services/api';
 
 export const QuotesPage = () => {
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/v1/cotizaciones')
-      .then(res => res.json())
-      .then(data => {
-        setQuotes(data);
+    api.get<{ data: any[] }>('/cotizaciones')
+      .then(res => {
+        setQuotes(res.data.data);
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const getStatusBadge = (status: string) => {
