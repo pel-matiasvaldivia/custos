@@ -23,6 +23,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { NotificacionesModule } from './modules/notificaciones/notificaciones.module';
 import { FlotaModule } from './modules/flota/flota.module';
 import { CuadranteModule } from './modules/cuadrante/cuadrante.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { CuadranteModule } from './modules/cuadrante/cuadrante.module';
     NotificacionesModule,
     FlotaModule,
     CuadranteModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [AppService],

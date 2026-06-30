@@ -11,10 +11,18 @@ services:
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
       JWT_SECRET: "${JWT_SECRET}"
+      MINIO_ENDPOINT: "minio"
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_USER: "${MINIO_USER}"
+      MINIO_PASSWORD: "${MINIO_PASSWORD}"
+      MINIO_BUCKET: "${MINIO_BUCKET:-custos-archivos}"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_started
+      minio:
         condition: service_started
     ports:
       - "3888:3000"
