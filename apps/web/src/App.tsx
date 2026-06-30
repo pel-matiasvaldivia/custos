@@ -18,6 +18,7 @@ import { DevicesPage } from './pages/monitoring/DevicesPage';
 import { ReportsPage } from './pages/reports/ReportsPage';
 import { MobileDashboard } from './pages/mobile/MobileDashboard';
 import ComprasPage from './pages/compras/ComprasPage';
+import { HerramientasPage } from './pages/herramientas/HerramientasPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -99,6 +100,7 @@ function AppRoutes() {
           <Route path="/monitoring/devices" element={<DevicesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/compras" element={<ComprasPage />} />
+          <Route path="/herramientas" element={<HerramientasPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/kiosk" element={<KioskPage />} />
           <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />

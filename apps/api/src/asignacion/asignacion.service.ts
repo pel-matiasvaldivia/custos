@@ -36,6 +36,10 @@ export class AsignacionService {
     });
     if (!puesto) throw new NotFoundException('Puesto no encontrado.');
 
+    if (dto.hora_fin <= dto.hora_inicio) {
+      throw new ConflictException('El horario "Hasta" debe ser posterior al horario "Desde".');
+    }
+
     try {
       return await this.prisma.asignacion.create({
         data: {

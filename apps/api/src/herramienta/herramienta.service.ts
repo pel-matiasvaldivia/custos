@@ -21,6 +21,12 @@ export class HerramientaService {
         skip,
         take,
         orderBy: { created_at: 'desc' },
+        include: {
+          asignaciones: {
+            where: { devuelta_el: null },
+            include: { vigilador: { select: { id: true, nombre: true, apellido: true } } },
+          },
+        },
       }),
       this.prisma.herramienta.count({ where: { tenant_id: tenantId, deleted_at: null } }),
     ]);
@@ -121,5 +127,18 @@ export class HerramientaService {
     ]);
 
     return asignacion;
+  }
+
+  async darDeBaja(herramientaId: string, tenantId: string) {
+    const herramienta = await this.findOne(herramientaId, tenantId);
+    if (herramienta.estado === 'ASIGNADA') {
+      throw new BadRequestException(
+        'No se puede dar de baja una herramienta asignada. Devolvela primero.',
+      );
+    }
+    return this.prisma.herramienta.update({
+      where: { id: herramientaId },
+      data: { estado: 'BAJA' },
+    });
   }
 }
