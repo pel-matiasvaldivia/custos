@@ -193,19 +193,24 @@ export const QuoteWizard = () => {
 
             <div className="border-t border-surface/10 pt-4 mt-4">
               <span className="text-xs font-bold uppercase opacity-60 tracking-widest block mb-1">Total Mensual Neto (ARS)</span>
-              <div className="text-4xl font-mono font-bold text-brand-blue">
+              <div className="text-3xl font-mono font-bold text-brand-blue break-all">
                 ${total.toLocaleString(undefined, {minimumFractionDigits: 2})}
               </div>
             </div>
 
-            <button 
+            <button
               onClick={handleSave}
-              className="btn btn-primary w-full mt-8 flex items-center justify-center gap-2"
+              className="btn btn-primary w-full mt-8 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!quote.cliente_id || total === 0}
             >
               <Save size={20} />
               Generar Cotización
             </button>
+            {!quote.cliente_id && (
+              <p className="text-xs text-amber mt-2 text-center">
+                Seleccioná o creá un cliente para poder generar la cotización.
+              </p>
+            )}
           </div>
 
           <div className="card border-brand-blue/20 bg-brand-blue/5">
