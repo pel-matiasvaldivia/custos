@@ -23,8 +23,8 @@ interface Props {
 }
 
 export const PuestoCoberturaForm = ({ puesto, coberturaActual, onClose, onGuardado }: Props) => {
-  const [horasDia, setHorasDia] = useState(coberturaActual?.ventana.horas_dia ?? 24);
-  const [dias, setDias] = useState<number[]>(coberturaActual?.ventana.dias ?? [1, 2, 3, 4, 5, 6, 7]);
+  const [horasDia, setHorasDia] = useState(coberturaActual?.ventana?.horas_dia ?? 24);
+  const [dias, setDias] = useState<number[]>(coberturaActual?.ventana?.dias ?? [1, 2, 3, 4, 5, 6, 7]);
   const [overrideManual, setOverrideManual] = useState(coberturaActual?.dotacion_requerida ?? null);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
