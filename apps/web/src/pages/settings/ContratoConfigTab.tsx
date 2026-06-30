@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { PenTool, Save } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { PenTool, Save, ImageIcon } from 'lucide-react';
 import { contratoConfigService, ConfiguracionContrato } from '../../services/contratoConfig.service';
 import { FirmaModal } from './FirmaModal';
 import { RichHtmlEditor } from '../../components/common/RichHtmlEditor';
@@ -19,6 +19,8 @@ export const ContratoConfigTab = () => {
   const [mensaje, setMensaje] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mostrarFirmaModal, setMostrarFirmaModal] = useState(false);
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     contratoConfigService
@@ -38,10 +40,33 @@ export const ContratoConfigTab = () => {
       const actualizado = await contratoConfigService.updatePlantilla(html);
       setConfig(actualizado);
       setMensaje('Plantilla guardada.');
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'No se pudo guardar la plantilla.');
+    } catch (err) {
+      setError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'No se pudo guardar la plantilla.',
+      );
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSubiendoLogo(true);
+    setError(null);
+    try {
+      const { logo_url } = await contratoConfigService.actualizarLogo(file);
+      setConfig((prev) => prev ? { ...prev, logo_url } : prev);
+      setMensaje('Logo actualizado.');
+    } catch (err) {
+      setError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'No se pudo subir el logo.',
+      );
+    } finally {
+      setSubiendoLogo(false);
+      if (logoInputRef.current) logoInputRef.current.value = '';
     }
   };
 
@@ -49,6 +74,38 @@ export const ContratoConfigTab = () => {
 
   return (
     <div className="space-y-6">
+      <div className="card p-5 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-16 rounded-md border border-line bg-canvas flex items-center justify-center overflow-hidden">
+            {config?.logo_url ? (
+              <img src={config.logo_url} alt="Logo" className="max-h-14 max-w-full object-contain" />
+            ) : (
+              <ImageIcon size={24} className="text-muted" />
+            )}
+          </div>
+          <div>
+            <p className="font-bold text-navy">Logo del tenant</p>
+            <p className="text-sm text-muted">Se muestra en el encabezado de cotizaciones.</p>
+          </div>
+        </div>
+        <div>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            onChange={handleLogoChange}
+          />
+          <button
+            onClick={() => logoInputRef.current?.click()}
+            disabled={subiendoLogo}
+            className="btn btn-secondary whitespace-nowrap"
+          >
+            {subiendoLogo ? 'Subiendo...' : config?.logo_url ? 'Cambiar logo' : 'Cargar logo'}
+          </button>
+        </div>
+      </div>
+
       <div className="card p-5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-md border border-line bg-canvas flex items-center justify-center overflow-hidden">

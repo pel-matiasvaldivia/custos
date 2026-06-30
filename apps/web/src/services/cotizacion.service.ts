@@ -18,7 +18,18 @@ export interface Cotizacion {
   vencimiento: string;
   estado: 'BORRADOR' | 'ENVIADA' | 'ACEPTADA' | 'RECHAZADA';
   total_mensual?: string;
+  documento_key?: string | null;
+  documento_generado_at?: string | null;
+  created_at: string;
   items: CotizacionItem[];
+}
+
+export interface CotizacionDocumentoEntry {
+  id: string;
+  version: number;
+  documento_key: string;
+  generado_at: string;
+  notas: string | null;
 }
 
 export type EstadoCotizacion = 'ENVIADA' | 'ACEPTADA' | 'RECHAZADA';
@@ -42,6 +53,26 @@ export const cotizacionService = {
       `/cotizaciones/${id}/estado`,
       { estado },
     );
+    return response.data;
+  },
+
+  getDocumentoHtml: async (id: string): Promise<string> => {
+    const response = await api.get<{ html: string }>(`/cotizaciones/${id}/documento-html`);
+    return response.data.html;
+  },
+
+  generarDocumento: async (id: string, html: string): Promise<Blob> => {
+    const response = await api.post(`/cotizaciones/${id}/documento`, { html }, { responseType: 'blob' });
+    return response.data;
+  },
+
+  getVersiones: async (id: string): Promise<CotizacionDocumentoEntry[]> => {
+    const response = await api.get<CotizacionDocumentoEntry[]>(`/cotizaciones/${id}/versiones`);
+    return response.data;
+  },
+
+  descargarVersion: async (id: string, version: number): Promise<Blob> => {
+    const response = await api.get(`/cotizaciones/${id}/versiones/${version}/documento`, { responseType: 'blob' });
     return response.data;
   },
 };

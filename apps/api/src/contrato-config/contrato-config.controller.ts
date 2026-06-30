@@ -69,4 +69,23 @@ export class ContratoConfigController {
       dto.cargo,
     );
   }
+
+  @Post('logo')
+  @Roles('ADMIN', 'GERENCIA')
+  @UseInterceptors(FileInterceptor('file'))
+  async actualizarLogo(
+    @Request() req: any,
+    @UploadedFile() file: Express.Multer.File | undefined,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se recibió ninguna imagen de logo.');
+    }
+    if (!TIPOS_FIRMA_PERMITIDOS.includes(file.mimetype)) {
+      throw new BadRequestException('El logo debe ser una imagen PNG o JPG.');
+    }
+    if (file.size > TAMANO_MAXIMO_FIRMA_BYTES) {
+      throw new BadRequestException('El logo supera el tamaño máximo de 2 MB.');
+    }
+    return this.contratoConfigService.actualizarLogo(req.user.tenantId, file);
+  }
 }

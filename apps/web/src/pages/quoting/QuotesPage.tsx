@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, CheckCircle2, Clock, Send, XCircle } from 'lucide-react';
+import { Plus, Search, CheckCircle2, Clock, Send, XCircle, FileText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { cotizacionService, Cotizacion, EstadoCotizacion } from '../../services/cotizacion.service';
+import { CotizacionDocumentoModal } from './CotizacionDocumentoModal';
 
 export const QuotesPage = () => {
   const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Cotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [actuando, setActuando] = useState<string | null>(null);
+  const [modalDocumento, setModalDocumento] = useState<Cotizacion | null>(null);
 
   const cargar = () => {
     cotizacionService
@@ -32,8 +34,11 @@ export const QuotesPage = () => {
           alert(`Contrato ${contrato.codigo} creado en BORRADOR. Completá la facturación para activarlo.`);
         }
       }
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'No se pudo cambiar el estado de la cotización.');
+    } catch (err) {
+      alert(
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'No se pudo cambiar el estado de la cotización.',
+      );
     } finally {
       setActuando(null);
     }
@@ -82,28 +87,38 @@ export const QuotesPage = () => {
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Total Mensual</th>
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Vencimiento</th>
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Estado</th>
+              <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Documento</th>
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface/10">
             {loading ? (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-muted italic">Cargando...</td></tr>
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-muted italic">Cargando...</td></tr>
             ) : quotes.length === 0 ? (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-muted italic">No hay cotizaciones emitidas.</td></tr>
+              <tr><td colSpan={6} className="px-6 py-8 text-center text-muted italic">No hay cotizaciones emitidas.</td></tr>
             ) : quotes.map(quote => (
               <tr key={quote.id} className="hover:bg-canvas/50 transition-colors">
                 <td className="px-6 py-4">
                   <span className="font-bold text-navy block">{quote.cliente_nombre}</span>
-                  <span className="text-xs text-muted">ID: {quote.id.slice(0,8)}</span>
+                  <span className="text-xs text-muted font-mono">COT-{quote.id.slice(0,8).toUpperCase()}</span>
                 </td>
                 <td className="px-6 py-4">
                   <span className="font-mono font-bold text-navy">${Number(quote.total_mensual).toLocaleString()}</span>
                 </td>
                 <td className="px-6 py-4 text-sm text-muted">
-                  {new Date(quote.vencimiento).toLocaleDateString()}
+                  {new Date(quote.vencimiento).toLocaleDateString('es-AR')}
                 </td>
                 <td className="px-6 py-4">
                   {getStatusBadge(quote.estado)}
+                </td>
+                <td className="px-6 py-4">
+                  <button
+                    onClick={() => setModalDocumento(quote)}
+                    className="flex items-center gap-1.5 text-sm text-brand-blue hover:underline font-medium"
+                  >
+                    <FileText size={14} />
+                    {quote.documento_key ? 'Ver / editar' : 'Generar'}
+                  </button>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
@@ -144,6 +159,17 @@ export const QuotesPage = () => {
           </tbody>
         </table>
       </div>
+
+      {modalDocumento && (
+        <CotizacionDocumentoModal
+          cotizacion={modalDocumento}
+          onClose={() => setModalDocumento(null)}
+          onGenerado={() => {
+            cargar();
+            setModalDocumento(null);
+          }}
+        />
+      )}
     </div>
   );
 };
