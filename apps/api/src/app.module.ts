@@ -30,6 +30,7 @@ import { ObjetivoModule } from './objetivo/objetivo.module';
 import { VehiculoModule } from './vehiculo/vehiculo.module';
 import { ContratoModule } from './contrato/contrato.module';
 import { ClienteModule } from './cliente/cliente.module';
+import { ContratoConfigModule } from './contrato-config/contrato-config.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ClienteModule } from './cliente/cliente.module';
     VehiculoModule,
     ContratoModule,
     ClienteModule,
+    ContratoConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

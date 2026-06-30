@@ -40,10 +40,12 @@ export interface Contrato {
   cliente_id?: string | null;
   cliente_nombre: string;
   objetivo_id?: string | null;
-  estado: 'ACTIVO' | 'SUSPENDIDO' | 'FINALIZADO';
+  estado: 'BORRADOR' | 'ACTIVO' | 'SUSPENDIDO' | 'FINALIZADO';
   inicio?: string | null;
   fin?: string | null;
   facturacion?: ContratoFacturacion | null;
+  documento_key?: string | null;
+  documento_generado_at?: string | null;
 }
 
 export interface Vehiculo {

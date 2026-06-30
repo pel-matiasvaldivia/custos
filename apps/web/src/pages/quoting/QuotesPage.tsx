@@ -1,25 +1,52 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, CheckCircle2, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import api from '../../services/api';
+import { Plus, Search, CheckCircle2, Clock, Send, XCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { cotizacionService, Cotizacion, EstadoCotizacion } from '../../services/cotizacion.service';
 
 export const QuotesPage = () => {
-  const [quotes, setQuotes] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [quotes, setQuotes] = useState<Cotizacion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actuando, setActuando] = useState<string | null>(null);
+
+  const cargar = () => {
+    cotizacionService
+      .getAll()
+      .then((data) => setQuotes(data))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    api.get<{ data: any[] }>('/cotizaciones')
-      .then(res => {
-        setQuotes(res.data.data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    cargar();
   }, []);
+
+  const cambiarEstado = async (id: string, estado: EstadoCotizacion) => {
+    setActuando(id);
+    try {
+      const { contrato } = await cotizacionService.cambiarEstado(id, estado);
+      cargar();
+      if (estado === 'ACEPTADA' && contrato) {
+        if (contrato.cliente_id) {
+          navigate(`/clients/${contrato.cliente_id}`);
+        } else {
+          alert(`Contrato ${contrato.codigo} creado en BORRADOR. Completá la facturación para activarlo.`);
+        }
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'No se pudo cambiar el estado de la cotización.');
+    } finally {
+      setActuando(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'ACEPTADA':
         return <span className="bg-emerald/10 text-emerald px-2 py-1 rounded text-xs font-bold ring-1 ring-emerald/20 flex items-center gap-1 w-fit"><CheckCircle2 size={12}/> ACEPTADA</span>;
+      case 'RECHAZADA':
+        return <span className="bg-red-50 text-red-600 px-2 py-1 rounded text-xs font-bold ring-1 ring-red-200 flex items-center gap-1 w-fit"><XCircle size={12}/> RECHAZADA</span>;
+      case 'ENVIADA':
+        return <span className="bg-brand-blue/10 text-brand-blue px-2 py-1 rounded text-xs font-bold ring-1 ring-brand-blue/20 flex items-center gap-1 w-fit"><Send size={12}/> ENVIADA</span>;
       case 'BORRADOR':
         return <span className="bg-zinc-100 text-zinc-500 px-2 py-1 rounded text-xs font-bold ring-1 ring-zinc-200 flex items-center gap-1 w-fit"><Clock size={12}/> BORRADOR</span>;
       default:
@@ -55,7 +82,7 @@ export const QuotesPage = () => {
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Total Mensual</th>
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Vencimiento</th>
               <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Estado</th>
-              <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider w-20"></th>
+              <th className="px-6 py-4 text-xs font-bold text-muted uppercase tracking-wider">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface/10">
@@ -79,7 +106,38 @@ export const QuotesPage = () => {
                   {getStatusBadge(quote.estado)}
                 </td>
                 <td className="px-6 py-4">
-                  <button className="text-brand-blue hover:underline text-sm font-bold">Ver</button>
+                  <div className="flex items-center gap-3">
+                    {quote.estado === 'BORRADOR' && (
+                      <button
+                        disabled={actuando === quote.id}
+                        onClick={() => cambiarEstado(quote.id, 'ENVIADA')}
+                        className="text-brand-blue hover:underline text-sm font-bold disabled:opacity-50"
+                      >
+                        Enviar
+                      </button>
+                    )}
+                    {quote.estado === 'ENVIADA' && (
+                      <>
+                        <button
+                          disabled={actuando === quote.id}
+                          onClick={() => cambiarEstado(quote.id, 'ACEPTADA')}
+                          className="text-emerald hover:underline text-sm font-bold disabled:opacity-50"
+                        >
+                          Aceptar
+                        </button>
+                        <button
+                          disabled={actuando === quote.id}
+                          onClick={() => cambiarEstado(quote.id, 'RECHAZADA')}
+                          className="text-red-600 hover:underline text-sm font-bold disabled:opacity-50"
+                        >
+                          Rechazar
+                        </button>
+                      </>
+                    )}
+                    {(quote.estado === 'ACEPTADA' || quote.estado === 'RECHAZADA') && (
+                      <span className="text-xs text-muted italic">Sin más acciones</span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

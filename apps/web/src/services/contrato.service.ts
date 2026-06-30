@@ -37,4 +37,19 @@ export const contratoService = {
     const response = await api.put<Contrato>(`/contratos/${id}`, data);
     return response.data;
   },
+
+  getDocumentoHtml: async (id: string): Promise<string> => {
+    const response = await api.get<{ html: string }>(`/contratos/${id}/documento-html`);
+    return response.data.html;
+  },
+
+  generarDocumento: async (id: string, html: string): Promise<Blob> => {
+    const response = await api.post(`/contratos/${id}/documento`, { html }, { responseType: 'blob' });
+    return response.data;
+  },
+
+  descargarDocumento: async (id: string): Promise<Blob> => {
+    const response = await api.get(`/contratos/${id}/documento`, { responseType: 'blob' });
+    return response.data;
+  },
 };

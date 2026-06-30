@@ -65,6 +65,7 @@ model Tenant {
   herramienta_asignaciones HerramientaAsignacion[]
   catalogo_items          CatalogoItem[]
   clientes                Cliente[]
+  configuracion_contrato  ConfiguracionContrato?
 
   @@map("tenants")
 }
@@ -304,6 +305,23 @@ model ConfiguracionCostos {
   tenant Tenant @relation(fields: [tenant_id], references: [id])
 
   @@map("configuracion_costos")
+}
+
+/// Plantilla HTML del contrato y firma digitalizada del Director/Responsable,
+/// configurables por tenant desde Configuración > Contratos. Se usan para
+/// generar el documento PDF que se envía al cliente al aceptar una Cotización.
+model ConfiguracionContrato {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @unique @db.Uuid
+  plantilla_html String   @db.Text
+  firma_key      String? // key en MinIO de la imagen de firma
+  firma_nombre   String? // nombre del Director/Responsable que firma
+  firma_cargo    String? // ej. "Director", "Responsable de Seguridad"
+  updated_at     DateTime @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@map("configuraciones_contrato")
 }
 
 model Cotizacion {
@@ -811,6 +829,11 @@ model Contrato {
   created_at     DateTime  @default(now()) @db.Timestamptz
   updated_at     DateTime  @default(now()) @db.Timestamptz
   deleted_at     DateTime? @db.Timestamptz
+
+  // Documento de contrato (PDF generado a partir de la plantilla + firma del
+  // Director, ver ConfiguracionContrato) almacenado en MinIO.
+  documento_key         String?
+  documento_generado_at DateTime? @db.Timestamptz
 
   tenant         Tenant               @relation(fields: [tenant_id], references: [id])
   cliente        Cliente?             @relation(fields: [cliente_id], references: [id])

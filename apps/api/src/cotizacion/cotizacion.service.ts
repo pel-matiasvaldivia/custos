@@ -1,14 +1,26 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CostosService } from '../costos/costos.service';
+import { ContratoService } from '../contrato/contrato.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
+
+// Transiciones de estado permitidas (Etapa 2 del camino crítico). Toda
+// cotización arranca en BORRADOR y termina en un estado final (ACEPTADA o
+// RECHAZADA) que no admite más cambios.
+const TRANSICIONES: Record<string, string[]> = {
+  BORRADOR: ['ENVIADA', 'RECHAZADA'],
+  ENVIADA: ['ACEPTADA', 'RECHAZADA'],
+  ACEPTADA: [],
+  RECHAZADA: [],
+};
 
 @Injectable()
 export class CotizacionService {
   constructor(
     private prisma: PrismaService,
     private costosService: CostosService,
+    private contratoService: ContratoService,
   ) {}
 
   /** Si viene cliente_id, completa cliente_nombre como snapshot de Cliente.razon_social. */
@@ -125,5 +137,40 @@ export class CotizacionService {
     }
 
     return cotizacion;
+  }
+
+  /**
+   * Cambia el estado de la cotización siguiendo TRANSICIONES. Al pasar a
+   * ACEPTADA dispara automáticamente la creación del Contrato (Etapa 3),
+   * pre-cargado con el cliente de la cotización — criterio de salida de la
+   * Etapa 2 del camino crítico (ver PROCESO_VENTA_A_COBRANZA.md).
+   */
+  async cambiarEstado(id: string, tenantId: string, nuevoEstado: string) {
+    const cotizacion = await this.prisma.cotizacion.findFirst({ where: { id, tenant_id: tenantId } });
+    if (!cotizacion) throw new NotFoundException('Cotización no encontrada.');
+
+    const permitidos = TRANSICIONES[cotizacion.estado] ?? [];
+    if (!permitidos.includes(nuevoEstado)) {
+      throw new BadRequestException(
+        `No se puede pasar de ${cotizacion.estado} a ${nuevoEstado}.`,
+      );
+    }
+
+    const actualizada = await this.prisma.cotizacion.update({
+      where: { id },
+      data: { estado: nuevoEstado },
+      include: { items: true },
+    });
+
+    let contrato = null;
+    if (nuevoEstado === 'ACEPTADA') {
+      contrato = await this.contratoService.crearDesdeCotizacion(tenantId, {
+        id: actualizada.id,
+        cliente_id: actualizada.cliente_id,
+        cliente_nombre: actualizada.cliente_nombre,
+      });
+    }
+
+    return { cotizacion: actualizada, contrato };
   }
 }

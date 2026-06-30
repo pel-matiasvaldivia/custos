@@ -49,6 +49,37 @@ export class ContratoService {
     return cliente.razon_social;
   }
 
+  /**
+   * Disparado al aceptar una Cotización (Etapa 2→3 del camino crítico): crea
+   * un Contrato en BORRADOR pre-cargado con el cliente de la cotización, sin
+   * ContratoFacturacion todavía — eso se completa a mano antes de activarlo
+   * (ver guarda en `update`). Idempotente: si la cotización ya tiene contrato
+   * asociado, lo devuelve en vez de duplicar.
+   */
+  async crearDesdeCotizacion(
+    tenantId: string,
+    cotizacion: { id: string; cliente_id: string | null; cliente_nombre: string },
+  ) {
+    const existente = await this.prisma.contrato.findFirst({
+      where: { tenant_id: tenantId, cotizacion_id: cotizacion.id },
+      include: { facturacion: true },
+    });
+    if (existente) return existente;
+
+    const codigo = `CON-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    return this.prisma.contrato.create({
+      data: {
+        tenant_id: tenantId,
+        codigo,
+        cliente_id: cotizacion.cliente_id,
+        cliente_nombre: cotizacion.cliente_nombre,
+        cotizacion_id: cotizacion.id,
+        estado: 'BORRADOR',
+      },
+      include: { facturacion: true },
+    });
+  }
+
   async create(tenantId: string, dto: CreateContratoDto) {
     const codigo =
       dto.codigo || `CON-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
@@ -79,7 +110,7 @@ export class ContratoService {
   }
 
   async update(id: string, tenantId: string, dto: UpdateContratoDto) {
-    await this.findOne(id, tenantId);
+    const contrato = await this.findOne(id, tenantId);
 
     const { modo, tarifa_hora, abono_mensual, redondeo_min, penaliza_hueco, ...contratoFields } =
       dto;
@@ -93,12 +124,31 @@ export class ContratoService {
     const facturacionFields = { modo, tarifa_hora, abono_mensual, redondeo_min, penaliza_hueco };
     const hayCambiosFacturacion = Object.values(facturacionFields).some((v) => v !== undefined);
 
+    // Regla crítica: un Contrato sin ContratoFacturacion no puede pasar a ACTIVO,
+    // o la etapa de facturación más adelante no tiene cómo calcular nada.
+    if (contratoFields.estado === 'ACTIVO' && !contrato.facturacion && !modo) {
+      throw new BadRequestException(
+        'No se puede activar el contrato sin configurar la facturación (modo, tarifa/abono).',
+      );
+    }
+
     return this.prisma.contrato.update({
       where: { id },
       data: {
         ...contratoFields,
         facturacion: hayCambiosFacturacion
-          ? { update: facturacionFields }
+          ? contrato.facturacion
+            ? { update: facturacionFields }
+            : {
+                create: {
+                  tenant_id: tenantId,
+                  modo: modo!,
+                  tarifa_hora,
+                  abono_mensual,
+                  redondeo_min: redondeo_min ?? 0,
+                  penaliza_hueco: penaliza_hueco ?? false,
+                },
+              }
           : undefined,
       },
       include: { facturacion: true },
