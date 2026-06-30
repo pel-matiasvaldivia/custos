@@ -88,7 +88,7 @@ async function main() {
     update: {},
     create: {
       tenant_id: tenant.id,
-      cliente_id: tenant.id, // using tenant as client reference
+      cliente_nombre: 'Cliente Demo SA',
       codigo: 'OBJ-001',
       nombre: 'Objetivo Centro',
       direccion: 'Av. Corrientes 1234, CABA',
