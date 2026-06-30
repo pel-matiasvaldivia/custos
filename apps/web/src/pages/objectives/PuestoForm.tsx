@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { puestoService } from '../../services/puesto.service';
+import { Puesto } from '../../services/objetivo.service';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
@@ -8,16 +9,21 @@ const labelClase = 'text-xs font-medium text-muted uppercase tracking-wider';
 
 interface Props {
   objetivoId: string;
+  puesto?: Puesto;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
-  const [nombre, setNombre] = useState('');
-  const [ubicacion, setUbicacion] = useState('');
-  const [coordenadas, setCoordenadas] = useState('');
-  const [requiereArma, setRequiereArma] = useState(false);
-  const [requiereMovil, setRequiereMovil] = useState(false);
+const coordStr = (p?: Puesto) =>
+  p?.lat != null && p?.lng != null ? `${p.lat}, ${p.lng}` : '';
+
+export const PuestoForm = ({ objetivoId, puesto, onClose, onCreated }: Props) => {
+  const editando = !!puesto;
+  const [nombre, setNombre] = useState(puesto?.nombre ?? '');
+  const [ubicacion, setUbicacion] = useState(puesto?.ubicacion ?? '');
+  const [coordenadas, setCoordenadas] = useState(coordStr(puesto));
+  const [requiereArma, setRequiereArma] = useState(puesto?.requiere_arma ?? false);
+  const [requiereMovil, setRequiereMovil] = useState(puesto?.requiere_movil ?? false);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,18 +43,30 @@ export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
         }
         [lat, lng] = partes;
       }
-      await puestoService.create({
-        objetivo_id: objetivoId,
-        nombre,
-        ubicacion: ubicacion || undefined,
-        lat,
-        lng,
-        requiere_arma: requiereArma,
-        requiere_movil: requiereMovil,
-      });
+      if (editando && puesto) {
+        await puestoService.update(puesto.id, {
+          nombre,
+          ubicacion: ubicacion || undefined,
+          lat,
+          lng,
+          requiere_arma: requiereArma,
+          requiere_movil: requiereMovil,
+        });
+      } else {
+        await puestoService.create({
+          objetivo_id: objetivoId,
+          nombre,
+          ubicacion: ubicacion || undefined,
+          lat,
+          lng,
+          requiere_arma: requiereArma,
+          requiere_movil: requiereMovil,
+        });
+      }
       onCreated();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'No se pudo guardar el puesto.');
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(msg || 'No se pudo guardar el puesto.');
     } finally {
       setEnviando(false);
     }
@@ -58,7 +76,9 @@ export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
     <div className="fixed inset-0 bg-navy/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-md rounded-xl shadow-xl overflow-hidden border border-line animate-in fade-in zoom-in duration-200">
         <div className="p-6 border-b border-line flex justify-between items-center">
-          <h3 className="text-xl font-display font-bold text-navy">Nuevo Puesto</h3>
+          <h3 className="text-xl font-display font-bold text-navy">
+            {editando ? 'Editar Puesto' : 'Nuevo Puesto'}
+          </h3>
           <button onClick={onClose} className="text-muted hover:text-navy transition-colors">
             <X size={20} />
           </button>
@@ -106,7 +126,7 @@ export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
               Cancelar
             </button>
             <button type="submit" className="flex-1 btn-primary" disabled={enviando}>
-              {enviando ? 'Guardando...' : 'Guardar'}
+              {enviando ? 'Guardando...' : editando ? 'Guardar cambios' : 'Guardar'}
             </button>
           </div>
         </form>

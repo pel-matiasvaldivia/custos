@@ -73,8 +73,15 @@ export const EsquemaCuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
     setFinalizando(true);
     try {
       await cuadranteService.finalizarAsignacion(asignacionId, new Date().toISOString().slice(0, 10));
+      // Optimistic: remove from local state immediately so the row disappears at once
+      setAsignaciones((prev) => prev.filter((a) => a.id !== asignacionId));
       setConfirmandoFinalizar(null);
-      await cargar();
+      // Then refresh the full cuadrante in background
+      cargar();
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setConfirmandoFinalizar(null);
+      alert(msg || 'No se pudo finalizar la afectación.');
     } finally {
       setFinalizando(false);
     }
