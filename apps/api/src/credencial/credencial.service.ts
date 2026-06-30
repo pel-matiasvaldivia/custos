@@ -15,6 +15,13 @@ export class CredencialService {
     });
   }
 
+  async findByVigilador(vigiladorId: string, tenantId: string) {
+    return this.prisma.credencial.findMany({
+      where: { vigilador_id: vigiladorId, tenant_id: tenantId },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   async findExpiringSoon(tenantId: string, days: number = 30) {
     const thresholdDate = new Date();
     thresholdDate.setDate(thresholdDate.getDate() + days);

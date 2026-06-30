@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -8,18 +9,29 @@ import {
   Param,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   Request,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { VigilanteService } from './vigilante.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateVigilanteDto } from './dto/create-vigilante.dto';
 import { UpdateVigilanteDto } from './dto/update-vigilante.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { StorageService } from '../storage/storage.service';
+import { HerramientaService } from '../herramienta/herramienta.service';
+
+const TIPOS_FOTO_PERMITIDOS = ['image/jpeg', 'image/png'];
 
 @Controller('vigilantes')
 @UseGuards(JwtAuthGuard)
 export class VigilanteController {
-  constructor(private readonly vigilanteService: VigilanteService) {}
+  constructor(
+    private readonly vigilanteService: VigilanteService,
+    private readonly storageService: StorageService,
+    private readonly herramientaService: HerramientaService,
+  ) {}
 
   @Get()
   async findAll(@Request() req: any, @Query() pagination: PaginationDto) {
@@ -51,5 +63,37 @@ export class VigilanteController {
   @Delete(':id')
   async delete(@Param('id') id: string, @Request() req: any) {
     return this.vigilanteService.delete(id, req.user.tenantId);
+  }
+
+  @Post(':id/foto')
+  @UseInterceptors(FileInterceptor('file'))
+  async subirFoto(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se recibió ningún archivo.');
+    }
+    if (!TIPOS_FOTO_PERMITIDOS.includes(file.mimetype)) {
+      throw new BadRequestException('La foto debe ser una imagen JPG o PNG.');
+    }
+    const { url } = await this.storageService.subir(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      'vigiladores/fotos',
+    );
+    return this.vigilanteService.setFoto(id, req.user.tenantId, url);
+  }
+
+  @Get(':id/completitud')
+  async completitud(@Param('id') id: string, @Request() req: any) {
+    return this.vigilanteService.getCompletitud(id, req.user.tenantId);
+  }
+
+  @Get(':id/herramientas')
+  async herramientas(@Param('id') id: string, @Request() req: any) {
+    return this.herramientaService.findHerramientasDeVigilador(id, req.user.tenantId);
   }
 }

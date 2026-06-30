@@ -24,6 +24,7 @@ import { NotificacionesModule } from './modules/notificaciones/notificaciones.mo
 import { FlotaModule } from './modules/flota/flota.module';
 import { CuadranteModule } from './modules/cuadrante/cuadrante.module';
 import { StorageModule } from './storage/storage.module';
+import { HerramientaModule } from './herramienta/herramienta.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { StorageModule } from './storage/storage.module';
     FlotaModule,
     CuadranteModule,
     StorageModule,
+    HerramientaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
