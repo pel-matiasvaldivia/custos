@@ -9,7 +9,12 @@ export interface Credencial {
   emitida_el?: string | null;
   vence_el?: string | null;
   documento_url?: string | null;
+  documento_key?: string | null;
   created_at: string;
+}
+
+export interface CredencialAlerta extends Credencial {
+  vigilador: { id: string; nombre: string; apellido: string };
 }
 
 export interface CreateCredencialData {
@@ -36,6 +41,18 @@ export const credencialService = {
     if (data.vence_el) form.append('vence_el', data.vence_el);
     if (data.archivo) form.append('file', data.archivo);
     const response = await api.post<Credencial>(`/vigilantes/${vigiladorId}/credenciales`, form);
+    return response.data;
+  },
+
+  descargarDocumento: async (vigiladorId: string, credencialId: string): Promise<Blob> => {
+    const response = await api.get(`/vigilantes/${vigiladorId}/credenciales/${credencialId}/documento`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  getAlertas: async (dias: number = 15): Promise<CredencialAlerta[]> => {
+    const response = await api.get<CredencialAlerta[]>('/credenciales/alertas', { params: { dias } });
     return response.data;
   },
 };

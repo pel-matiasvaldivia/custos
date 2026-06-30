@@ -6,10 +6,12 @@ import {
   Param,
   Post,
   Request,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CredencialService } from './credencial.service';
@@ -42,6 +44,7 @@ export class CredencialController {
     @Request() req: any,
   ) {
     let documentoUrl: string | undefined;
+    let documentoKey: string | undefined;
     if (file) {
       if (!TIPOS_DOCUMENTO_PERMITIDOS.includes(file.mimetype)) {
         throw new BadRequestException(
@@ -55,6 +58,7 @@ export class CredencialController {
         'credenciales',
       );
       documentoUrl = subida.url;
+      documentoKey = subida.key;
     }
 
     const credencial = await this.credencialService.create({
@@ -62,8 +66,24 @@ export class CredencialController {
       vigilador_id: vigiladorId,
       tenant_id: req.user.tenantId,
       documento_url: documentoUrl,
+      documento_key: documentoKey,
     });
     await this.vigilanteService.recalcularCompletitud(vigiladorId, req.user.tenantId);
     return credencial;
+  }
+
+  @Get(':id/documento')
+  async descargarDocumento(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const credencial = await this.credencialService.findOne(id, req.user.tenantId);
+    if (!credencial.documento_key) {
+      throw new BadRequestException('Esta credencial no tiene un documento adjunto.');
+    }
+    const { stream, contentType } = await this.storageService.descargar(credencial.documento_key);
+    res.setHeader('Content-Type', contentType);
+    stream.pipe(res);
   }
 }

@@ -1,6 +1,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Client } from 'minio';
 import { randomUUID } from 'crypto';
+import { Readable } from 'stream';
 
 const DEFAULT_BUCKET = 'custos-archivos';
 const URL_EXPIRY_SECONDS = 60 * 60; // 1 hora
@@ -51,5 +52,19 @@ export class StorageService implements OnModuleInit {
 
   async eliminar(key: string): Promise<void> {
     await this.client.removeObject(this.bucket, key);
+  }
+
+  // Servimos el archivo a través de la API en vez de exponer la URL firmada
+  // de MinIO directamente: esa URL apunta al hostname interno "minio", que
+  // no es resoluble desde el navegador del usuario.
+  async descargar(key: string): Promise<{ stream: Readable; contentType: string }> {
+    const [stat, stream] = await Promise.all([
+      this.client.statObject(this.bucket, key),
+      this.client.getObject(this.bucket, key),
+    ]);
+    return {
+      stream,
+      contentType: (stat.metaData?.['content-type'] as string) || 'application/octet-stream',
+    };
   }
 }

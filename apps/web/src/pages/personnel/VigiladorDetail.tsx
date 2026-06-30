@@ -70,6 +70,14 @@ export const VigiladorDetail = () => {
     setCompletitud(comp);
   };
 
+  const handleVerDocumento = async (credencialId: string) => {
+    if (!id) return;
+    const blob = await credencialService.descargarDocumento(id, credencialId);
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
   if (loading) return <div className="p-8 text-muted">Cargando detalles...</div>;
   if (!vigilador) return <div className="p-8 text-amber">Vigilador no encontrado.</div>;
 
@@ -173,18 +181,18 @@ export const VigiladorDetail = () => {
                   const vencida = estaVencida(c.vence_el);
                   const porVencer = !vencida && proximaAVencer(c.vence_el);
                   return (
-                    <a
+                    <button
                       key={c.id}
-                      href={c.documento_url || undefined}
-                      target={c.documento_url ? '_blank' : undefined}
-                      rel="noreferrer"
-                      className={`p-4 border rounded-lg flex justify-between items-center transition-colors ${
+                      type="button"
+                      onClick={() => c.documento_key && handleVerDocumento(c.id)}
+                      disabled={!c.documento_key}
+                      className={`w-full text-left p-4 border rounded-lg flex justify-between items-center transition-colors ${
                         vencida
                           ? 'bg-red-50 border-red-200'
                           : porVencer
                             ? 'bg-amber/5 border-amber/20'
                             : 'bg-canvas border-line'
-                      } ${c.documento_url ? 'hover:opacity-80 cursor-pointer' : ''}`}
+                      } ${c.documento_key ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
                     >
                       <div className="flex items-center gap-4">
                         <div
@@ -212,7 +220,7 @@ export const VigiladorDetail = () => {
                       >
                         {vencida ? 'Vencida' : porVencer ? 'Por Vencer' : 'Vigente'}
                       </span>
-                    </a>
+                    </button>
                   );
                 })
               )}
