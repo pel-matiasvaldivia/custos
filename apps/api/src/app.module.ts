@@ -26,6 +26,9 @@ import { CuadranteModule } from './modules/cuadrante/cuadrante.module';
 import { StorageModule } from './storage/storage.module';
 import { HerramientaModule } from './herramienta/herramienta.module';
 import { CatalogoModule } from './catalogo/catalogo.module';
+import { ObjetivoModule } from './objetivo/objetivo.module';
+import { VehiculoModule } from './vehiculo/vehiculo.module';
+import { ContratoModule } from './contrato/contrato.module';
 
 @Module({
   imports: [
@@ -53,6 +56,9 @@ import { CatalogoModule } from './catalogo/catalogo.module';
     StorageModule,
     HerramientaModule,
     CatalogoModule,
+    ObjetivoModule,
+    VehiculoModule,
+    ContratoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
