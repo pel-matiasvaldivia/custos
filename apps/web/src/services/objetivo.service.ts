@@ -2,6 +2,7 @@ import api from './api';
 
 export interface Objetivo {
   id: string;
+  cliente_id?: string | null;
   cliente_nombre: string;
   codigo: string;
   nombre: string;
@@ -36,6 +37,7 @@ export interface ContratoFacturacion {
 export interface Contrato {
   id: string;
   codigo: string;
+  cliente_id?: string | null;
   cliente_nombre: string;
   objetivo_id?: string | null;
   estado: 'ACTIVO' | 'SUSPENDIDO' | 'FINALIZADO';
@@ -96,7 +98,8 @@ export interface ObjetivoDetalle {
 }
 
 export interface CreateObjetivoData {
-  cliente_nombre: string;
+  cliente_id?: string;
+  cliente_nombre?: string;
   codigo: string;
   nombre: string;
   direccion?: string;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { contratoService } from '../../services/contrato.service';
+import { ClientePicker } from '../../components/clients/ClientePicker';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
@@ -14,13 +15,14 @@ const MODOS: { value: 'POR_PLANIFICADO' | 'POR_REAL' | 'ABONO_FIJO'; label: stri
 
 interface Props {
   objetivoId: string;
-  clienteNombreSugerido: string;
+  clienteIdSugerido?: string;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export const ContratoForm = ({ objetivoId, clienteNombreSugerido, onClose, onCreated }: Props) => {
-  const [clienteNombre, setClienteNombre] = useState(clienteNombreSugerido);
+export const ContratoForm = ({ objetivoId, clienteIdSugerido, onClose, onCreated }: Props) => {
+  const [clienteId, setClienteId] = useState(clienteIdSugerido || '');
+  const [clienteNombre, setClienteNombre] = useState('');
   const [modo, setModo] = useState<'POR_PLANIFICADO' | 'POR_REAL' | 'ABONO_FIJO'>('POR_PLANIFICADO');
   const [tarifaHora, setTarifaHora] = useState('');
   const [abonoMensual, setAbonoMensual] = useState('');
@@ -34,7 +36,8 @@ export const ContratoForm = ({ objetivoId, clienteNombreSugerido, onClose, onCre
     setError(null);
     try {
       await contratoService.create({
-        cliente_nombre: clienteNombre,
+        cliente_id: clienteId || undefined,
+        cliente_nombre: clienteNombre || undefined,
         objetivo_id: objetivoId,
         modo,
         tarifa_hora: tarifaHora ? Number(tarifaHora) : undefined,
@@ -59,10 +62,13 @@ export const ContratoForm = ({ objetivoId, clienteNombreSugerido, onClose, onCre
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-1">
-            <label className={labelClase}>Cliente</label>
-            <input className={campoClase} value={clienteNombre} onChange={(e) => setClienteNombre(e.target.value)} required />
-          </div>
+          <ClientePicker
+            clienteId={clienteId}
+            onChange={(id, nombre) => {
+              setClienteId(id);
+              setClienteNombre(nombre);
+            }}
+          />
           <div className="space-y-1">
             <label className={labelClase}>Tipo de contrato</label>
             <select className={campoClase} value={modo} onChange={(e) => setModo(e.target.value as any)}>

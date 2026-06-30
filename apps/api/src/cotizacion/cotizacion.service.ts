@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CostosService } from '../costos/costos.service';
 import { Prisma } from '@prisma/client';
@@ -11,8 +11,26 @@ export class CotizacionService {
     private costosService: CostosService,
   ) {}
 
+  /** Si viene cliente_id, completa cliente_nombre como snapshot de Cliente.razon_social. */
+  private async resolverClienteNombre(
+    tenantId: string,
+    clienteId: string | undefined,
+    clienteNombre: string | undefined,
+  ): Promise<string> {
+    if (!clienteId) {
+      if (!clienteNombre) throw new BadRequestException('Debe indicar cliente_id o cliente_nombre.');
+      return clienteNombre;
+    }
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { id: clienteId, tenant_id: tenantId, deleted_at: null },
+    });
+    if (!cliente) throw new NotFoundException('Cliente no encontrado.');
+    return cliente.razon_social;
+  }
+
   async create(tenantId: string, data: any) {
     const config = await this.costosService.findOne(tenantId);
+    const clienteNombre = await this.resolverClienteNombre(tenantId, data.cliente_id, data.cliente_nombre);
 
     // Simple calculation logic for the items
     const items = data.items.map((item: any) => {
@@ -42,7 +60,8 @@ export class CotizacionService {
     return this.prisma.cotizacion.create({
       data: {
         tenant_id: tenantId,
-        cliente_nombre: data.cliente_nombre,
+        cliente_id: data.cliente_id,
+        cliente_nombre: clienteNombre,
         vencimiento: new Date(data.vencimiento),
         estado: 'BORRADOR',
         total_mensual: total,
