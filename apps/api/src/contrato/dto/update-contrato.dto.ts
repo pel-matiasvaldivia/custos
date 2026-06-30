@@ -12,6 +12,10 @@ import {
 export class UpdateContratoDto {
   @IsOptional()
   @IsUUID()
+  objetivo_id?: string;
+
+  @IsOptional()
+  @IsUUID()
   cliente_id?: string;
 
   @IsOptional()

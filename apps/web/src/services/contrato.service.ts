@@ -23,7 +23,7 @@ export interface CreateContratoData {
   penaliza_hueco?: boolean;
 }
 
-export type UpdateContratoData = Partial<CreateContratoData> & { estado?: string };
+export type UpdateContratoData = Partial<CreateContratoData> & { estado?: string; objetivo_id?: string };
 
 export const contratoService = {
   getByObjetivo: async (objetivoId: string): Promise<Contrato[]> => {
