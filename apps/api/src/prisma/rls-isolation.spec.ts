@@ -30,7 +30,9 @@ suite('RLS · aislamiento multi-tenant', () => {
 
   beforeAll(async () => {
     admin = new PrismaClient({ datasources: { db: { url: ADMIN_URL } } });
-    await admin.$executeRawUnsafe(`DELETE FROM vigiladores WHERE tenant_id IN ('${TA}','${TB}')`);
+    await admin.$executeRawUnsafe(
+      `DELETE FROM vigiladores WHERE tenant_id IN ('${TA}','${TB}')`,
+    );
     await admin.$executeRawUnsafe(
       `INSERT INTO tenants (id,nombre) VALUES ('${TA}','Empresa A'),('${TB}','Empresa B') ON CONFLICT (id) DO NOTHING`,
     );
@@ -47,7 +49,9 @@ suite('RLS · aislamiento multi-tenant', () => {
 
   afterAll(async () => {
     if (admin) {
-      await admin.$executeRawUnsafe(`DELETE FROM vigiladores WHERE tenant_id IN ('${TA}','${TB}')`);
+      await admin.$executeRawUnsafe(
+        `DELETE FROM vigiladores WHERE tenant_id IN ('${TA}','${TB}')`,
+      );
       await admin.$disconnect();
     }
     if (prisma) await (prisma as unknown as PrismaClient).$disconnect();
@@ -72,7 +76,13 @@ suite('RLS · aislamiento multi-tenant', () => {
     await expect(
       ctx.run(TA, async () =>
         prisma.vigilador.create({
-          data: { tenant_id: TB, legajo_nro: 'X-9', nombre: 'Intruso', apellido: 'X', documento: '9' },
+          data: {
+            tenant_id: TB,
+            legajo_nro: 'X-9',
+            nombre: 'Intruso',
+            apellido: 'X',
+            documento: '9',
+          },
         }),
       ),
     ).rejects.toThrow();

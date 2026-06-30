@@ -30,9 +30,16 @@ export class StorageController {
       );
     }
     if (file.size > TAMANO_MAXIMO_BYTES) {
-      throw new BadRequestException('El archivo supera el tamaño máximo de 5 MB.');
+      throw new BadRequestException(
+        'El archivo supera el tamaño máximo de 5 MB.',
+      );
     }
 
-    return this.storageService.subir(file.buffer, file.originalname, file.mimetype, 'documentos');
+    return this.storageService.subir(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      'documentos',
+    );
   }
 }

@@ -56,18 +56,28 @@ describe('flota.domain', () => {
   describe('planMantenimientoDisparo', () => {
     it('KM: dispara al superar el umbral', () => {
       expect(
-        planMantenimientoDisparo({ disparo: 'KM', cada_km: 10000, ultimo_km: 5000 }, 16000),
+        planMantenimientoDisparo(
+          { disparo: 'KM', cada_km: 10000, ultimo_km: 5000 },
+          16000,
+        ),
       ).toBe(true);
     });
     it('KM: no dispara si no llegó', () => {
       expect(
-        planMantenimientoDisparo({ disparo: 'KM', cada_km: 10000, ultimo_km: 5000 }, 12000),
+        planMantenimientoDisparo(
+          { disparo: 'KM', cada_km: 10000, ultimo_km: 5000 },
+          12000,
+        ),
       ).toBe(false);
     });
     it('TIEMPO: dispara por meses transcurridos', () => {
       expect(
         planMantenimientoDisparo(
-          { disparo: 'TIEMPO', cada_meses: 6, ultima_fecha: new Date('2026-01-01') },
+          {
+            disparo: 'TIEMPO',
+            cada_meses: 6,
+            ultima_fecha: new Date('2026-01-01'),
+          },
           0,
           new Date('2026-07-01'),
         ),
@@ -91,7 +101,9 @@ describe('flota.domain', () => {
       expect(map.has(null as any)).toBe(false);
     });
     it('mapa vacío si no hay horas imputables', () => {
-      expect(prorratearTCO(180000, [{ contrato_id: null, horas: 10 }]).size).toBe(0);
+      expect(
+        prorratearTCO(180000, [{ contrato_id: null, horas: 10 }]).size,
+      ).toBe(0);
     });
   });
 });

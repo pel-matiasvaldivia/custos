@@ -1,6 +1,9 @@
 // Valores por defecto de cada lista configurable. El tenant puede agregar los
 // suyos desde Configuración; estos siguen disponibles aunque no haya filas en DB.
-export const CATALOGO_DEFAULTS: Record<string, { codigo: string; etiqueta: string }[]> = {
+export const CATALOGO_DEFAULTS: Record<
+  string,
+  { codigo: string; etiqueta: string }[]
+> = {
   CREDENCIAL_TIPO: [
     { codigo: 'CARNET_VIGILADOR', etiqueta: 'Carnet de Vigilador' },
     { codigo: 'PSICOFISICO', etiqueta: 'Psicofísico' },

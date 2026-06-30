@@ -49,7 +49,12 @@ export class ContratoConfigService {
       where: { tenant_id: tenantId },
     });
 
-    const subida = await this.storageService.subir(file.buffer, file.originalname, file.mimetype, 'firmas');
+    const subida = await this.storageService.subir(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      'firmas',
+    );
 
     const actualizado = await this.prisma.configuracionContrato.upsert({
       where: { tenant_id: tenantId },
@@ -68,10 +73,14 @@ export class ContratoConfigService {
     });
 
     if (existente?.firma_key && existente.firma_key !== subida.key) {
-      await this.storageService.eliminar(existente.firma_key).catch(() => undefined);
+      await this.storageService
+        .eliminar(existente.firma_key)
+        .catch(() => undefined);
     }
 
-    const firma_url = await this.storageService.obtenerUrlFirmada(actualizado.firma_key!);
+    const firma_url = await this.storageService.obtenerUrlFirmada(
+      actualizado.firma_key!,
+    );
     return { ...actualizado, firma_url };
   }
 }

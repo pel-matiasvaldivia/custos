@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsIn, IsNumber, IsInt, IsBoolean, IsDateString, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsIn,
+  IsNumber,
+  IsInt,
+  IsBoolean,
+  IsDateString,
+  IsUUID,
+} from 'class-validator';
 
 export class UpdateContratoDto {
   @IsOptional()

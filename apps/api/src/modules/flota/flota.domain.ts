@@ -94,16 +94,17 @@ export function prorratearTCO(
   tco: number,
   asignaciones: { contrato_id: string | null; horas: number }[],
 ): Map<string, number> {
-  const imputables = asignaciones.filter(
-    (a) => a.contrato_id && a.horas > 0,
-  );
+  const imputables = asignaciones.filter((a) => a.contrato_id && a.horas > 0);
   const totalHoras = imputables.reduce((acc, a) => acc + a.horas, 0);
   const out = new Map<string, number>();
   if (totalHoras <= 0) return out;
 
   for (const a of imputables) {
     const parte = redondear2((tco * a.horas) / totalHoras);
-    out.set(a.contrato_id as string, (out.get(a.contrato_id as string) ?? 0) + parte);
+    out.set(
+      a.contrato_id as string,
+      (out.get(a.contrato_id as string) ?? 0) + parte,
+    );
   }
   return out;
 }

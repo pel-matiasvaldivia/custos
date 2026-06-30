@@ -96,6 +96,7 @@ model Vigilador {
   apellido   String
   documento  String
   estado     String    @default("ACTIVO")
+  pin        String? // hash bcrypt del PIN de acceso a Vigilancia Móvil; null hasta que un admin lo configura
   // Wizard de alta guiada (PROMPT_UX_ONBOARDING_GUIADO.md §4)
   foto_url                String?
   domicilio               String?
@@ -1017,6 +1018,7 @@ model TurnoPlanificado {
   fin_real              DateTime? @db.Timestamptz
   metodo                String? // GEO | QR | NFC | MANUAL
   asistencia_estado     String    @default("PENDIENTE") // PENDIENTE | OK | OBSERVADA | AUSENTE
+  motivo                String? // motivo del cambio de turno cuando estado='AUSENTE' por solicitud de relevo pendiente
 
   tenant            Tenant             @relation(fields: [tenant_id], references: [id])
   asignacionEsquema AsignacionEsquema? @relation(fields: [asignacion_esquema_id], references: [id])
@@ -1048,5 +1050,6 @@ model PuestoCobertura {
 
   tenant Tenant @relation(fields: [tenant_id], references: [id])
 
+  @@unique([tenant_id, puesto_id])
   @@map("puesto_cobertura")
 }

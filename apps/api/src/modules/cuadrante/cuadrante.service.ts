@@ -13,6 +13,9 @@ import {
 import { validarTurno, ReglasValidacion } from './validacion.domain';
 import { detectarCobertura, VentanaCobertura } from './cobertura.domain';
 import { AuditoriaService } from '../auditoria/auditoria.service';
+import { CreateEsquemaTurnoDto } from './dto/create-esquema-turno.dto';
+import { CreateAsignacionEsquemaDto } from './dto/create-asignacion-esquema.dto';
+import { UpsertPuestoCoberturaDto } from './dto/upsert-puesto-cobertura.dto';
 
 function horaNum(hhmm: string): number {
   return parseInt(hhmm.split(':')[0], 10);
@@ -40,7 +43,8 @@ export class CuadranteService {
       where: { id: asignacionEsquemaId, tenant_id: tenantId },
       include: { esquema: true },
     });
-    if (!asig) throw new NotFoundException('Asignación de esquema no encontrada');
+    if (!asig)
+      throw new NotFoundException('Asignación de esquema no encontrada');
 
     const generados = generarTurnosDesdeEsquema({
       definicion: asig.esquema.definicion as unknown as EsquemaDef,
@@ -208,7 +212,9 @@ export class CuadranteService {
       where: { tenant_id: tenantId },
       select: { contrato_id: true, modo: true, penaliza_hueco: true },
     });
-    const factByContrato = new Map(facturaciones.map((f) => [f.contrato_id, f]));
+    const factByContrato = new Map(
+      facturaciones.map((f) => [f.contrato_id, f]),
+    );
 
     const snapshots = [];
     for (const contrato of contratos) {
@@ -240,7 +246,8 @@ export class CuadranteService {
         finPlan: t.fin_plan,
         inicioReal: t.inicio_real,
         finReal: t.fin_real,
-        esCubierto: t.asistencia_estado === 'OK' && !!t.inicio_real && !!t.fin_real,
+        esCubierto:
+          t.asistencia_estado === 'OK' && !!t.inicio_real && !!t.fin_real,
         esFeriado: feriadoSet.has(t.inicio_plan.toISOString().slice(0, 10)),
         vigiladorId: t.vigilador_id,
       }));
@@ -341,5 +348,283 @@ export class CuadranteService {
       huecos: resultado.huecos,
       sobreDotacion: resultado.sobre,
     };
+  }
+
+  // ─── Esquemas de turno ───
+
+  async crearEsquema(tenantId: string, dto: CreateEsquemaTurnoDto) {
+    return this.prisma.esquemaTurno.create({
+      data: {
+        tenant_id: tenantId,
+        nombre: dto.nombre,
+        dias_ciclo: dto.dias_ciclo,
+        definicion: { dias_ciclo: dto.dias_ciclo, dias: dto.dias } as any,
+      },
+    });
+  }
+
+  async listarEsquemas(tenantId: string) {
+    return this.prisma.esquemaTurno.findMany({
+      where: { tenant_id: tenantId, deleted_at: null },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  async obtenerEsquema(tenantId: string, id: string) {
+    const esquema = await this.prisma.esquemaTurno.findFirst({
+      where: { id, tenant_id: tenantId, deleted_at: null },
+    });
+    if (!esquema) throw new NotFoundException('Esquema de turno no encontrado');
+    return esquema;
+  }
+
+  async eliminarEsquema(tenantId: string, id: string) {
+    await this.obtenerEsquema(tenantId, id);
+    const enUso = await this.prisma.asignacionEsquema.count({
+      where: { tenant_id: tenantId, esquema_id: id, vigente_hasta: null },
+    });
+    if (enUso > 0) {
+      throw new BadRequestException(
+        'No se puede eliminar: hay asignaciones activas usando este esquema.',
+      );
+    }
+    return this.prisma.esquemaTurno.update({
+      where: { id },
+      data: { deleted_at: new Date() },
+    });
+  }
+
+  // ─── Asignaciones de esquema (afectación vigilador → puesto) ───
+
+  async crearAsignacionEsquema(
+    tenantId: string,
+    dto: CreateAsignacionEsquemaDto,
+  ) {
+    const [puesto, vigilador, esquema] = await Promise.all([
+      this.prisma.puesto.findFirst({
+        where: { id: dto.puesto_id, tenant_id: tenantId },
+      }),
+      this.prisma.vigilador.findFirst({
+        where: { id: dto.vigilador_id, tenant_id: tenantId },
+      }),
+      this.prisma.esquemaTurno.findFirst({
+        where: { id: dto.esquema_id, tenant_id: tenantId, deleted_at: null },
+      }),
+    ]);
+    if (!puesto) throw new NotFoundException('Puesto no encontrado');
+    if (!vigilador) throw new NotFoundException('Vigilador no encontrado');
+    if (!esquema) throw new NotFoundException('Esquema de turno no encontrado');
+
+    const asignacion = await this.prisma.asignacionEsquema.create({
+      data: {
+        tenant_id: tenantId,
+        puesto_id: dto.puesto_id,
+        vigilador_id: dto.vigilador_id,
+        esquema_id: dto.esquema_id,
+        posicion_ciclo: dto.posicion_ciclo ?? 0,
+        fecha_ancla: new Date(dto.fecha_ancla),
+        vigente_desde: new Date(dto.vigente_desde),
+      },
+    });
+
+    const desde = dto.generar_desde ? new Date(dto.generar_desde) : new Date();
+    const hasta = dto.generar_hasta
+      ? new Date(dto.generar_hasta)
+      : new Date(desde.getTime() + 35 * 86_400_000);
+
+    const generacion = await this.generarCuadrante(
+      tenantId,
+      asignacion.id,
+      desde,
+      hasta,
+    );
+
+    return { asignacion, generacion };
+  }
+
+  async listarAsignacionesPorObjetivo(tenantId: string, objetivoId: string) {
+    const puestos = await this.prisma.puesto.findMany({
+      where: { tenant_id: tenantId, objetivo_id: objetivoId },
+      select: { id: true, nombre: true },
+    });
+    if (puestos.length === 0) return [];
+
+    const asignaciones = await this.prisma.asignacionEsquema.findMany({
+      where: {
+        tenant_id: tenantId,
+        puesto_id: { in: puestos.map((p) => p.id) },
+        vigente_hasta: null,
+      },
+      include: { esquema: true },
+    });
+    if (asignaciones.length === 0) return [];
+
+    const vigiladores = await this.prisma.vigilador.findMany({
+      where: {
+        tenant_id: tenantId,
+        id: { in: asignaciones.map((a) => a.vigilador_id) },
+      },
+      select: { id: true, nombre: true, apellido: true, legajo_nro: true },
+    });
+    const vigiladorPorId = new Map(vigiladores.map((v) => [v.id, v]));
+    const puestoPorId = new Map(puestos.map((p) => [p.id, p]));
+
+    return asignaciones.map((a) => ({
+      id: a.id,
+      puestoId: a.puesto_id,
+      puestoNombre: puestoPorId.get(a.puesto_id)?.nombre ?? null,
+      vigiladorId: a.vigilador_id,
+      vigilador: vigiladorPorId.get(a.vigilador_id) ?? null,
+      esquemaId: a.esquema_id,
+      esquemaNombre: a.esquema.nombre,
+      posicionCiclo: a.posicion_ciclo,
+      fechaAncla: a.fecha_ancla,
+      vigenteDesde: a.vigente_desde,
+    }));
+  }
+
+  async finalizarAsignacionEsquema(
+    tenantId: string,
+    id: string,
+    vigenteHasta: Date,
+  ) {
+    const asig = await this.prisma.asignacionEsquema.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
+    if (!asig)
+      throw new NotFoundException('Asignación de esquema no encontrada');
+    return this.prisma.asignacionEsquema.update({
+      where: { id },
+      data: { vigente_hasta: vigenteHasta },
+    });
+  }
+
+  // ─── Cobertura por puesto ───
+
+  async upsertCobertura(
+    tenantId: string,
+    puestoId: string,
+    dto: UpsertPuestoCoberturaDto,
+  ) {
+    const puesto = await this.prisma.puesto.findFirst({
+      where: { id: puestoId, tenant_id: tenantId },
+    });
+    if (!puesto) throw new NotFoundException('Puesto no encontrado');
+
+    const regla = await this.prisma.reglaLaboral.findUnique({
+      where: { tenant_id: tenantId },
+    });
+    const jornadaMaxSemanalH = regla?.jornada_max_semanal_h ?? 48;
+
+    const sugerido = Math.ceil(
+      (dto.ventana.horas_dia * dto.ventana.dias.length) / jornadaMaxSemanalH,
+    );
+    const dotacionRequerida = dto.dotacion_requerida ?? sugerido;
+
+    return this.prisma.puestoCobertura.upsert({
+      where: {
+        tenant_id_puesto_id: { tenant_id: tenantId, puesto_id: puestoId },
+      },
+      create: {
+        tenant_id: tenantId,
+        puesto_id: puestoId,
+        dotacion_requerida: dotacionRequerida,
+        ventana: dto.ventana as any,
+      },
+      update: {
+        dotacion_requerida: dotacionRequerida,
+        ventana: dto.ventana as any,
+      },
+    });
+  }
+
+  async obtenerCobertura(tenantId: string, puestoId: string) {
+    return this.prisma.puestoCobertura.findFirst({
+      where: { tenant_id: tenantId, puesto_id: puestoId },
+    });
+  }
+
+  // ─── Vista agregada de cuadrante por objetivo ───
+
+  async cuadranteDeObjetivo(
+    tenantId: string,
+    objetivoId: string,
+    desde: Date,
+    hasta: Date,
+  ) {
+    const puestos = await this.prisma.puesto.findMany({
+      where: { tenant_id: tenantId, objetivo_id: objetivoId },
+      select: { id: true, nombre: true },
+    });
+    if (puestos.length === 0) return [];
+
+    const puestoIds = puestos.map((p) => p.id);
+
+    const [turnos, coberturas] = await Promise.all([
+      this.prisma.turnoPlanificado.findMany({
+        where: {
+          tenant_id: tenantId,
+          puesto_id: { in: puestoIds },
+          inicio_plan: { lt: hasta },
+          fin_plan: { gt: desde },
+        },
+      }),
+      this.prisma.puestoCobertura.findMany({
+        where: { tenant_id: tenantId, puesto_id: { in: puestoIds } },
+      }),
+    ]);
+
+    const vigiladorIds = Array.from(new Set(turnos.map((t) => t.vigilador_id)));
+    const vigiladores = vigiladorIds.length
+      ? await this.prisma.vigilador.findMany({
+          where: { tenant_id: tenantId, id: { in: vigiladorIds } },
+          select: { id: true, nombre: true, apellido: true },
+        })
+      : [];
+    const vigiladorPorId = new Map(vigiladores.map((v) => [v.id, v]));
+    const coberturaPorPuesto = new Map(coberturas.map((c) => [c.puesto_id, c]));
+
+    return puestos.map((puesto) => {
+      const turnosPuesto = turnos
+        .filter((t) => t.puesto_id === puesto.id)
+        .map((t) => ({
+          id: t.id,
+          inicioPlan: t.inicio_plan,
+          finPlan: t.fin_plan,
+          tipoBloque: t.tipo_bloque,
+          estado: t.estado,
+          motivo: t.motivo,
+          vigiladorId: t.vigilador_id,
+          vigilador: vigiladorPorId.get(t.vigilador_id) ?? null,
+        }));
+
+      const cobertura = coberturaPorPuesto.get(puesto.id);
+      let resultadoCobertura: ReturnType<typeof detectarCobertura> | null =
+        null;
+      if (cobertura) {
+        resultadoCobertura = detectarCobertura(
+          turnos
+            .filter((t) => t.puesto_id === puesto.id)
+            .map((t) => ({ inicio: t.inicio_plan, fin: t.fin_plan })),
+          cobertura.dotacion_requerida,
+          cobertura.ventana as unknown as VentanaCobertura,
+          desde,
+          hasta,
+        );
+      }
+
+      return {
+        puestoId: puesto.id,
+        puestoNombre: puesto.nombre,
+        turnos: turnosPuesto,
+        dotacionRequerida: cobertura?.dotacion_requerida ?? null,
+        cobertura: resultadoCobertura
+          ? {
+              huecos: resultadoCobertura.huecos,
+              sobreDotacion: resultadoCobertura.sobre,
+            }
+          : null,
+      };
+    });
   }
 }

@@ -41,7 +41,12 @@ describe('VigilanteService', () => {
 
       const result = await service.findAll('tenant-1');
 
-      expect(result).toEqual({ data: mockVigilantes, total: 2, page: 1, limit: 50 });
+      expect(result).toEqual({
+        data: mockVigilantes,
+        total: 2,
+        page: 1,
+        limit: 50,
+      });
       expect(prisma.vigilador.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { tenant_id: 'tenant-1', deleted_at: null },
@@ -64,7 +69,12 @@ describe('VigilanteService', () => {
 
   describe('findOne', () => {
     it('should return vigilante when found and not deleted', async () => {
-      const mockVigilante = { id: '1', nombre: 'Juan', tenant_id: 'tenant-1', deleted_at: null };
+      const mockVigilante = {
+        id: '1',
+        nombre: 'Juan',
+        tenant_id: 'tenant-1',
+        deleted_at: null,
+      };
       mockPrisma.vigilador.findFirst.mockResolvedValue(mockVigilante);
 
       const result = await service.findOne('1', 'tenant-1');
@@ -101,13 +111,20 @@ describe('VigilanteService', () => {
       const result = await service.create(createData);
 
       expect(result).toEqual(created);
-      expect(prisma.vigilador.create).toHaveBeenCalledWith({ data: createData });
+      expect(prisma.vigilador.create).toHaveBeenCalledWith({
+        data: createData,
+      });
     });
   });
 
   describe('update', () => {
     it('should update vigilante after verifying tenant', async () => {
-      const existing = { id: '1', tenant_id: 'tenant-1', nombre: 'Juan', deleted_at: null };
+      const existing = {
+        id: '1',
+        tenant_id: 'tenant-1',
+        nombre: 'Juan',
+        deleted_at: null,
+      };
       mockPrisma.vigilador.findFirst.mockResolvedValue(existing);
       mockPrisma.vigilador.update.mockResolvedValue({
         ...existing,

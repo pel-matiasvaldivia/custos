@@ -102,7 +102,10 @@ export function detectarCobertura(
 
   for (const tramo of tramos) {
     // Límites internos: bordes de turnos que caen dentro del tramo.
-    const limites = new Set<number>([tramo.inicio.getTime(), tramo.fin.getTime()]);
+    const limites = new Set<number>([
+      tramo.inicio.getTime(),
+      tramo.fin.getTime(),
+    ]);
     for (const tu of turnos) {
       const i = tu.inicio.getTime();
       const f = tu.fin.getTime();

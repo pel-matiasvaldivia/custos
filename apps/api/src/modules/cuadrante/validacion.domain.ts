@@ -27,7 +27,8 @@ export interface ResultadoValidacion {
 const MS_HORA = 3_600_000;
 const MS_DIA = 86_400_000;
 
-const horas = (a: Date, b: Date) => Math.max(0, (b.getTime() - a.getTime()) / MS_HORA);
+const horas = (a: Date, b: Date) =>
+  Math.max(0, (b.getTime() - a.getTime()) / MS_HORA);
 
 function diaKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -61,14 +62,18 @@ export function validarTurno(
     .sort((a, b) => b.fin_plan.getTime() - a.fin_plan.getTime());
   if (previos.length > 0) {
     const gap = horas(previos[0].fin_plan, candidato.inicio_plan);
-    if (gap < reglas.descansoMinEntreJornadasH) errores.push('DESCANSO_INSUFICIENTE');
+    if (gap < reglas.descansoMinEntreJornadasH)
+      errores.push('DESCANSO_INSUFICIENTE');
   }
   const posteriores = existentes
     .filter((e) => e.inicio_plan >= candidato.fin_plan)
     .sort((a, b) => a.inicio_plan.getTime() - b.inicio_plan.getTime());
   if (posteriores.length > 0) {
     const gap = horas(candidato.fin_plan, posteriores[0].inicio_plan);
-    if (gap < reglas.descansoMinEntreJornadasH && !errores.includes('DESCANSO_INSUFICIENTE')) {
+    if (
+      gap < reglas.descansoMinEntreJornadasH &&
+      !errores.includes('DESCANSO_INSUFICIENTE')
+    ) {
       errores.push('DESCANSO_INSUFICIENTE');
     }
   }
@@ -78,7 +83,10 @@ export function validarTurno(
   const horasSemana = existentes
     .filter((e) => inicioSemana(e.inicio_plan) === semanaCand)
     .reduce((acc, e) => acc + horas(e.inicio_plan, e.fin_plan), 0);
-  if (horasSemana + horas(candidato.inicio_plan, candidato.fin_plan) > reglas.jornadaMaxSemanalH) {
+  if (
+    horasSemana + horas(candidato.inicio_plan, candidato.fin_plan) >
+    reglas.jornadaMaxSemanalH
+  ) {
     avisos.push('GENERA_EXTRA');
     if (
       horasSemana + horas(candidato.inicio_plan, candidato.fin_plan) >
@@ -107,7 +115,8 @@ export function validarTurno(
     if (dias.has(diaKey(d))) run++;
     else break;
   }
-  if (run > reglas.maxDiasConsecutivos) errores.push('EXCEDE_DIAS_CONSECUTIVOS');
+  if (run > reglas.maxDiasConsecutivos)
+    errores.push('EXCEDE_DIAS_CONSECUTIVOS');
 
   return { errores, avisos };
 }

@@ -23,13 +23,17 @@ describe('RolesGuard', () => {
   });
 
   it('permite cuando el rol del usuario está incluido', () => {
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['ADMIN', 'GERENCIA']);
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockReturnValue(['ADMIN', 'GERENCIA']);
     const guard = new RolesGuard(reflector);
     expect(guard.canActivate(ctxConRol('GERENCIA'))).toBe(true);
   });
 
   it('bloquea (Forbidden) cuando el rol no está incluido', () => {
-    jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['ADMIN', 'GERENCIA']);
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockReturnValue(['ADMIN', 'GERENCIA']);
     const guard = new RolesGuard(reflector);
     expect(() => guard.canActivate(ctxConRol('OPERADOR'))).toThrow(
       ForbiddenException,

@@ -32,7 +32,11 @@ export class CotizacionController {
   // Lectura abierta; el service recorta montos para OPERADOR.
   @Get()
   findAll(@Request() req: any, @Query() pagination: PaginationDto) {
-    return this.cotizacionService.findAll(req.user.tenantId, req.user.role, pagination);
+    return this.cotizacionService.findAll(
+      req.user.tenantId,
+      req.user.role,
+      pagination,
+    );
   }
 
   @Get(':id')
@@ -49,6 +53,10 @@ export class CotizacionController {
     @Param('id') id: string,
     @Body() body: CambiarEstadoCotizacionDto,
   ) {
-    return this.cotizacionService.cambiarEstado(id, req.user.tenantId, body.estado);
+    return this.cotizacionService.cambiarEstado(
+      id,
+      req.user.tenantId,
+      body.estado,
+    );
   }
 }

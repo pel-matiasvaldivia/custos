@@ -24,7 +24,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       select: { id: true },
     });
     if (!tenant) {
-      throw new UnauthorizedException('Tu sesión expiró, iniciá sesión de nuevo.');
+      throw new UnauthorizedException(
+        'Tu sesión expiró, iniciá sesión de nuevo.',
+      );
     }
 
     return {

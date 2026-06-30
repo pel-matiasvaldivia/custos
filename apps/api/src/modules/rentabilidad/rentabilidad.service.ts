@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { calcularRentabilidad, ResultadoRentabilidad } from './rentabilidad.domain';
+import {
+  calcularRentabilidad,
+  ResultadoRentabilidad,
+} from './rentabilidad.domain';
 import { FlotaService } from '../flota/flota.service';
 
 export interface RentabilidadContrato extends ResultadoRentabilidad {
@@ -109,9 +112,15 @@ export class RentabilidadService {
     const contratoById = new Map(contratos.map((c) => [c.id, c]));
     const factById = new Map(facturaciones.map((f) => [f.contrato_id, f]));
 
-    const hhByContrato = new Map<string, { facturables: number; reales: number }>();
+    const hhByContrato = new Map<
+      string,
+      { facturables: number; reales: number }
+    >();
     for (const c of conciliaciones) {
-      const acc = hhByContrato.get(c.contrato_id) ?? { facturables: 0, reales: 0 };
+      const acc = hhByContrato.get(c.contrato_id) ?? {
+        facturables: 0,
+        reales: 0,
+      };
       acc.facturables += Number(c.hh_facturables);
       acc.reales += Number(c.hh_reales);
       hhByContrato.set(c.contrato_id, acc);

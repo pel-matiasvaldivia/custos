@@ -55,4 +55,9 @@ export class HerramientaController {
   async devolver(@Param('id') id: string, @Request() req: any) {
     return this.herramientaService.devolver(id, req.user.tenantId);
   }
+
+  @Post(':id/baja')
+  async darDeBaja(@Param('id') id: string, @Request() req: any) {
+    return this.herramientaService.darDeBaja(id, req.user.tenantId);
+  }
 }

@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  Res,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { ContratoService } from './contrato.service';
 import { ContratoPdfService } from './contrato-pdf.service';
@@ -23,7 +34,8 @@ export class ContratoController {
     @Query('clienteId') clienteId: string,
     @Request() req: any,
   ) {
-    if (clienteId) return this.contratoService.findByCliente(clienteId, req.user.tenantId);
+    if (clienteId)
+      return this.contratoService.findByCliente(clienteId, req.user.tenantId);
     return this.contratoService.findByObjetivo(objetivoId, req.user.tenantId);
   }
 
@@ -38,7 +50,11 @@ export class ContratoController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: UpdateContratoDto, @Request() req: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateContratoDto,
+    @Request() req: any,
+  ) {
     return this.contratoService.update(id, req.user.tenantId, body);
   }
 
@@ -61,7 +77,11 @@ export class ContratoController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    const buffer = await this.contratoPdfService.generarYGuardarPdf(id, req.user.tenantId, body.html);
+    const buffer = await this.contratoPdfService.generarYGuardarPdf(
+      id,
+      req.user.tenantId,
+      body.html,
+    );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=contrato.pdf`);
     res.send(buffer);
@@ -69,15 +89,22 @@ export class ContratoController {
 
   // Re-descarga el último documento generado (sin volver a renderizar).
   @Get(':id/documento')
-  async descargarDocumento(@Param('id') id: string, @Request() req: any, @Res() res: Response) {
+  async descargarDocumento(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
     const contrato = await this.contratoService.findOne(id, req.user.tenantId);
     if (!contrato?.documento_key) {
-      res.status(404).json({ message: 'Este contrato todavía no tiene un documento generado.' });
+      res.status(404).json({
+        message: 'Este contrato todavía no tiene un documento generado.',
+      });
       return;
     }
-    const { stream, contentType } = await this.contratoPdfService.descargarDocumentoGuardado(
-      contrato.documento_key,
-    );
+    const { stream, contentType } =
+      await this.contratoPdfService.descargarDocumentoGuardado(
+        contrato.documento_key,
+      );
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename=contrato.pdf`);
     stream.pipe(res);

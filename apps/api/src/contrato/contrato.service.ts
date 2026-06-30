@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateContratoDto } from './dto/create-contrato.dto';
 import { UpdateContratoDto } from './dto/update-contrato.dto';
@@ -39,7 +43,10 @@ export class ContratoService {
     clienteNombre: string | undefined,
   ): Promise<string> {
     if (!clienteId) {
-      if (!clienteNombre) throw new BadRequestException('Debe indicar cliente_id o cliente_nombre.');
+      if (!clienteNombre)
+        throw new BadRequestException(
+          'Debe indicar cliente_id o cliente_nombre.',
+        );
       return clienteNombre;
     }
     const cliente = await this.prisma.cliente.findFirst({
@@ -58,7 +65,11 @@ export class ContratoService {
    */
   async crearDesdeCotizacion(
     tenantId: string,
-    cotizacion: { id: string; cliente_id: string | null; cliente_nombre: string },
+    cotizacion: {
+      id: string;
+      cliente_id: string | null;
+      cliente_nombre: string;
+    },
   ) {
     const existente = await this.prisma.contrato.findFirst({
       where: { tenant_id: tenantId, cotizacion_id: cotizacion.id },
@@ -82,8 +93,13 @@ export class ContratoService {
 
   async create(tenantId: string, dto: CreateContratoDto) {
     const codigo =
-      dto.codigo || `CON-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
-    const clienteNombre = await this.resolverClienteNombre(tenantId, dto.cliente_id, dto.cliente_nombre);
+      dto.codigo ||
+      `CON-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const clienteNombre = await this.resolverClienteNombre(
+      tenantId,
+      dto.cliente_id,
+      dto.cliente_nombre,
+    );
 
     return this.prisma.contrato.create({
       data: {
@@ -112,11 +128,22 @@ export class ContratoService {
   async update(id: string, tenantId: string, dto: UpdateContratoDto) {
     const contrato = await this.findOne(id, tenantId);
 
-    const { modo, tarifa_hora, abono_mensual, redondeo_min, penaliza_hueco, ...contratoFields } =
-      dto;
-    const datosContrato: Omit<typeof contratoFields, 'inicio' | 'fin'> & { inicio?: Date; fin?: Date } = {
+    const {
+      modo,
+      tarifa_hora,
+      abono_mensual,
+      redondeo_min,
+      penaliza_hueco,
+      ...contratoFields
+    } = dto;
+    const datosContrato: Omit<typeof contratoFields, 'inicio' | 'fin'> & {
+      inicio?: Date;
+      fin?: Date;
+    } = {
       ...contratoFields,
-      inicio: contratoFields.inicio ? new Date(contratoFields.inicio) : undefined,
+      inicio: contratoFields.inicio
+        ? new Date(contratoFields.inicio)
+        : undefined,
       fin: contratoFields.fin ? new Date(contratoFields.fin) : undefined,
     };
     if (datosContrato.cliente_id) {
@@ -126,8 +153,16 @@ export class ContratoService {
         datosContrato.cliente_nombre,
       );
     }
-    const facturacionFields = { modo, tarifa_hora, abono_mensual, redondeo_min, penaliza_hueco };
-    const hayCambiosFacturacion = Object.values(facturacionFields).some((v) => v !== undefined);
+    const facturacionFields = {
+      modo,
+      tarifa_hora,
+      abono_mensual,
+      redondeo_min,
+      penaliza_hueco,
+    };
+    const hayCambiosFacturacion = Object.values(facturacionFields).some(
+      (v) => v !== undefined,
+    );
 
     // Regla crítica: un Contrato sin ContratoFacturacion no puede pasar a ACTIVO,
     // o la etapa de facturación más adelante no tiene cómo calcular nada.

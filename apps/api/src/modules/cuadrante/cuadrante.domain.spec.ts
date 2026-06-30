@@ -4,8 +4,18 @@ import { generarTurnosDesdeEsquema, EsquemaDef } from './cuadrante.domain';
 const ESQUEMA: EsquemaDef = {
   dias_ciclo: 4,
   dias: [
-    { tipo: 'TRABAJO', bloques: [{ hora_inicio: '06:00', duracion_horas: 12, tipo_bloque: 'DIURNO' }] },
-    { tipo: 'TRABAJO', bloques: [{ hora_inicio: '18:00', duracion_horas: 12, tipo_bloque: 'NOCTURNO' }] },
+    {
+      tipo: 'TRABAJO',
+      bloques: [
+        { hora_inicio: '06:00', duracion_horas: 12, tipo_bloque: 'DIURNO' },
+      ],
+    },
+    {
+      tipo: 'TRABAJO',
+      bloques: [
+        { hora_inicio: '18:00', duracion_horas: 12, tipo_bloque: 'NOCTURNO' },
+      ],
+    },
     { tipo: 'FRANCO' },
     { tipo: 'FRANCO' },
   ],

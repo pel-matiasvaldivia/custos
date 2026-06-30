@@ -11,7 +11,9 @@ import {
   Smartphone,
   BarChart3,
   Zap,
-  Building2
+  Building2,
+  Wrench,
+  RefreshCw
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -37,6 +39,8 @@ const navGroups = [
       { icon: Users, label: 'Personal', path: '/personnel' },
       { icon: AlertCircle, label: 'Novedades', path: '/novedades' },
       { icon: ShoppingCart, label: 'Compras', path: '/compras' },
+      { icon: Wrench, label: 'Herramientas', path: '/herramientas' },
+      { icon: RefreshCw, label: 'Cambios de turno', path: '/relevos' },
     ],
   },
   {

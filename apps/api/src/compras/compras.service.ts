@@ -101,7 +101,9 @@ export class ComprasService {
     const itemIds = new Set(oc.items.map((i) => i.id));
     for (const item of itemsRecibidos) {
       if (!itemIds.has(item.itemId)) {
-        throw new NotFoundException(`Item ${item.itemId} no pertenece a esta orden`);
+        throw new NotFoundException(
+          `Item ${item.itemId} no pertenece a esta orden`,
+        );
       }
       await this.prisma.ordenCompraItem.update({
         where: { id: item.itemId },

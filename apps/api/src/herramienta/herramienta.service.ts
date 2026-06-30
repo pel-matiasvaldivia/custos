@@ -21,8 +21,18 @@ export class HerramientaService {
         skip,
         take,
         orderBy: { created_at: 'desc' },
+        include: {
+          asignaciones: {
+            where: { devuelta_el: null },
+            include: {
+              vigilador: { select: { id: true, nombre: true, apellido: true } },
+            },
+          },
+        },
       }),
-      this.prisma.herramienta.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.herramienta.count({
+        where: { tenant_id: tenantId, deleted_at: null },
+      }),
     ]);
 
     return { data, total, page: pagination?.page ?? 1, limit: take };
@@ -31,14 +41,21 @@ export class HerramientaService {
   async findOne(id: string, tenantId: string) {
     const herramienta = await this.prisma.herramienta.findFirst({
       where: { id, tenant_id: tenantId, deleted_at: null },
-      include: { asignaciones: { where: { devuelta_el: null }, include: { vigilador: true } } },
+      include: {
+        asignaciones: {
+          where: { devuelta_el: null },
+          include: { vigilador: true },
+        },
+      },
     });
     if (!herramienta) throw new NotFoundException('Herramienta no encontrada');
     return herramienta;
   }
 
   async create(
-    data: Omit<Prisma.HerramientaUncheckedCreateInput, 'codigo'> & { codigo?: string },
+    data: Omit<Prisma.HerramientaUncheckedCreateInput, 'codigo'> & {
+      codigo?: string;
+    },
   ) {
     const codigo =
       data.codigo ||
@@ -48,7 +65,11 @@ export class HerramientaService {
 
   async findHerramientasDeVigilador(vigiladorId: string, tenantId: string) {
     return this.prisma.herramientaAsignacion.findMany({
-      where: { vigilador_id: vigiladorId, tenant_id: tenantId, devuelta_el: null },
+      where: {
+        vigilador_id: vigiladorId,
+        tenant_id: tenantId,
+        devuelta_el: null,
+      },
       include: { herramienta: true },
     });
   }
@@ -103,10 +124,16 @@ export class HerramientaService {
   async devolver(herramientaId: string, tenantId: string) {
     await this.findOne(herramientaId, tenantId);
     const asignacionActiva = await this.prisma.herramientaAsignacion.findFirst({
-      where: { herramienta_id: herramientaId, tenant_id: tenantId, devuelta_el: null },
+      where: {
+        herramienta_id: herramientaId,
+        tenant_id: tenantId,
+        devuelta_el: null,
+      },
     });
     if (!asignacionActiva) {
-      throw new BadRequestException('La herramienta no tiene una asignación activa.');
+      throw new BadRequestException(
+        'La herramienta no tiene una asignación activa.',
+      );
     }
 
     const [asignacion] = await this.prisma.$transaction([
@@ -121,5 +148,18 @@ export class HerramientaService {
     ]);
 
     return asignacion;
+  }
+
+  async darDeBaja(herramientaId: string, tenantId: string) {
+    const herramienta = await this.findOne(herramientaId, tenantId);
+    if (herramienta.estado === 'ASIGNADA') {
+      throw new BadRequestException(
+        'No se puede dar de baja una herramienta asignada. Devolvela primero.',
+      );
+    }
+    return this.prisma.herramienta.update({
+      where: { id: herramientaId },
+      data: { estado: 'BAJA' },
+    });
   }
 }

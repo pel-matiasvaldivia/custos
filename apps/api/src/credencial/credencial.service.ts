@@ -91,7 +91,9 @@ export class CredencialService {
 // `emitida_el`/`vence_el` llegan como string "AAAA-MM-DD" desde un form-data
 // (multer no aplica el transform de class-validator); Prisma necesita un
 // DateTime completo, no solo la fecha.
-function normalizarFechas<T extends { emitida_el?: unknown; vence_el?: unknown }>(data: T): T {
+function normalizarFechas<
+  T extends { emitida_el?: unknown; vence_el?: unknown },
+>(data: T): T {
   const normalizado = { ...data };
   if (typeof normalizado.emitida_el === 'string') {
     normalizado.emitida_el = new Date(normalizado.emitida_el) as never;

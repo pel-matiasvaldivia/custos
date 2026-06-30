@@ -11,20 +11,28 @@ const D = (s: string) => new Date(s);
 describe('conciliacion.domain', () => {
   describe('duracionHoras', () => {
     it('calcula horas entre dos fechas', () => {
-      expect(duracionHoras(D('2026-06-01T08:00'), D('2026-06-01T20:00'))).toBe(12);
+      expect(duracionHoras(D('2026-06-01T08:00'), D('2026-06-01T20:00'))).toBe(
+        12,
+      );
     });
     it('0 si fin <= inicio', () => {
-      expect(duracionHoras(D('2026-06-01T20:00'), D('2026-06-01T08:00'))).toBe(0);
+      expect(duracionHoras(D('2026-06-01T20:00'), D('2026-06-01T08:00'))).toBe(
+        0,
+      );
     });
   });
 
   describe('horasNocturnas (ventana 21→06)', () => {
     it('turno diurno 08–20 → 0 nocturnas', () => {
-      expect(horasNocturnas(D('2026-06-01T08:00'), D('2026-06-01T20:00'))).toBe(0);
+      expect(horasNocturnas(D('2026-06-01T08:00'), D('2026-06-01T20:00'))).toBe(
+        0,
+      );
     });
     it('turno nocturno 20–08 → 10 nocturnas (21→06)', () => {
       // 20:00→08:00 = 12h; nocturnas entre 21 y 06 = 9h (21-06) ... 20-21 no, 06-08 no
-      expect(horasNocturnas(D('2026-06-01T20:00'), D('2026-06-02T08:00'))).toBe(9);
+      expect(horasNocturnas(D('2026-06-01T20:00'), D('2026-06-02T08:00'))).toBe(
+        9,
+      );
     });
     it('null si falta asistencia', () => {
       expect(horasNocturnas(null, D('2026-06-01T20:00'))).toBe(0);
@@ -53,14 +61,20 @@ describe('conciliacion.domain', () => {
     ];
 
     it('POR_PLANIFICADO sin penalización: facturables = planificadas', () => {
-      const r = conciliarHH(turnos, { modo: 'POR_PLANIFICADO', penalizaHueco: false });
+      const r = conciliarHH(turnos, {
+        modo: 'POR_PLANIFICADO',
+        penalizaHueco: false,
+      });
       expect(r.hh_planificadas).toBe(24);
       expect(r.hh_reales).toBe(12);
       expect(r.hh_facturables).toBe(24);
     });
 
     it('POR_PLANIFICADO con penalización: descuenta huecos', () => {
-      const r = conciliarHH(turnos, { modo: 'POR_PLANIFICADO', penalizaHueco: true });
+      const r = conciliarHH(turnos, {
+        modo: 'POR_PLANIFICADO',
+        penalizaHueco: true,
+      });
       expect(r.hh_facturables).toBe(12); // 24 - 12 hueco
     });
 
@@ -70,7 +84,10 @@ describe('conciliacion.domain', () => {
     });
 
     it('ABONO_FIJO: facturables = 0', () => {
-      const r = conciliarHH(turnos, { modo: 'ABONO_FIJO', penalizaHueco: false });
+      const r = conciliarHH(turnos, {
+        modo: 'ABONO_FIJO',
+        penalizaHueco: false,
+      });
       expect(r.hh_facturables).toBe(0);
     });
 
@@ -87,12 +104,24 @@ describe('conciliacion.domain', () => {
 
     it('0 si cada vigilador no excede el tope semanal', () => {
       const turnos: TurnoConciliable[] = [
-        { inicioPlan: D('2026-06-01T08:00'), finPlan: D('2026-06-01T20:00'),
-          inicioReal: D('2026-06-01T08:00'), finReal: D('2026-06-01T20:00'),
-          esCubierto: true, esFeriado: false, vigiladorId: 'v1' },
-        { inicioPlan: D('2026-06-02T08:00'), finPlan: D('2026-06-02T20:00'),
-          inicioReal: D('2026-06-02T08:00'), finReal: D('2026-06-02T20:00'),
-          esCubierto: true, esFeriado: false, vigiladorId: 'v2' },
+        {
+          inicioPlan: D('2026-06-01T08:00'),
+          finPlan: D('2026-06-01T20:00'),
+          inicioReal: D('2026-06-01T08:00'),
+          finReal: D('2026-06-01T20:00'),
+          esCubierto: true,
+          esFeriado: false,
+          vigiladorId: 'v1',
+        },
+        {
+          inicioPlan: D('2026-06-02T08:00'),
+          finPlan: D('2026-06-02T20:00'),
+          inicioReal: D('2026-06-02T08:00'),
+          finReal: D('2026-06-02T20:00'),
+          esCubierto: true,
+          esFeriado: false,
+          vigiladorId: 'v2',
+        },
       ];
       expect(horasExtraPorSemana(turnos, 48)).toBe(0);
     });
@@ -104,14 +133,18 @@ describe('conciliacion.domain', () => {
         finPlan: D(`2026-06-0${i + 1}T20:00`),
         inicioReal: D(`2026-06-0${i + 1}T08:00`),
         finReal: D(`2026-06-0${i + 1}T20:00`),
-        esCubierto: true, esFeriado: false, vigiladorId: 'v1',
+        esCubierto: true,
+        esFeriado: false,
+        vigiladorId: 'v1',
       }));
       const v2 = '1234'.split('').map((_, i) => ({
         inicioPlan: D(`2026-06-0${i + 1}T08:00`),
         finPlan: D(`2026-06-0${i + 1}T20:00`),
         inicioReal: D(`2026-06-0${i + 1}T08:00`),
         finReal: D(`2026-06-0${i + 1}T20:00`),
-        esCubierto: true, esFeriado: false, vigiladorId: 'v2',
+        esCubierto: true,
+        esFeriado: false,
+        vigiladorId: 'v2',
       }));
       expect(horasExtraPorSemana([...turnos, ...v2], 48)).toBe(12);
     });

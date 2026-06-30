@@ -83,7 +83,7 @@ export interface HerramientaResumen {
 }
 
 export interface Dotacion {
-  horasMensuales: number;
+  horasSemanales: number;
   vigiladoresRequeridos: number;
   vigiladoresActivosTotal: number;
   suficiente: boolean;

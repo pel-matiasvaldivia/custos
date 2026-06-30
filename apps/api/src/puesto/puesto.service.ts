@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -7,10 +11,16 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 export class PuestoService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string, pagination?: PaginationDto, objetivoId?: string) {
+  async findAll(
+    tenantId: string,
+    pagination?: PaginationDto,
+    objetivoId?: string,
+  ) {
     const skip = pagination?.skip ?? 0;
     const take = pagination?.limit ?? 50;
-    const where = objetivoId ? { tenant_id: tenantId, objetivo_id: objetivoId } : { tenant_id: tenantId };
+    const where = objetivoId
+      ? { tenant_id: tenantId, objetivo_id: objetivoId }
+      : { tenant_id: tenantId };
 
     const [data, total] = await Promise.all([
       this.prisma.puesto.findMany({
@@ -39,8 +49,13 @@ export class PuestoService {
         data,
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('Ya existe un puesto con ese nombre en este objetivo.');
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Ya existe un puesto con ese nombre en este objetivo.',
+        );
       }
       throw e;
     }

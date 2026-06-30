@@ -16,8 +16,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { VigilanteService } from './vigilante.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { CreateVigilanteDto } from './dto/create-vigilante.dto';
 import { UpdateVigilanteDto } from './dto/update-vigilante.dto';
+import { SetPinDto } from './dto/set-pin.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { StorageService } from '../storage/storage.service';
 import { HerramientaService } from '../herramienta/herramienta.service';
@@ -94,6 +97,20 @@ export class VigilanteController {
 
   @Get(':id/herramientas')
   async herramientas(@Param('id') id: string, @Request() req: any) {
-    return this.herramientaService.findHerramientasDeVigilador(id, req.user.tenantId);
+    return this.herramientaService.findHerramientasDeVigilador(
+      id,
+      req.user.tenantId,
+    );
+  }
+
+  @Post(':id/pin')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
+  async setPin(
+    @Param('id') id: string,
+    @Body() body: SetPinDto,
+    @Request() req: any,
+  ) {
+    return this.vigilanteService.setPin(id, req.user.tenantId, body.pin);
   }
 }

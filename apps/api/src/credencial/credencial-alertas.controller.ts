@@ -8,7 +8,13 @@ export class CredencialAlertasController {
   constructor(private readonly credencialService: CredencialService) {}
 
   @Get('alertas')
-  async findAlertas(@Query('dias') dias: string | undefined, @Request() req: any) {
-    return this.credencialService.findAlertas(req.user.tenantId, dias ? Number(dias) : 15);
+  async findAlertas(
+    @Query('dias') dias: string | undefined,
+    @Request() req: any,
+  ) {
+    return this.credencialService.findAlertas(
+      req.user.tenantId,
+      dias ? Number(dias) : 15,
+    );
   }
 }

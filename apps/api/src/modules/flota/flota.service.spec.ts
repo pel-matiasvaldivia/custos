@@ -7,7 +7,11 @@ describe('FlotaService', () => {
   const mockPrisma = {
     vehiculo: { findFirst: jest.fn(), update: jest.fn(), findMany: jest.fn() },
     vehiculoVencimiento: { findMany: jest.fn() },
-    cargaCombustible: { findFirst: jest.fn(), create: jest.fn(), findMany: jest.fn() },
+    cargaCombustible: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      findMany: jest.fn(),
+    },
     planMantenimiento: { findMany: jest.fn() },
     ordenTrabajo: { create: jest.fn(), findMany: jest.fn() },
     asignacionMovil: { findMany: jest.fn() },
@@ -44,7 +48,9 @@ describe('FlotaService', () => {
   describe('registrarCarga', () => {
     it('calcula rendimiento contra la carga anterior y actualiza km', async () => {
       mockPrisma.cargaCombustible.findFirst.mockResolvedValue({ km: 10000 });
-      mockPrisma.cargaCombustible.create.mockImplementation(({ data }: any) => data);
+      mockPrisma.cargaCombustible.create.mockImplementation(
+        ({ data }: any) => data,
+      );
       mockPrisma.vehiculo.update.mockResolvedValue({});
 
       const carga: any = await service.registrarCarga('t1', 'v1', {

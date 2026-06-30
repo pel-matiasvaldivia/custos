@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaAdminService } from '../prisma/prisma-admin.service';
 import * as bcrypt from 'bcrypt';
@@ -91,7 +96,9 @@ export class AuthService {
     if (currentUser.role !== 'SUPERADMIN') {
       throw new ForbiddenException('Solo superadmin puede cambiar de tenant.');
     }
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
     if (!tenant) throw new NotFoundException('Tenant no encontrado.');
 
     const payload = {

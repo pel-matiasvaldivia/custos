@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { VehiculoService } from './vehiculo.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';

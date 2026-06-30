@@ -17,11 +17,15 @@ import { MonitoringPage } from './pages/monitoring/MonitoringPage';
 import { DevicesPage } from './pages/monitoring/DevicesPage';
 import { ReportsPage } from './pages/reports/ReportsPage';
 import { MobileDashboard } from './pages/mobile/MobileDashboard';
+import MobileLogin from './pages/mobile/MobileLogin';
 import ComprasPage from './pages/compras/ComprasPage';
+import { HerramientasPage } from './pages/herramientas/HerramientasPage';
+import { RelevosPage } from './pages/relevos/RelevosPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { MobileProtectedRoute } from './components/auth/MobileProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 /* ─── Dashboard placeholder ─── */
@@ -78,7 +82,12 @@ function AppRoutes() {
       {/* PUBLIC */}
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/mobile" element={<MobileDashboard />} />
+      <Route path="/mobile/login" element={<MobileLogin />} />
+
+      {/* PROTECTED: requires vigilador login */}
+      <Route element={<MobileProtectedRoute />}>
+        <Route path="/mobile" element={<MobileDashboard />} />
+      </Route>
 
       {/* PROTECTED: requires login */}
       <Route element={<ProtectedRoute />}>
@@ -99,6 +108,8 @@ function AppRoutes() {
           <Route path="/monitoring/devices" element={<DevicesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/compras" element={<ComprasPage />} />
+          <Route path="/herramientas" element={<HerramientasPage />} />
+          <Route path="/relevos" element={<RelevosPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/kiosk" element={<KioskPage />} />
           <Route path="*" element={<div className="text-muted">Módulo en construcción...</div>} />

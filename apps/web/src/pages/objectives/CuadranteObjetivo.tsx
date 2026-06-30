@@ -1,3 +1,5 @@
+// Superada por EsquemaCuadranteObjetivo.tsx (afectación automática vía EsquemaTurno).
+// Se deja sin usar en vez de borrarse hasta confirmar que nada más depende de Asignacion.
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
 import { Puesto } from '../../services/objetivo.service';
@@ -239,6 +241,10 @@ const TurnoModal = ({ puesto, fecha, asignacion, onClose, onGuardado }: TurnoMod
 
   const handleAsignar = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!asignacion?.id && horaFin <= horaInicio) {
+      setError('El horario "Hasta" debe ser posterior al horario "Desde".');
+      return;
+    }
     setEnviando(true);
     setError(null);
     try {

@@ -15,11 +15,16 @@ import { PrismaClient } from '@prisma/client';
  * usar PrismaService, que aplica RLS.
  */
 @Injectable()
-export class PrismaAdminService extends PrismaClient implements OnModuleDestroy {
+export class PrismaAdminService
+  extends PrismaClient
+  implements OnModuleDestroy
+{
   constructor() {
     super({
       datasources: {
-        db: { url: process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL },
+        db: {
+          url: process.env.MIGRATE_DATABASE_URL || process.env.DATABASE_URL,
+        },
       },
     });
   }

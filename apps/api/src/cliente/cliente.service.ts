@@ -8,7 +8,11 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 export class ClienteService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string, pagination?: PaginationDto, busqueda?: string) {
+  async findAll(
+    tenantId: string,
+    pagination?: PaginationDto,
+    busqueda?: string,
+  ) {
     const skip = pagination?.skip ?? 0;
     const take = pagination?.limit ?? 50;
     const where = {

@@ -8,6 +8,7 @@ export interface Herramienta {
   numero_serie?: string | null;
   estado: 'DISPONIBLE' | 'ASIGNADA' | 'EN_REPARACION' | 'BAJA';
   foto_url?: string | null;
+  asignaciones?: HerramientaAsignacion[];
 }
 
 export interface HerramientaAsignacion {
@@ -16,7 +17,8 @@ export interface HerramientaAsignacion {
   vigilador_id: string;
   entregada_el: string;
   devuelta_el?: string | null;
-  herramienta: Herramienta;
+  herramienta?: Herramienta;
+  vigilador?: { id: string; nombre: string; apellido: string };
 }
 
 export const TIPOS_HERRAMIENTA = [
@@ -49,5 +51,9 @@ export const herramientaService = {
   },
   devolver: async (herramientaId: string): Promise<void> => {
     await api.post(`/herramientas/${herramientaId}/devolver`);
+  },
+  darDeBaja: async (herramientaId: string): Promise<Herramienta> => {
+    const response = await api.post(`/herramientas/${herramientaId}/baja`);
+    return response.data;
   },
 };

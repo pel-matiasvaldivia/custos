@@ -41,7 +41,8 @@ async function bootstrap() {
     rateLimit({
       windowMs: 15 * 60 * 1000,
       max: 100,
-      message: 'Demasiadas solicitudes desde esta IP, por favor intente más tarde.',
+      message:
+        'Demasiadas solicitudes desde esta IP, por favor intente más tarde.',
       standardHeaders: true,
       legacyHeaders: false,
     }),
