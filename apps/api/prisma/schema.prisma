@@ -192,6 +192,8 @@ model Puesto {
   objetivo_id     String?  @db.Uuid
   nombre          String
   ubicacion       String?
+  lat             Float?
+  lng             Float?
   requiere_arma   Boolean  @default(false)
   requiere_movil  Boolean  @default(false)
   esquema_horario Json?
@@ -205,7 +207,7 @@ model Puesto {
   puntos_control PuntoControl[]
   rondas         Ronda[]
 
-  @@unique([tenant_id, nombre])
+  @@unique([tenant_id, objetivo_id, nombre])
   @@map("puestos")
 }
 

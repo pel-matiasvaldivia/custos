@@ -18,6 +18,8 @@ export interface Puesto {
   objetivo_id?: string | null;
   nombre: string;
   ubicacion?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   requiere_arma: boolean;
   requiere_movil: boolean;
 }

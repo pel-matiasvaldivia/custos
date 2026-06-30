@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -34,9 +34,16 @@ export class PuestoService {
   }
 
   async create(data: Prisma.PuestoUncheckedCreateInput) {
-    return this.prisma.puesto.create({
-      data,
-    });
+    try {
+      return await this.prisma.puesto.create({
+        data,
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('Ya existe un puesto con ese nombre en este objetivo.');
+      }
+      throw e;
+    }
   }
 
   async update(
