@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { TenantSwitcher } from './TenantSwitcher';
 
 const navGroups = [
   {
@@ -100,6 +101,10 @@ export const Sidebar = () => {
           </div>
         ))}
       </nav>
+
+      <div className="border-t border-surface/10 pt-3">
+        <TenantSwitcher />
+      </div>
 
       <div className="p-4 border-t border-surface/10">
         <button
