@@ -36,6 +36,7 @@ export const ObjetivoDetail = () => {
   const [modalPuesto, setModalPuesto] = useState(false);
   const [modalEditarPuesto, setModalEditarPuesto] = useState<Puesto | null>(null);
   const [confirmandoEliminarPuesto, setConfirmandoEliminarPuesto] = useState<string | null>(null);
+  const [errorEliminarPuesto, setErrorEliminarPuesto] = useState<{ id: string; msg: string } | null>(null);
   const [modalVehiculo, setModalVehiculo] = useState(false);
   const [enviandoNotificacion, setEnviandoNotificacion] = useState(false);
   const [notificacionEnviada, setNotificacionEnviada] = useState(false);
@@ -53,9 +54,18 @@ export const ObjetivoDetail = () => {
   }, [id]);
 
   const handleEliminarPuesto = async (puestoId: string) => {
-    await puestoService.delete(puestoId);
-    setConfirmandoEliminarPuesto(null);
-    cargar();
+    try {
+      await puestoService.delete(puestoId);
+      setConfirmandoEliminarPuesto(null);
+      setErrorEliminarPuesto(null);
+      cargar();
+    } catch (err) {
+      const msg =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'No se pudo eliminar el puesto.';
+      setConfirmandoEliminarPuesto(null);
+      setErrorEliminarPuesto({ id: puestoId, msg });
+    }
   };
 
   const handleLiberarVehiculo = async (asignacionId: string) => {
@@ -138,9 +148,10 @@ export const ObjetivoDetail = () => {
               ) : (
                 puestos.map((p) => {
                   const eliminando = confirmandoEliminarPuesto === p.id;
+                  const errorEste = errorEliminarPuesto?.id === p.id ? errorEliminarPuesto.msg : null;
                   return (
+                    <div key={p.id} className="space-y-1">
                     <div
-                      key={p.id}
                       className={`p-4 border rounded-lg flex justify-between items-center transition-colors ${
                         eliminando ? 'border-red-300 bg-red-50' : 'border-line bg-canvas'
                       }`}
@@ -173,14 +184,14 @@ export const ObjetivoDetail = () => {
                         ) : (
                           <>
                             <button
-                              onClick={() => setModalEditarPuesto(p)}
+                              onClick={() => { setModalEditarPuesto(p); setErrorEliminarPuesto(null); }}
                               className="p-1 text-muted hover:text-brand-blue transition-colors"
                               title="Editar puesto"
                             >
                               <Pencil size={14} />
                             </button>
                             <button
-                              onClick={() => setConfirmandoEliminarPuesto(p.id)}
+                              onClick={() => { setConfirmandoEliminarPuesto(p.id); setErrorEliminarPuesto(null); }}
                               className="p-1 text-muted hover:text-red-500 transition-colors"
                               title="Eliminar puesto"
                             >
@@ -189,6 +200,10 @@ export const ObjetivoDetail = () => {
                           </>
                         )}
                       </div>
+                    </div>
+                    {errorEste && (
+                      <p className="text-xs text-amber px-1">{errorEste}</p>
+                    )}
                     </div>
                   );
                 })

@@ -75,7 +75,19 @@ export class PuestoService {
 
   async delete(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    return this.prisma.puesto.delete({ where: { id } });
+    try {
+      return await this.prisma.puesto.delete({ where: { id } });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'El puesto tiene registros asociados (asignaciones, novedades o rondas) y no puede eliminarse. Finalizá las afectaciones activas primero.',
+        );
+      }
+      throw e;
+    }
   }
 
   /**
