@@ -6,7 +6,7 @@ import { StorageService } from '../storage/storage.service';
 import { ContratoConfigService } from '../contrato-config/contrato-config.service';
 import { parseBlocks, PDF_STYLES } from './html-to-pdf-content.util';
 // @ts-ignore
-import printer = require('pdfmake');
+import pdfMake = require('pdfmake');
 
 @Injectable()
 export class ContratoPdfService {
@@ -16,6 +16,8 @@ export class ContratoPdfService {
     private contratoConfigService: ContratoConfigService,
   ) {}
 
+  // pdfmake 0.3.x: el export ya es una instancia singleton, no un constructor;
+  // configurar fuentes y generar el doc se hace todo sobre esa misma instancia.
   private getPrinter() {
     const fonts = {
       Roboto: {
@@ -25,8 +27,8 @@ export class ContratoPdfService {
         bolditalics: 'Helvetica-BoldOblique',
       },
     };
-    // @ts-ignore
-    return new printer(fonts);
+    pdfMake.setFonts(fonts);
+    return pdfMake;
   }
 
   private buildObjetivosTablaHtml(contrato: any): string {
@@ -132,15 +134,8 @@ export class ContratoPdfService {
       pageMargins: [40, 40, 40, 40],
     };
 
-    const doc = this.getPrinter().createPdfKitDocument(docDefinition);
-    const chunks: Buffer[] = [];
-    doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-
-    const buffer: Buffer = await new Promise((resolve, reject) => {
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
-      doc.end();
-    });
+    const pdfDoc = this.getPrinter().createPdf(docDefinition);
+    const buffer: Buffer = await pdfDoc.getBuffer();
 
     const subida = await this.storageService.subir(
       buffer,
