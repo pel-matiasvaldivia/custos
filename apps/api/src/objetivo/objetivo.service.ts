@@ -107,7 +107,7 @@ export class ObjetivoService {
     const objetivo = await this.findOne(id, tenantId);
 
     const puestos = await this.prisma.puesto.findMany({
-      where: { objetivo_id: id, tenant_id: tenantId },
+      where: { objetivo_id: id, tenant_id: tenantId, deleted_at: null },
       orderBy: { nombre: 'asc' },
     });
     const puestoIds = puestos.map((p: { id: string }) => p.id);
@@ -271,7 +271,7 @@ export class ObjetivoService {
     }
 
     const puestos = await this.prisma.puesto.findMany({
-      where: { objetivo_id: objetivoId, tenant_id: tenantId },
+      where: { objetivo_id: objetivoId, tenant_id: tenantId, deleted_at: null },
       select: { id: true },
     });
     const { horasSemanales } = await this.dotacionRequeridaPuestos(
@@ -300,7 +300,7 @@ export class ObjetivoService {
   async notificarPersonalInsuficiente(objetivoId: string, tenantId: string) {
     const objetivo = await this.findOne(objetivoId, tenantId);
     const puestos = await this.prisma.puesto.findMany({
-      where: { objetivo_id: objetivoId, tenant_id: tenantId },
+      where: { objetivo_id: objetivoId, tenant_id: tenantId, deleted_at: null },
       select: { id: true },
     });
     const { total: vigiladoresRequeridos } =

@@ -19,8 +19,8 @@ export class PuestoService {
     const skip = pagination?.skip ?? 0;
     const take = pagination?.limit ?? 50;
     const where = objetivoId
-      ? { tenant_id: tenantId, objetivo_id: objetivoId }
-      : { tenant_id: tenantId };
+      ? { tenant_id: tenantId, objetivo_id: objetivoId, deleted_at: null }
+      : { tenant_id: tenantId, deleted_at: null };
 
     const [data, total] = await Promise.all([
       this.prisma.puesto.findMany({
@@ -37,7 +37,7 @@ export class PuestoService {
 
   async findOne(id: string, tenantId: string) {
     const puesto = await this.prisma.puesto.findFirst({
-      where: { id, tenant_id: tenantId },
+      where: { id, tenant_id: tenantId, deleted_at: null },
     });
     if (!puesto) throw new NotFoundException('Puesto no encontrado');
     return puesto;
@@ -75,19 +75,7 @@ export class PuestoService {
 
   async delete(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    try {
-      return await this.prisma.puesto.delete({ where: { id } });
-    } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2003'
-      ) {
-        throw new ConflictException(
-          'El puesto tiene registros asociados (asignaciones, novedades o rondas) y no puede eliminarse. Finalizá las afectaciones activas primero.',
-        );
-      }
-      throw e;
-    }
+    await this.prisma.$executeRaw`UPDATE puestos SET deleted_at = NOW() WHERE id = ${id}::uuid AND tenant_id = ${tenantId}::uuid`;
   }
 
   /**
