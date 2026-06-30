@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsUUID } from 'class-validator';
+import { Prisma } from '@prisma/client';
 
 export class CreatePuestoDto {
   @IsOptional()
@@ -22,5 +23,5 @@ export class CreatePuestoDto {
   requiere_movil?: boolean;
 
   @IsOptional()
-  esquema_horario?: Record<string, unknown>;
+  esquema_horario?: Prisma.InputJsonValue;
 }
