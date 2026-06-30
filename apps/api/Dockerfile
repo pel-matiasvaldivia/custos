@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM node:20-slim as builder
+FROM node:22-slim AS builder
 
 WORKDIR /app
 
@@ -9,18 +9,17 @@ RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt
 COPY package*.json ./
 COPY apps/api/package*.json ./apps/api/
 COPY apps/web/package*.json ./apps/web/
-COPY packages/contracts ./packages/contracts
+COPY packages/contracts/package*.json ./packages/contracts/
 
 RUN npm install --include=dev
 
-# Sync Prisma Client and build
 COPY packages/contracts ./packages/contracts
 COPY apps/api ./apps/api
 RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
 RUN npm run build --workspace=api
 
 # Stage 2: Runner
-FROM node:20-slim
+FROM node:22-slim
 
 WORKDIR /app
 
