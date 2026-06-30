@@ -20,10 +20,6 @@ export class CreateObjetivoDto {
 
   @IsString()
   @IsNotEmpty()
-  codigo: string;
-
-  @IsString()
-  @IsNotEmpty()
   nombre: string;
 
   @IsOptional()

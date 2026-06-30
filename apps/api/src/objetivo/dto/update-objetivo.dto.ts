@@ -11,10 +11,6 @@ export class UpdateObjetivoDto {
 
   @IsOptional()
   @IsString()
-  codigo?: string;
-
-  @IsOptional()
-  @IsString()
   nombre?: string;
 
   @IsOptional()

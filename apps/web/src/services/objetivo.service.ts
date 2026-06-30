@@ -102,7 +102,6 @@ export interface ObjetivoDetalle {
 export interface CreateObjetivoData {
   cliente_id?: string;
   cliente_nombre?: string;
-  codigo: string;
   nombre: string;
   direccion?: string;
   lat?: number;

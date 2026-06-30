@@ -213,8 +213,22 @@ export class ObjetivoService {
     return cliente.razon_social;
   }
 
+  private async generarCodigoObjetivo(tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `OBJ-${year}-`;
+    const ultimo = await this.prisma.objetivo.findFirst({
+      where: { tenant_id: tenantId, codigo: { startsWith: prefix } },
+      orderBy: { codigo: 'desc' },
+      select: { codigo: true },
+    });
+    const siguiente = ultimo
+      ? parseInt(ultimo.codigo.slice(prefix.length), 10) + 1
+      : 1;
+    return `${prefix}${String(siguiente).padStart(4, '0')}`;
+  }
+
   async create(
-    data: Omit<Prisma.ObjetivoUncheckedCreateInput, 'cliente_nombre'> & {
+    data: Omit<Prisma.ObjetivoUncheckedCreateInput, 'cliente_nombre' | 'codigo'> & {
       cliente_nombre?: string;
     },
   ) {
@@ -228,8 +242,9 @@ export class ObjetivoService {
         'Debe indicar cliente_id o cliente_nombre.',
       );
     }
+    const codigo = await this.generarCodigoObjetivo(data.tenant_id);
     return this.prisma.objetivo.create({
-      data: { ...data, cliente_nombre: clienteNombre },
+      data: { ...data, cliente_nombre: clienteNombre, codigo },
     });
   }
 
