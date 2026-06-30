@@ -19,7 +19,7 @@ export class AsignacionService {
     hasta: Date,
   ) {
     const puestos = await this.prisma.puesto.findMany({
-      where: { tenant_id: tenantId, objetivo_id: objetivoId },
+      where: { tenant_id: tenantId, objetivo_id: objetivoId, deleted_at: null },
       select: { id: true },
     });
     const puestoIds = puestos.map((p) => p.id);
@@ -41,7 +41,7 @@ export class AsignacionService {
 
   async create(tenantId: string, dto: CreateAsignacionDto) {
     const puesto = await this.prisma.puesto.findFirst({
-      where: { id: dto.puesto_id, tenant_id: tenantId },
+      where: { id: dto.puesto_id, tenant_id: tenantId, deleted_at: null },
     });
     if (!puesto) throw new NotFoundException('Puesto no encontrado.');
 
@@ -108,7 +108,7 @@ export class AsignacionService {
     const days = eachDayOfInterval({ start, end });
 
     const puestos = await this.prisma.puesto.findMany({
-      where: { tenant_id: tenantId },
+      where: { tenant_id: tenantId, deleted_at: null },
     });
 
     const creations = [];

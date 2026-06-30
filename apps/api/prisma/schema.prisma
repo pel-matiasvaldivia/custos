@@ -231,8 +231,9 @@ model Puesto {
   requiere_arma   Boolean  @default(false)
   requiere_movil  Boolean  @default(false)
   esquema_horario Json?
-  created_at      DateTime @default(now()) @db.Timestamptz
-  updated_at      DateTime @default(now()) @db.Timestamptz
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  updated_at      DateTime  @default(now()) @db.Timestamptz
+  deleted_at      DateTime? @db.Timestamptz
 
   tenant         Tenant         @relation(fields: [tenant_id], references: [id])
   objetivo       Objetivo?      @relation(fields: [objetivo_id], references: [id])

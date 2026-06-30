@@ -83,6 +83,7 @@ export class RelevosService {
         where: {
           tenant_id: tenantId,
           id: { in: turnos.map((t) => t.puesto_id) },
+          deleted_at: null,
         },
         select: { id: true, nombre: true },
       }),

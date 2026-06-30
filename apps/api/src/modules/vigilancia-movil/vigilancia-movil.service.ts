@@ -121,7 +121,7 @@ export class VigilanciaMovilService {
     if (!turno) return null;
 
     const puesto = await this.prisma.puesto.findFirst({
-      where: { id: turno.puesto_id, tenant_id: tenantId },
+      where: { id: turno.puesto_id, tenant_id: tenantId, deleted_at: null },
       select: { id: true, nombre: true, ubicacion: true },
     });
 

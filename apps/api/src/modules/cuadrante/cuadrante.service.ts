@@ -219,7 +219,7 @@ export class CuadranteService {
     const snapshots = [];
     for (const contrato of contratos) {
       const puestos = await this.prisma.puesto.findMany({
-        where: { tenant_id: tenantId, objetivo_id: contrato.objetivo_id },
+        where: { tenant_id: tenantId, objetivo_id: contrato.objetivo_id, deleted_at: null },
         select: { id: true },
       });
       if (puestos.length === 0) continue;
@@ -402,7 +402,7 @@ export class CuadranteService {
   ) {
     const [puesto, vigilador, esquema] = await Promise.all([
       this.prisma.puesto.findFirst({
-        where: { id: dto.puesto_id, tenant_id: tenantId },
+        where: { id: dto.puesto_id, tenant_id: tenantId, deleted_at: null },
       }),
       this.prisma.vigilador.findFirst({
         where: { id: dto.vigilador_id, tenant_id: tenantId },
@@ -444,7 +444,7 @@ export class CuadranteService {
 
   async listarAsignacionesPorObjetivo(tenantId: string, objetivoId: string) {
     const puestos = await this.prisma.puesto.findMany({
-      where: { tenant_id: tenantId, objetivo_id: objetivoId },
+      where: { tenant_id: tenantId, objetivo_id: objetivoId, deleted_at: null },
       select: { id: true, nombre: true },
     });
     if (puestos.length === 0) return [];
@@ -507,7 +507,7 @@ export class CuadranteService {
     dto: UpsertPuestoCoberturaDto,
   ) {
     const puesto = await this.prisma.puesto.findFirst({
-      where: { id: puestoId, tenant_id: tenantId },
+      where: { id: puestoId, tenant_id: tenantId, deleted_at: null },
     });
     if (!puesto) throw new NotFoundException('Puesto no encontrado');
 
@@ -553,7 +553,7 @@ export class CuadranteService {
     hasta: Date,
   ) {
     const puestos = await this.prisma.puesto.findMany({
-      where: { tenant_id: tenantId, objetivo_id: objetivoId },
+      where: { tenant_id: tenantId, objetivo_id: objetivoId, deleted_at: null },
       select: { id: true, nombre: true },
     });
     if (puestos.length === 0) return [];
