@@ -343,7 +343,7 @@ export const ObjetivoDetail = () => {
       {modalContrato && id && (
         <ContratoForm
           objetivoId={id}
-          clienteNombreSugerido={objetivo.cliente_nombre}
+          clienteIdSugerido={objetivo.cliente_id || undefined}
           onClose={() => setModalContrato(false)}
           onCreated={() => {
             setModalContrato(false);

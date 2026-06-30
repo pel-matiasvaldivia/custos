@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Trash2, ArrowLeft, Save, Calculator, Users } from 'lucide-react';
 import api from '../../services/api';
+import { ClientePicker } from '../../components/clients/ClientePicker';
 
 export const QuoteWizard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<any>(null);
   const [quote, setQuote] = useState({
+    cliente_id: '',
     cliente_nombre: '',
     vencimiento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     items: [
@@ -55,7 +57,8 @@ export const QuoteWizard = () => {
 
   const handleSave = async () => {
     const payload = {
-      cliente_nombre: quote.cliente_nombre,
+      cliente_id: quote.cliente_id || undefined,
+      cliente_nombre: quote.cliente_nombre || undefined,
       vencimiento: quote.vencimiento,
       items: quote.items.map(item => ({
         puesto_nombre: item.puesto_nombre,
@@ -91,13 +94,9 @@ export const QuoteWizard = () => {
             <h3 className="text-lg font-bold text-navy mb-4 border-b pb-2">Datos Generales</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="label">Nombre del Cliente / Empresa</label>
-                <input 
-                  type="text" 
-                  className="input" 
-                  placeholder="Ej: Consorcio Torre Madero"
-                  value={quote.cliente_nombre}
-                  onChange={e => setQuote({...quote, cliente_nombre: e.target.value})}
+                <ClientePicker
+                  clienteId={quote.cliente_id}
+                  onChange={(id, nombre) => setQuote({ ...quote, cliente_id: id, cliente_nombre: nombre })}
                 />
               </div>
               <div>
@@ -202,7 +201,7 @@ export const QuoteWizard = () => {
             <button 
               onClick={handleSave}
               className="btn btn-primary w-full mt-8 flex items-center justify-center gap-2"
-              disabled={!quote.cliente_nombre || total === 0}
+              disabled={!quote.cliente_id || total === 0}
             >
               <Save size={20} />
               Generar Cotización

@@ -64,6 +64,7 @@ model Tenant {
   herramientas            Herramienta[]
   herramienta_asignaciones HerramientaAsignacion[]
   catalogo_items          CatalogoItem[]
+  clientes                Cliente[]
 
   @@map("tenants")
 }
@@ -157,12 +158,42 @@ model CatalogoItem {
   @@map("catalogo_items")
 }
 
+// Cliente/Empresa: entidad real que consolida lo que antes era un
+// cliente_nombre de texto libre duplicado en Cotizacion/Contrato/Objetivo.
+// cliente_id es opcional para no romper la carga rápida de cotizaciones;
+// cuando está presente, cliente_nombre se completa como snapshot del
+// razon_social al momento de la operación (no se recalcula después).
+model Cliente {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  razon_social      String
+  nombre_fantasia   String?
+  cuit              String?
+  domicilio         String?
+  localidad         String?
+  provincia         String?
+  contacto_nombre   String?
+  contacto_email    String?
+  contacto_telefono String?
+  estado            String    @default("ACTIVO") // ACTIVO | INACTIVO
+  created_at        DateTime  @default(now()) @db.Timestamptz
+  updated_at        DateTime  @default(now()) @db.Timestamptz
+  deleted_at        DateTime? @db.Timestamptz
+
+  tenant     Tenant       @relation(fields: [tenant_id], references: [id])
+  objetivos  Objetivo[]
+  cotizaciones Cotizacion[]
+  contratos  Contrato[]
+
+  @@map("clientes")
+}
+
 model Objetivo {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id      String   @db.Uuid
-  // cliente_nombre sigue la misma convención que Cotizacion/Contrato (este
-  // esquema no tiene tabla Cliente). Reemplaza al ex cliente_id (UUID NOT
-  // NULL sin FK ni fuente de valores válidos: ningún código lo usaba).
+  cliente_id     String?  @db.Uuid
+  // cliente_nombre sigue la misma convención que Cotizacion/Contrato.
+  // Es un snapshot: si hay cliente_id, se completa desde Cliente.razon_social.
   cliente_nombre String
   codigo         String
   nombre         String
@@ -174,6 +205,7 @@ model Objetivo {
   lng            Float?
 
   tenant         Tenant                @relation(fields: [tenant_id], references: [id])
+  cliente        Cliente?              @relation(fields: [cliente_id], references: [id])
   puestos        Puesto[]
   dispositivos   Dispositivo[]
   eventos        Evento[]
@@ -277,6 +309,7 @@ model ConfiguracionCostos {
 model Cotizacion {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id      String   @db.Uuid
+  cliente_id     String?  @db.Uuid
   cliente_nombre String
   vencimiento    DateTime @db.Date
   estado         String   @default("BORRADOR") // BORRADOR | ENVIADA | ACEPTADA | RECHAZADA
@@ -285,6 +318,7 @@ model Cotizacion {
   updated_at     DateTime @default(now()) @db.Timestamptz
 
   tenant    Tenant           @relation(fields: [tenant_id], references: [id])
+  cliente   Cliente?         @relation(fields: [cliente_id], references: [id])
   items     CotizacionItem[]
   contratos Contrato[]
 
@@ -767,6 +801,7 @@ model Contrato {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id      String    @db.Uuid
   codigo         String // CON-2026-0001
+  cliente_id     String?   @db.Uuid
   cliente_nombre String
   objetivo_id    String?   @db.Uuid
   cotizacion_id  String?   @db.Uuid
@@ -778,6 +813,7 @@ model Contrato {
   deleted_at     DateTime? @db.Timestamptz
 
   tenant         Tenant               @relation(fields: [tenant_id], references: [id])
+  cliente        Cliente?             @relation(fields: [cliente_id], references: [id])
   objetivo       Objetivo?            @relation(fields: [objetivo_id], references: [id])
   cotizacion     Cotizacion?          @relation(fields: [cotizacion_id], references: [id])
   facturacion    ContratoFacturacion?

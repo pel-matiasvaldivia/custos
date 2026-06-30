@@ -6,6 +6,7 @@ import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
 import { QuadrantPage } from './pages/quadrant/QuadrantPage';
 import { ObjetivosPage } from './pages/objectives/ObjetivosPage';
 import { ObjetivoDetail } from './pages/objectives/ObjetivoDetail';
+import { ClientesPage } from './pages/clients/ClientesPage';
 import { QuotesPage } from './pages/quoting/QuotesPage';
 import { QuoteWizard } from './pages/quoting/QuoteWizard';
 import { SettingsPage } from './pages/settings/SettingsPage';
@@ -87,6 +88,7 @@ function AppRoutes() {
           <Route path="/quadrant" element={<QuadrantPage />} />
           <Route path="/objectives" element={<ObjetivosPage />} />
           <Route path="/objectives/:id" element={<ObjetivoDetail />} />
+          <Route path="/clients" element={<ClientesPage />} />
           <Route path="/quotes" element={<QuotesPage />} />
           <Route path="/quotes/new" element={<QuoteWizard />} />
           <Route path="/settings" element={<SettingsPage />} />

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
@@ -142,12 +142,42 @@ export class ObjetivoService {
     };
   }
 
+  /** Si viene cliente_id, completa cliente_nombre como snapshot de Cliente.razon_social. */
+  private async resolverClienteNombre(
+    tenantId: string,
+    clienteId: string | null | undefined,
+    clienteNombre: string | null | undefined,
+  ): Promise<string | undefined> {
+    if (!clienteId) return clienteNombre ?? undefined;
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { id: clienteId, tenant_id: tenantId, deleted_at: null },
+    });
+    if (!cliente) throw new NotFoundException('Cliente no encontrado.');
+    return cliente.razon_social;
+  }
+
   async create(data: Prisma.ObjetivoUncheckedCreateInput) {
-    return this.prisma.objetivo.create({ data });
+    const clienteNombre = await this.resolverClienteNombre(
+      data.tenant_id,
+      data.cliente_id as string | null | undefined,
+      data.cliente_nombre as string | null | undefined,
+    );
+    if (!clienteNombre) {
+      throw new BadRequestException('Debe indicar cliente_id o cliente_nombre.');
+    }
+    return this.prisma.objetivo.create({ data: { ...data, cliente_nombre: clienteNombre } });
   }
 
   async update(id: string, tenantId: string, data: Prisma.ObjetivoUncheckedUpdateInput) {
     await this.findOne(id, tenantId);
+    if (data.cliente_id) {
+      const clienteNombre = await this.resolverClienteNombre(
+        tenantId,
+        data.cliente_id as string,
+        data.cliente_nombre as string | null | undefined,
+      );
+      data = { ...data, cliente_nombre: clienteNombre };
+    }
     return this.prisma.objetivo.update({ where: { id }, data });
   }
 

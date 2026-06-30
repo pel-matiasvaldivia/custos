@@ -2,7 +2,8 @@ import api from './api';
 import { Contrato } from './objetivo.service';
 
 export interface CreateContratoData {
-  cliente_nombre: string;
+  cliente_id?: string;
+  cliente_nombre?: string;
   codigo?: string;
   objetivo_id?: string;
   inicio?: string;

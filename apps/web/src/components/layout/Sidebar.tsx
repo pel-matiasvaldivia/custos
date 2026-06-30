@@ -1,7 +1,7 @@
-import { 
-  Users, 
-  Calendar, 
-  LayoutDashboard, 
+import {
+  Users,
+  Calendar,
+  LayoutDashboard,
   LogOut,
   ShoppingCart,
   Shield,
@@ -10,7 +10,8 @@ import {
   Activity,
   Smartphone,
   BarChart3,
-  Zap
+  Zap,
+  Building2
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 
@@ -27,6 +28,7 @@ const navItems = [
   { icon: Shield, label: 'Cotizaciones', path: '/quotes' },
   { icon: AlertCircle, label: 'Novedades', path: '/novedades' },
   { icon: Shield, label: 'Objetivos', path: '/objectives' },
+  { icon: Building2, label: 'Clientes', path: '/clients' },
   { icon: Settings, label: 'Configuración', path: '/settings' },
 ];
 

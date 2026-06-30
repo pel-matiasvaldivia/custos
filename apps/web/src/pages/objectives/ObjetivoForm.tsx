@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { objetivoService, Objetivo } from '../../services/objetivo.service';
+import { ClientePicker } from '../../components/clients/ClientePicker';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
+  const [clienteId, setClienteId] = useState(objetivo?.cliente_id || '');
   const [clienteNombre, setClienteNombre] = useState(objetivo?.cliente_nombre || '');
   const [codigo, setCodigo] = useState(objetivo?.codigo || '');
   const [nombre, setNombre] = useState(objetivo?.nombre || '');
@@ -26,6 +28,7 @@ export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
     setError(null);
     try {
       const data = {
+        cliente_id: clienteId || undefined,
         cliente_nombre: clienteNombre,
         codigo,
         nombre,
@@ -56,15 +59,13 @@ export const ObjetivoForm = ({ objetivo, onClose, onSaved }: Props) => {
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-1">
-            <label className={labelClase}>Cliente</label>
-            <input
-              className={campoClase}
-              value={clienteNombre}
-              onChange={(e) => setClienteNombre(e.target.value)}
-              required
-            />
-          </div>
+          <ClientePicker
+            clienteId={clienteId}
+            onChange={(id, nombre) => {
+              setClienteId(id);
+              setClienteNombre(nombre);
+            }}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className={labelClase}>Código</label>

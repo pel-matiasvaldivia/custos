@@ -1,6 +1,10 @@
-import { IsString, IsOptional, IsNumber, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsIn, IsUUID } from 'class-validator';
 
 export class UpdateObjetivoDto {
+  @IsOptional()
+  @IsUUID()
+  cliente_id?: string;
+
   @IsOptional()
   @IsString()
   cliente_nombre?: string;
