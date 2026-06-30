@@ -23,8 +23,12 @@ export class ObjetivoController {
   constructor(private readonly objetivoService: ObjetivoService) {}
 
   @Get()
-  async findAll(@Request() req: any, @Query() pagination: PaginationDto) {
-    return this.objetivoService.findAll(req.user.tenantId, pagination);
+  async findAll(
+    @Request() req: any,
+    @Query() pagination: PaginationDto,
+    @Query('clienteId') clienteId?: string,
+  ) {
+    return this.objetivoService.findAll(req.user.tenantId, pagination, clienteId);
   }
 
   @Get(':id')

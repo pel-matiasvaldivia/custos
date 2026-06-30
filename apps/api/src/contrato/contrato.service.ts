@@ -24,6 +24,14 @@ export class ContratoService {
     });
   }
 
+  async findByCliente(clienteId: string, tenantId: string) {
+    return this.prisma.contrato.findMany({
+      where: { cliente_id: clienteId, tenant_id: tenantId },
+      include: { facturacion: true },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
   /** Si viene cliente_id, completa cliente_nombre como snapshot de Cliente.razon_social. */
   private async resolverClienteNombre(
     tenantId: string,

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { clienteService, Cliente } from '../../services/cliente.service';
 import { ClienteForm } from './ClienteForm';
 
 export const ClientesPage = () => {
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState('');
@@ -88,7 +90,11 @@ export const ClientesPage = () => {
                 <tr><td colSpan={5} className="py-8 text-center text-muted">No se encontraron clientes.</td></tr>
               ) : (
                 filtrados.map((c) => (
-                  <tr key={c.id} className="hover:bg-canvas/50 transition-colors text-sm">
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate(`/clients/${c.id}`)}
+                    className="hover:bg-canvas/50 transition-colors text-sm cursor-pointer"
+                  >
                     <td className="py-4 px-4 font-medium text-navy">{c.razon_social}</td>
                     <td className="py-4 px-4 text-muted">{c.nombre_fantasia || '—'}</td>
                     <td className="py-4 px-4 text-muted font-mono">{c.cuit || '—'}</td>

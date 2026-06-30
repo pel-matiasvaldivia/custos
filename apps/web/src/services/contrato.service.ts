@@ -23,6 +23,11 @@ export const contratoService = {
     return response.data;
   },
 
+  getByCliente: async (clienteId: string): Promise<Contrato[]> => {
+    const response = await api.get<Contrato[]>('/contratos', { params: { clienteId } });
+    return response.data;
+  },
+
   create: async (data: CreateContratoData): Promise<Contrato> => {
     const response = await api.post<Contrato>('/contratos', data);
     return response.data;

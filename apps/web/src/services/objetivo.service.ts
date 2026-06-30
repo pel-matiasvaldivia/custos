@@ -108,8 +108,8 @@ export interface CreateObjetivoData {
 }
 
 export const objetivoService = {
-  getAll: async (page = 1, limit = 50): Promise<Objetivo[]> => {
-    const response = await api.get<{ data: Objetivo[] }>('/objetivos', { params: { page, limit } });
+  getAll: async (page = 1, limit = 50, clienteId?: string): Promise<Objetivo[]> => {
+    const response = await api.get<{ data: Objetivo[] }>('/objetivos', { params: { page, limit, clienteId } });
     return response.data.data;
   },
 
