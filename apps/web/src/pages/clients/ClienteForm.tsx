@@ -1,24 +1,25 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { clienteService } from '../../services/cliente.service';
+import { clienteService, Cliente } from '../../services/cliente.service';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
 const labelClase = 'text-xs font-medium text-muted uppercase tracking-wider';
 
 interface Props {
+  cliente?: Cliente;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const ClienteForm = ({ onClose, onSaved }: Props) => {
-  const [razonSocial, setRazonSocial] = useState('');
-  const [nombreFantasia, setNombreFantasia] = useState('');
-  const [cuit, setCuit] = useState('');
-  const [domicilio, setDomicilio] = useState('');
-  const [contactoNombre, setContactoNombre] = useState('');
-  const [contactoEmail, setContactoEmail] = useState('');
-  const [contactoTelefono, setContactoTelefono] = useState('');
+export const ClienteForm = ({ cliente, onClose, onSaved }: Props) => {
+  const [razonSocial, setRazonSocial] = useState(cliente?.razon_social ?? '');
+  const [nombreFantasia, setNombreFantasia] = useState(cliente?.nombre_fantasia ?? '');
+  const [cuit, setCuit] = useState(cliente?.cuit ?? '');
+  const [domicilio, setDomicilio] = useState(cliente?.domicilio ?? '');
+  const [contactoNombre, setContactoNombre] = useState(cliente?.contacto_nombre ?? '');
+  const [contactoEmail, setContactoEmail] = useState(cliente?.contacto_email ?? '');
+  const [contactoTelefono, setContactoTelefono] = useState(cliente?.contacto_telefono ?? '');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +28,7 @@ export const ClienteForm = ({ onClose, onSaved }: Props) => {
     setEnviando(true);
     setError(null);
     try {
-      await clienteService.create({
+      const data = {
         razon_social: razonSocial,
         nombre_fantasia: nombreFantasia || undefined,
         cuit: cuit || undefined,
@@ -35,7 +36,12 @@ export const ClienteForm = ({ onClose, onSaved }: Props) => {
         contacto_nombre: contactoNombre || undefined,
         contacto_email: contactoEmail || undefined,
         contacto_telefono: contactoTelefono || undefined,
-      });
+      };
+      if (cliente) {
+        await clienteService.update(cliente.id, data);
+      } else {
+        await clienteService.create(data);
+      }
       onSaved();
     } catch (err: any) {
       setError(err?.response?.data?.message || 'No se pudo guardar el cliente.');
@@ -48,7 +54,7 @@ export const ClienteForm = ({ onClose, onSaved }: Props) => {
     <div className="fixed inset-0 bg-navy/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-md rounded-xl shadow-xl overflow-hidden border border-line animate-in fade-in zoom-in duration-200">
         <div className="p-6 border-b border-line flex justify-between items-center">
-          <h3 className="text-xl font-display font-bold text-navy">Nuevo Cliente</h3>
+          <h3 className="text-xl font-display font-bold text-navy">{cliente ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
           <button onClick={onClose} className="text-muted hover:text-navy transition-colors">
             <X size={20} />
           </button>

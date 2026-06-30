@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { contratoService } from '../../services/contrato.service';
-import { ClientePicker } from '../../components/clients/ClientePicker';
+import { objetivoService, Objetivo } from '../../services/objetivo.service';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
@@ -14,15 +14,15 @@ const MODOS: { value: 'POR_PLANIFICADO' | 'POR_REAL' | 'ABONO_FIJO'; label: stri
 ];
 
 interface Props {
-  objetivoId: string;
-  clienteIdSugerido?: string;
+  clienteId: string;
+  clienteNombre: string;
   onClose: () => void;
   onCreated: () => void;
 }
 
-export const ContratoForm = ({ objetivoId, clienteIdSugerido, onClose, onCreated }: Props) => {
-  const [clienteId, setClienteId] = useState(clienteIdSugerido || '');
-  const [clienteNombre, setClienteNombre] = useState('');
+export const ContratoForm = ({ clienteId, clienteNombre, onClose, onCreated }: Props) => {
+  const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
+  const [objetivoId, setObjetivoId] = useState('');
   const [modo, setModo] = useState<'POR_PLANIFICADO' | 'POR_REAL' | 'ABONO_FIJO'>('POR_PLANIFICADO');
   const [tarifaHora, setTarifaHora] = useState('');
   const [abonoMensual, setAbonoMensual] = useState('');
@@ -30,15 +30,19 @@ export const ContratoForm = ({ objetivoId, clienteIdSugerido, onClose, onCreated
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    objetivoService.getAll(1, 200, clienteId).then(setObjetivos).catch(() => setObjetivos([]));
+  }, [clienteId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEnviando(true);
     setError(null);
     try {
       await contratoService.create({
-        cliente_id: clienteId || undefined,
-        cliente_nombre: clienteNombre || undefined,
-        objetivo_id: objetivoId,
+        cliente_id: clienteId,
+        cliente_nombre: clienteNombre,
+        objetivo_id: objetivoId || undefined,
         modo,
         tarifa_hora: tarifaHora ? Number(tarifaHora) : undefined,
         abono_mensual: abonoMensual ? Number(abonoMensual) : undefined,
@@ -56,19 +60,27 @@ export const ContratoForm = ({ objetivoId, clienteIdSugerido, onClose, onCreated
     <div className="fixed inset-0 bg-navy/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-surface w-full max-w-md rounded-xl shadow-xl overflow-hidden border border-line animate-in fade-in zoom-in duration-200">
         <div className="p-6 border-b border-line flex justify-between items-center">
-          <h3 className="text-xl font-display font-bold text-navy">Configurar Contrato</h3>
+          <h3 className="text-xl font-display font-bold text-navy">Nuevo Contrato</h3>
           <button onClick={onClose} className="text-muted hover:text-navy transition-colors">
             <X size={20} />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <ClientePicker
-            clienteId={clienteId}
-            onChange={(id, nombre) => {
-              setClienteId(id);
-              setClienteNombre(nombre);
-            }}
-          />
+          <div className="space-y-1">
+            <label className={labelClase}>Cliente</label>
+            <p className="px-3 py-2 bg-canvas border border-line rounded-md text-sm text-navy font-medium">
+              {clienteNombre}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <label className={labelClase}>Objetivo (opcional)</label>
+            <select className={campoClase} value={objetivoId} onChange={(e) => setObjetivoId(e.target.value)}>
+              <option value="">Sin asignar todavía</option>
+              {objetivos.map((o) => (
+                <option key={o.id} value={o.id}>{o.codigo} · {o.nombre}</option>
+              ))}
+            </select>
+          </div>
           <div className="space-y-1">
             <label className={labelClase}>Tipo de contrato</label>
             <select className={campoClase} value={modo} onChange={(e) => setModo(e.target.value as any)}>

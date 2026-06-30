@@ -10,7 +10,12 @@ export class ContratoController {
   constructor(private readonly contratoService: ContratoService) {}
 
   @Get()
-  async findByObjetivo(@Query('objetivoId') objetivoId: string, @Request() req: any) {
+  async findAll(
+    @Query('objetivoId') objetivoId: string,
+    @Query('clienteId') clienteId: string,
+    @Request() req: any,
+  ) {
+    if (clienteId) return this.contratoService.findByCliente(clienteId, req.user.tenantId);
     return this.contratoService.findByObjetivo(objetivoId, req.user.tenantId);
   }
 

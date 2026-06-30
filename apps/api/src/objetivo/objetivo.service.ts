@@ -26,19 +26,20 @@ export class ObjetivoService {
     return horasMensuales > 0 ? Math.ceil(horasMensuales / horasEfectivas) : 0;
   }
 
-  async findAll(tenantId: string, pagination?: PaginationDto) {
+  async findAll(tenantId: string, pagination?: PaginationDto, clienteId?: string) {
     const skip = pagination?.skip ?? 0;
     const take = pagination?.limit ?? 50;
+    const where = { tenant_id: tenantId, ...(clienteId ? { cliente_id: clienteId } : {}) };
 
     const [data, total] = await Promise.all([
       this.prisma.objetivo.findMany({
-        where: { tenant_id: tenantId },
+        where,
         include: { _count: { select: { puestos: true } } },
         skip,
         take,
         orderBy: { created_at: 'desc' },
       }),
-      this.prisma.objetivo.count({ where: { tenant_id: tenantId } }),
+      this.prisma.objetivo.count({ where }),
     ]);
 
     return { data, total, page: pagination?.page ?? 1, limit: take };

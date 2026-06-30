@@ -7,6 +7,7 @@ import { QuadrantPage } from './pages/quadrant/QuadrantPage';
 import { ObjetivosPage } from './pages/objectives/ObjetivosPage';
 import { ObjetivoDetail } from './pages/objectives/ObjetivoDetail';
 import { ClientesPage } from './pages/clients/ClientesPage';
+import { ClienteDetail } from './pages/clients/ClienteDetail';
 import { QuotesPage } from './pages/quoting/QuotesPage';
 import { QuoteWizard } from './pages/quoting/QuoteWizard';
 import { SettingsPage } from './pages/settings/SettingsPage';
@@ -89,6 +90,7 @@ function AppRoutes() {
           <Route path="/objectives" element={<ObjetivosPage />} />
           <Route path="/objectives/:id" element={<ObjetivoDetail />} />
           <Route path="/clients" element={<ClientesPage />} />
+          <Route path="/clients/:id" element={<ClienteDetail />} />
           <Route path="/quotes" element={<QuotesPage />} />
           <Route path="/quotes/new" element={<QuoteWizard />} />
           <Route path="/settings" element={<SettingsPage />} />

@@ -18,7 +18,6 @@ import { objetivoService, ObjetivoDetalle } from '../../services/objetivo.servic
 import { ObjetivoForm } from './ObjetivoForm';
 import { PuestoForm } from './PuestoForm';
 import { VehiculoAsignarForm } from './VehiculoAsignarForm';
-import { ContratoForm } from './ContratoForm';
 import { CuadranteObjetivo } from './CuadranteObjetivo';
 
 const ETIQUETAS_MODO: Record<string, string> = {
@@ -35,7 +34,6 @@ export const ObjetivoDetail = () => {
   const [modalEditar, setModalEditar] = useState(false);
   const [modalPuesto, setModalPuesto] = useState(false);
   const [modalVehiculo, setModalVehiculo] = useState(false);
-  const [modalContrato, setModalContrato] = useState(false);
   const [enviandoNotificacion, setEnviandoNotificacion] = useState(false);
   const [notificacionEnviada, setNotificacionEnviada] = useState(false);
 
@@ -254,13 +252,9 @@ export const ObjetivoDetail = () => {
               </div>
             ) : (
               <div className="text-center py-2">
-                <p className="text-sm text-muted mb-3">Este objetivo todavía no tiene contrato configurado.</p>
-                <button
-                  onClick={() => setModalContrato(true)}
-                  className="text-brand-blue hover:text-brand-deep transition-colors text-sm font-medium flex items-center gap-1 mx-auto"
-                >
-                  <Plus size={14} /> Configurar Contrato
-                </button>
+                <p className="text-sm text-muted">
+                  Este objetivo todavía no tiene contrato vinculado. El contrato se crea desde la ficha del cliente.
+                </p>
               </div>
             )}
           </div>
@@ -335,18 +329,6 @@ export const ObjetivoDetail = () => {
           onClose={() => setModalVehiculo(false)}
           onAsignado={() => {
             setModalVehiculo(false);
-            cargar();
-          }}
-        />
-      )}
-
-      {modalContrato && id && (
-        <ContratoForm
-          objetivoId={id}
-          clienteIdSugerido={objetivo.cliente_id || undefined}
-          onClose={() => setModalContrato(false)}
-          onCreated={() => {
-            setModalContrato(false);
             cargar();
           }}
         />
