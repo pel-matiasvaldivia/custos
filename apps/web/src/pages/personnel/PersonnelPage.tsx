@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import { vigilanteService, Vigilador } from '../../services/vigilante.service';
-import { UserPlus, Search, MoreVertical } from 'lucide-react';
+import { UserPlus, Search, MoreVertical, Pencil } from 'lucide-react';
 import { VigiladorWizard } from './VigiladorWizard';
+import { VigiladorEditForm } from './VigiladorEditForm';
 import { Link } from 'react-router-dom';
 
 export const PersonnelPage = () => {
   const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
   const [loading, setLoading] = useState(true);
   const [wizardAbierto, setWizardAbierto] = useState(false);
+  const [menuAbiertoId, setMenuAbiertoId] = useState<string | null>(null);
+  const [vigiladorEditando, setVigiladorEditando] = useState<Vigilador | null>(null);
 
   const fetchVigiladores = async () => {
     setLoading(true);
@@ -96,10 +99,29 @@ export const PersonnelPage = () => {
                       {v.completitud === 'COMPLETO' ? 'Completa' : 'Incompleta'}
                     </span>
                   </td>
-                  <td className="py-4 px-4 text-right">
-                    <button className="text-muted hover:text-navy transition-colors">
+                  <td className="py-4 px-4 text-right relative">
+                    <button
+                      onClick={() => setMenuAbiertoId(menuAbiertoId === v.id ? null : v.id)}
+                      className="text-muted hover:text-navy transition-colors"
+                    >
                       <MoreVertical size={18} />
                     </button>
+                    {menuAbiertoId === v.id && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setMenuAbiertoId(null)} />
+                        <div className="absolute right-4 top-10 z-20 bg-surface border border-line rounded-md shadow-lg py-1 w-36 text-left">
+                          <button
+                            onClick={() => {
+                              setMenuAbiertoId(null);
+                              setVigiladorEditando(v);
+                            }}
+                            className="w-full px-3 py-2 text-sm text-navy hover:bg-canvas transition-colors flex items-center gap-2"
+                          >
+                            <Pencil size={14} /> Editar
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </td>
                 </tr>
               )
@@ -108,6 +130,17 @@ export const PersonnelPage = () => {
           </table>
         </div>
       </div>
+
+      {vigiladorEditando && (
+        <VigiladorEditForm
+          vigilador={vigiladorEditando}
+          onClose={() => setVigiladorEditando(null)}
+          onSaved={() => {
+            setVigiladorEditando(null);
+            fetchVigiladores();
+          }}
+        />
+      )}
     </div>
   );
 };

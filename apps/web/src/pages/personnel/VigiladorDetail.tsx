@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { vigilanteService, Vigilador, Completitud } from '../../services/vigilante.service';
 import { credencialService, Credencial } from '../../services/credencial.service';
-import { ArrowLeft, Plus, AlertCircle, FileCheck, User, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Plus, AlertCircle, FileCheck, User, MapPin, Phone, Pencil } from 'lucide-react';
 import { CredencialForm } from './CredencialForm';
+import { VigiladorEditForm } from './VigiladorEditForm';
 
 const ETIQUETAS_TIPO: Record<string, string> = {
   CARNET_VIGILADOR: 'Carnet de Vigilador',
@@ -41,6 +42,7 @@ export const VigiladorDetail = () => {
   const [completitud, setCompletitud] = useState<Completitud | null>(null);
   const [loading, setLoading] = useState(true);
   const [modalCredencialAbierto, setModalCredencialAbierto] = useState(false);
+  const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
 
   const cargarTodo = async () => {
     if (!id) return;
@@ -108,6 +110,12 @@ export const VigiladorDetail = () => {
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={() => setModalEditarAbierto(true)}
+            className="text-brand-blue hover:text-brand-deep transition-colors text-sm font-medium flex items-center gap-1"
+          >
+            <Pencil size={14} /> Editar ficha
+          </button>
           <span className={`status-badge ${vigilador.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
             {vigilador.estado}
           </span>
@@ -119,9 +127,17 @@ export const VigiladorDetail = () => {
 
       {completitud && !completitud.completo && (
         <div className="card bg-amber/5 border-amber/20">
-          <p className="font-medium text-amber flex items-center gap-2 mb-2">
-            <AlertCircle size={16} /> Faltan datos para completar la ficha
-          </p>
+          <div className="flex justify-between items-start mb-2">
+            <p className="font-medium text-amber flex items-center gap-2">
+              <AlertCircle size={16} /> Faltan datos para completar la ficha
+            </p>
+            <button
+              onClick={() => setModalEditarAbierto(true)}
+              className="text-amber hover:text-amber/80 transition-colors text-sm font-medium flex items-center gap-1 shrink-0"
+            >
+              <Pencil size={14} /> Editar
+            </button>
+          </div>
           <ul className="flex flex-wrap gap-2 text-xs">
             {completitud.faltantes.map((f) => (
               <li key={f} className="px-2 py-1 bg-amber/10 text-amber rounded-md">
@@ -253,6 +269,17 @@ export const VigiladorDetail = () => {
           onClose={() => setModalCredencialAbierto(false)}
           onCreated={() => {
             setModalCredencialAbierto(false);
+            cargarTodo();
+          }}
+        />
+      )}
+
+      {modalEditarAbierto && (
+        <VigiladorEditForm
+          vigilador={vigilador}
+          onClose={() => setModalEditarAbierto(false)}
+          onSaved={() => {
+            setModalEditarAbierto(false);
             cargarTodo();
           }}
         />
