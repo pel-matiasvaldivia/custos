@@ -19,6 +19,7 @@ import { ObjetivoForm } from './ObjetivoForm';
 import { PuestoForm } from './PuestoForm';
 import { VehiculoAsignarForm } from './VehiculoAsignarForm';
 import { ContratoForm } from './ContratoForm';
+import { CuadranteObjetivo } from './CuadranteObjetivo';
 
 const ETIQUETAS_MODO: Record<string, string> = {
   POR_PLANIFICADO: 'Por planificado',
@@ -179,27 +180,25 @@ export const ObjetivoDetail = () => {
                 )}
               </div>
             )}
-            {personal.length === 0 ? (
-              <p className="text-sm text-muted py-2 text-center">
-                Sin vigiladores asignados en los últimos 30 días. Gestioná las asignaciones desde el Cuadrante.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {personal.map((p) => (
-                  <li key={p.id} className="flex justify-between items-center text-sm py-2 border-b border-line last:border-b-0">
-                    <Link to={`/personnel/${p.id}`} className="font-medium text-navy hover:text-brand-blue transition-colors">
-                      {p.apellido}, {p.nombre}
-                    </Link>
-                    <span className={`status-badge ${p.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
-                      {p.estado}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            <CuadranteObjetivo objetivoId={id!} puestos={puestos} />
+
+            {personal.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-line">
+                <p className="text-xs font-medium text-muted uppercase tracking-wider mb-2">Vigiladores con asignación reciente</p>
+                <ul className="space-y-2">
+                  {personal.map((p) => (
+                    <li key={p.id} className="flex justify-between items-center text-sm py-1">
+                      <Link to={`/personnel/${p.id}`} className="font-medium text-navy hover:text-brand-blue transition-colors">
+                        {p.apellido}, {p.nombre}
+                      </Link>
+                      <span className={`status-badge ${p.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
+                        {p.estado}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
-            <Link to="/quadrant" className="text-brand-blue hover:text-brand-deep text-xs font-medium mt-3 inline-block">
-              Gestionar asignaciones en el Cuadrante →
-            </Link>
           </div>
 
           <div className="card">
