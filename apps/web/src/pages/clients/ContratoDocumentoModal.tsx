@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, Download, FileSignature } from 'lucide-react';
 import { contratoService } from '../../services/contrato.service';
 import { Contrato } from '../../services/objetivo.service';
+import { RichHtmlEditor } from '../../components/common/RichHtmlEditor';
 
 interface Props {
   contrato: Contrato;
@@ -86,20 +87,9 @@ export const ContratoDocumentoModal = ({ contrato, onClose, onGenerado }: Props)
           {loading ? (
             <p className="text-muted italic py-8 text-center">Cargando documento...</p>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted uppercase tracking-wider">HTML</label>
-                <textarea
-                  className="w-full h-[450px] p-3 bg-canvas border border-line rounded-md font-mono text-xs outline-none focus:ring-2 focus:ring-brand-blue/20"
-                  value={html}
-                  onChange={(e) => setHtml(e.target.value)}
-                  spellCheck={false}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted uppercase tracking-wider">Vista previa</label>
-                <iframe title="preview" srcDoc={html} className="w-full h-[450px] bg-white border border-line rounded-md" />
-              </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted uppercase tracking-wider">Documento</label>
+              <RichHtmlEditor value={html} onChange={setHtml} height={450} />
             </div>
           )}
 
