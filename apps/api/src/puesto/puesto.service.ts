@@ -73,6 +73,11 @@ export class PuestoService {
     });
   }
 
+  async delete(id: string, tenantId: string) {
+    await this.findOne(id, tenantId);
+    return this.prisma.puesto.delete({ where: { id } });
+  }
+
   /**
    * CENTRAL STAFFING FORMULA
    * dotacion = H_cubrir / (horas_nominales_mes * (1 - tasa_ausentismo))

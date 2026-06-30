@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -44,5 +45,10 @@ export class PuestoController {
     @Request() req: any,
   ) {
     return this.puestoService.update(id, req.user.tenantId, body);
+  }
+
+  @Delete(':id')
+  async delete(@Param('id') id: string, @Request() req: any) {
+    return this.puestoService.delete(id, req.user.tenantId);
   }
 }

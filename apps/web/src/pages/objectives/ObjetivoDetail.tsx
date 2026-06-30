@@ -14,7 +14,8 @@ import {
   AlertTriangle,
   Bell,
 } from 'lucide-react';
-import { objetivoService, ObjetivoDetalle } from '../../services/objetivo.service';
+import { objetivoService, ObjetivoDetalle, Puesto } from '../../services/objetivo.service';
+import { puestoService } from '../../services/puesto.service';
 import { ObjetivoForm } from './ObjetivoForm';
 import { PuestoForm } from './PuestoForm';
 import { VehiculoAsignarForm } from './VehiculoAsignarForm';
@@ -33,6 +34,8 @@ export const ObjetivoDetail = () => {
   const [loading, setLoading] = useState(true);
   const [modalEditar, setModalEditar] = useState(false);
   const [modalPuesto, setModalPuesto] = useState(false);
+  const [modalEditarPuesto, setModalEditarPuesto] = useState<Puesto | null>(null);
+  const [confirmandoEliminarPuesto, setConfirmandoEliminarPuesto] = useState<string | null>(null);
   const [modalVehiculo, setModalVehiculo] = useState(false);
   const [enviandoNotificacion, setEnviandoNotificacion] = useState(false);
   const [notificacionEnviada, setNotificacionEnviada] = useState(false);
@@ -48,6 +51,12 @@ export const ObjetivoDetail = () => {
     cargar().finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const handleEliminarPuesto = async (puestoId: string) => {
+    await puestoService.delete(puestoId);
+    setConfirmandoEliminarPuesto(null);
+    cargar();
+  };
 
   const handleLiberarVehiculo = async (asignacionId: string) => {
     if (!id) return;
@@ -127,18 +136,62 @@ export const ObjetivoDetail = () => {
                   Todavía no se cargó ningún puesto para este objetivo.
                 </p>
               ) : (
-                puestos.map((p) => (
-                  <div key={p.id} className="p-4 border border-line rounded-lg bg-canvas flex justify-between items-center">
-                    <div>
-                      <h4 className="font-bold text-sm text-navy">{p.nombre}</h4>
-                      {p.ubicacion && <p className="text-xs text-muted">{p.ubicacion}</p>}
+                puestos.map((p) => {
+                  const eliminando = confirmandoEliminarPuesto === p.id;
+                  return (
+                    <div
+                      key={p.id}
+                      className={`p-4 border rounded-lg flex justify-between items-center transition-colors ${
+                        eliminando ? 'border-red-300 bg-red-50' : 'border-line bg-canvas'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-navy">{p.nombre}</h4>
+                        {p.ubicacion && <p className="text-xs text-muted">{p.ubicacion}</p>}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        {p.requiere_arma && <span className="status-badge status-badge-alert">Arma</span>}
+                        {p.requiere_movil && <span className="status-badge status-badge-ok">Móvil</span>}
+                        {eliminando ? (
+                          <>
+                            <span className="text-xs text-red-500 font-medium">¿Eliminar?</span>
+                            <button
+                              onClick={() => handleEliminarPuesto(p.id)}
+                              className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                              title="Confirmar eliminación"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmandoEliminarPuesto(null)}
+                              className="p-1 border border-line text-muted rounded hover:bg-surface transition-colors"
+                              title="Cancelar"
+                            >
+                              <ArrowLeft size={12} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => setModalEditarPuesto(p)}
+                              className="p-1 text-muted hover:text-brand-blue transition-colors"
+                              title="Editar puesto"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmandoEliminarPuesto(p.id)}
+                              className="p-1 text-muted hover:text-red-500 transition-colors"
+                              title="Eliminar puesto"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2">
-                      {p.requiere_arma && <span className="status-badge status-badge-alert">Arma</span>}
-                      {p.requiere_movil && <span className="status-badge status-badge-ok">Móvil</span>}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -318,6 +371,18 @@ export const ObjetivoDetail = () => {
           onClose={() => setModalPuesto(false)}
           onCreated={() => {
             setModalPuesto(false);
+            cargar();
+          }}
+        />
+      )}
+
+      {modalEditarPuesto && id && (
+        <PuestoForm
+          objetivoId={id}
+          puesto={modalEditarPuesto}
+          onClose={() => setModalEditarPuesto(null)}
+          onCreated={() => {
+            setModalEditarPuesto(null);
             cargar();
           }}
         />
