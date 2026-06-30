@@ -1,14 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Upload } from 'lucide-react';
-import { credencialService, TipoCredencial } from '../../services/credencial.service';
-
-const TIPOS: { value: TipoCredencial; label: string }[] = [
-  { value: 'CARNET_VIGILADOR', label: 'Carnet de Vigilador' },
-  { value: 'PSICOFISICO', label: 'Psicofísico' },
-  { value: 'ANTECEDENTES', label: 'Certificado de Antecedentes' },
-  { value: 'ANMAC', label: 'Credencial ANMAC' },
-  { value: 'CAPACITACION', label: 'Capacitación' },
-];
+import { credencialService } from '../../services/credencial.service';
+import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
@@ -21,7 +14,8 @@ interface Props {
 }
 
 export const CredencialForm = ({ vigiladorId, onClose, onCreated }: Props) => {
-  const [tipo, setTipo] = useState<TipoCredencial>('CARNET_VIGILADOR');
+  const [tipos, setTipos] = useState<CatalogoItemOption[]>([]);
+  const [tipo, setTipo] = useState('');
   const [numero, setNumero] = useState('');
   const [organismo, setOrganismo] = useState('');
   const [emitidaEl, setEmitidaEl] = useState('');
@@ -29,6 +23,13 @@ export const CredencialForm = ({ vigiladorId, onClose, onCreated }: Props) => {
   const [archivo, setArchivo] = useState<File | undefined>();
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    catalogoService.getItems('CREDENCIAL_TIPO').then((items) => {
+      setTipos(items);
+      if (items.length > 0) setTipo(items[0].codigo);
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,17 +64,16 @@ export const CredencialForm = ({ vigiladorId, onClose, onCreated }: Props) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="space-y-1">
             <label className={labelClase}>Tipo</label>
-            <select
-              className={campoClase}
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as TipoCredencial)}
-            >
-              {TIPOS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
+            <select className={campoClase} value={tipo} onChange={(e) => setTipo(e.target.value)}>
+              {tipos.map((t) => (
+                <option key={t.codigo} value={t.codigo}>
+                  {t.etiqueta}
                 </option>
               ))}
             </select>
+            <p className="text-xs text-muted">
+              ¿Falta un tipo? Agregalo desde Configuración → Catálogos.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
