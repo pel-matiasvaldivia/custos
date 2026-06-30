@@ -26,8 +26,10 @@ function parseInline(html: string): any {
   let m: RegExpExecArray | null;
   while ((m = re.exec(normalized))) {
     if (m[1]) runs.push({ text: decodeEntities(stripTags(m[2])), bold: true });
-    else if (m[3]) runs.push({ text: decodeEntities(stripTags(m[4])), italics: true });
-    else if (m[5] && m[5].trim() !== '') runs.push({ text: decodeEntities(m[5]) });
+    else if (m[3])
+      runs.push({ text: decodeEntities(stripTags(m[4])), italics: true });
+    else if (m[5] && m[5].trim() !== '')
+      runs.push({ text: decodeEntities(m[5]) });
   }
   return runs.length ? runs : '';
 }
@@ -58,7 +60,11 @@ function parseTable(openTag: string, inner: string): any {
       const cellContent = /<(p|img|table|h[1-3]|ul)\b/i.test(cellInner)
         ? { stack: parseBlocks(cellInner) }
         : { text: parseInline(cellInner) };
-      cells.push(isHeader ? { ...cellContent, bold: true, fillColor: '#f0f0f0' } : cellContent);
+      cells.push(
+        isHeader
+          ? { ...cellContent, bold: true, fillColor: '#f0f0f0' }
+          : cellContent,
+      );
     }
     if (cells.length) {
       rows.push(cells);
@@ -78,13 +84,24 @@ function parseTable(openTag: string, inner: string): any {
 
 export function parseBlocks(html: string): any[] {
   const content: any[] = [];
-  const blockRe = /<(h[1-3]|p|table|ul|ol)\b([^>]*)>([\s\S]*?)<\/\1>|<hr\s*\/?>|<img\b[^>]*\/?>/gi;
+  const blockRe =
+    /<(h[1-3]|p|table|ul|ol)\b([^>]*)>([\s\S]*?)<\/\1>|<hr\s*\/?>|<img\b[^>]*\/?>/gi;
   let m: RegExpExecArray | null;
   while ((m = blockRe.exec(html))) {
     const full = m[0];
     if (/^<hr/i.test(full)) {
       content.push({
-        canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1, lineColor: '#cccccc' }],
+        canvas: [
+          {
+            type: 'line',
+            x1: 0,
+            y1: 0,
+            x2: 515,
+            y2: 0,
+            lineWidth: 1,
+            lineColor: '#cccccc',
+          },
+        ],
         margin: [0, 10, 0, 10],
       });
       continue;
@@ -97,7 +114,11 @@ export function parseBlocks(html: string): any[] {
     const tag = m[1].toLowerCase();
     const inner = m[3];
     if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
-      content.push({ text: parseInline(inner), style: tag, margin: [0, 10, 0, 6] });
+      content.push({
+        text: parseInline(inner),
+        style: tag,
+        margin: [0, 10, 0, 6],
+      });
     } else if (tag === 'p') {
       content.push({ text: parseInline(inner), margin: [0, 2, 0, 6] });
     } else if (tag === 'table') {
@@ -109,7 +130,10 @@ export function parseBlocks(html: string): any[] {
       while ((lm = liRe.exec(inner))) {
         items.push(parseInline(lm[1]));
       }
-      content.push({ [tag === 'ul' ? 'ul' : 'ol']: items, margin: [0, 2, 0, 6] });
+      content.push({
+        [tag === 'ul' ? 'ul' : 'ol']: items,
+        margin: [0, 2, 0, 6],
+      });
     }
   }
   return content;

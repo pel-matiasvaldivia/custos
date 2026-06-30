@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { Prisma } from '@prisma/client';
@@ -8,7 +12,12 @@ import { CreateAsignacionDto } from './dto/create-asignacion.dto';
 export class AsignacionService {
   constructor(private prisma: PrismaService) {}
 
-  async findByObjetivo(tenantId: string, objetivoId: string, desde: Date, hasta: Date) {
+  async findByObjetivo(
+    tenantId: string,
+    objetivoId: string,
+    desde: Date,
+    hasta: Date,
+  ) {
     const puestos = await this.prisma.puesto.findMany({
       where: { tenant_id: tenantId, objetivo_id: objetivoId },
       select: { id: true },
@@ -37,7 +46,9 @@ export class AsignacionService {
     if (!puesto) throw new NotFoundException('Puesto no encontrado.');
 
     if (dto.hora_fin <= dto.hora_inicio) {
-      throw new ConflictException('El horario "Hasta" debe ser posterior al horario "Desde".');
+      throw new ConflictException(
+        'El horario "Hasta" debe ser posterior al horario "Desde".',
+      );
     }
 
     try {
@@ -53,15 +64,22 @@ export class AsignacionService {
         include: { puesto: true, vigilador: true },
       });
     } catch (e) {
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        throw new ConflictException('Ya existe un turno cargado para ese puesto en esa fecha y horario.');
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Ya existe un turno cargado para ese puesto en esa fecha y horario.',
+        );
       }
       throw e;
     }
   }
 
   async liberar(id: string, tenantId: string) {
-    const asignacion = await this.prisma.asignacion.findFirst({ where: { id, tenant_id: tenantId } });
+    const asignacion = await this.prisma.asignacion.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
     if (!asignacion) throw new NotFoundException('Turno no encontrado.');
 
     return this.prisma.asignacion.update({
@@ -72,10 +90,14 @@ export class AsignacionService {
   }
 
   async deleteSlot(id: string, tenantId: string) {
-    const asignacion = await this.prisma.asignacion.findFirst({ where: { id, tenant_id: tenantId } });
+    const asignacion = await this.prisma.asignacion.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
     if (!asignacion) throw new NotFoundException('Turno no encontrado.');
     if (asignacion.vigilador_id) {
-      throw new ConflictException('No se puede eliminar un turno con un vigilador asignado. Liberalo primero.');
+      throw new ConflictException(
+        'No se puede eliminar un turno con un vigilador asignado. Liberalo primero.',
+      );
     }
     await this.prisma.asignacion.delete({ where: { id } });
   }
@@ -139,7 +161,9 @@ export class AsignacionService {
   }
 
   async asignVigilante(id: string, tenantId: string, vigiladorId: string) {
-    const asignacion = await this.prisma.asignacion.findFirst({ where: { id, tenant_id: tenantId } });
+    const asignacion = await this.prisma.asignacion.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
     if (!asignacion) throw new NotFoundException('Turno no encontrado.');
 
     const vigilador = await this.prisma.vigilador.findFirst({

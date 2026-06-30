@@ -120,7 +120,9 @@ export function conciliarHH(
   turnos: TurnoConciliable[],
   opts: OpcionesConciliacion,
 ): CubetasHH {
-  const cubiertos = turnos.filter((t) => t.esCubierto && t.inicioReal && t.finReal);
+  const cubiertos = turnos.filter(
+    (t) => t.esCubierto && t.inicioReal && t.finReal,
+  );
 
   const hh_planificadas = r2(
     turnos.reduce((a, t) => a + duracionHoras(t.inicioPlan, t.finPlan), 0),
@@ -181,10 +183,7 @@ export function conciliarHH(
   // Partición sobre lo real (spec L341).
   const hh_normales = r2(Math.max(0, hh_reales - hh_nocturnas));
 
-  const hh_extra = r2(horasExtraPorSemana(
-    turnos,
-    opts.topeSemanalH ?? 48,
-  ));
+  const hh_extra = r2(horasExtraPorSemana(turnos, opts.topeSemanalH ?? 48));
 
   return {
     hh_planificadas,

@@ -1,4 +1,8 @@
-import { detectarCobertura, Intervalo, VentanaCobertura } from './cobertura.domain';
+import {
+  detectarCobertura,
+  Intervalo,
+  VentanaCobertura,
+} from './cobertura.domain';
 
 const I = (ini: string, fin: string): Intervalo => ({
   inicio: new Date(ini),

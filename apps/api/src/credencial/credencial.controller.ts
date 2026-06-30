@@ -19,7 +19,11 @@ import { CreateCredencialDto } from './dto/create-credencial.dto';
 import { StorageService } from '../storage/storage.service';
 import { VigilanteService } from '../vigilante/vigilante.service';
 
-const TIPOS_DOCUMENTO_PERMITIDOS = ['image/jpeg', 'image/png', 'application/pdf'];
+const TIPOS_DOCUMENTO_PERMITIDOS = [
+  'image/jpeg',
+  'image/png',
+  'application/pdf',
+];
 
 @Controller('vigilantes/:vigiladorId/credenciales')
 @UseGuards(JwtAuthGuard)
@@ -31,8 +35,14 @@ export class CredencialController {
   ) {}
 
   @Get()
-  async findAll(@Param('vigiladorId') vigiladorId: string, @Request() req: any) {
-    return this.credencialService.findByVigilador(vigiladorId, req.user.tenantId);
+  async findAll(
+    @Param('vigiladorId') vigiladorId: string,
+    @Request() req: any,
+  ) {
+    return this.credencialService.findByVigilador(
+      vigiladorId,
+      req.user.tenantId,
+    );
   }
 
   @Post()
@@ -68,7 +78,10 @@ export class CredencialController {
       documento_url: documentoUrl,
       documento_key: documentoKey,
     });
-    await this.vigilanteService.recalcularCompletitud(vigiladorId, req.user.tenantId);
+    await this.vigilanteService.recalcularCompletitud(
+      vigiladorId,
+      req.user.tenantId,
+    );
     return credencial;
   }
 
@@ -78,11 +91,18 @@ export class CredencialController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    const credencial = await this.credencialService.findOne(id, req.user.tenantId);
+    const credencial = await this.credencialService.findOne(
+      id,
+      req.user.tenantId,
+    );
     if (!credencial.documento_key) {
-      throw new BadRequestException('Esta credencial no tiene un documento adjunto.');
+      throw new BadRequestException(
+        'Esta credencial no tiene un documento adjunto.',
+      );
     }
-    const { stream, contentType } = await this.storageService.descargar(credencial.documento_key);
+    const { stream, contentType } = await this.storageService.descargar(
+      credencial.documento_key,
+    );
     res.setHeader('Content-Type', contentType);
     stream.pipe(res);
   }

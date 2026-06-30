@@ -24,7 +24,11 @@ export class ObjetivoController {
 
   @Get()
   async findAll(@Request() req: any, @Query() query: FindObjetivosDto) {
-    return this.objetivoService.findAll(req.user.tenantId, query, query.clienteId);
+    return this.objetivoService.findAll(
+      req.user.tenantId,
+      query,
+      query.clienteId,
+    );
   }
 
   @Get(':id')
@@ -55,7 +59,11 @@ export class ObjetivoController {
     @Body() body: AsignarVehiculoDto,
     @Request() req: any,
   ) {
-    return this.objetivoService.asignarVehiculo(id, req.user.tenantId, body.vehiculo_id);
+    return this.objetivoService.asignarVehiculo(
+      id,
+      req.user.tenantId,
+      body.vehiculo_id,
+    );
   }
 
   @Delete(':id/vehiculos/:asignacionId')
@@ -64,11 +72,21 @@ export class ObjetivoController {
     @Param('asignacionId') asignacionId: string,
     @Request() req: any,
   ) {
-    return this.objetivoService.liberarVehiculo(id, req.user.tenantId, asignacionId);
+    return this.objetivoService.liberarVehiculo(
+      id,
+      req.user.tenantId,
+      asignacionId,
+    );
   }
 
   @Post(':id/notificar-personal-insuficiente')
-  async notificarPersonalInsuficiente(@Param('id') id: string, @Request() req: any) {
-    return this.objetivoService.notificarPersonalInsuficiente(id, req.user.tenantId);
+  async notificarPersonalInsuficiente(
+    @Param('id') id: string,
+    @Request() req: any,
+  ) {
+    return this.objetivoService.notificarPersonalInsuficiente(
+      id,
+      req.user.tenantId,
+    );
   }
 }

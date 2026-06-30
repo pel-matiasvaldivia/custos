@@ -31,6 +31,8 @@ import { VehiculoModule } from './vehiculo/vehiculo.module';
 import { ContratoModule } from './contrato/contrato.module';
 import { ClienteModule } from './cliente/cliente.module';
 import { ContratoConfigModule } from './contrato-config/contrato-config.module';
+import { RelevosModule } from './modules/relevos/relevos.module';
+import { VigilanteAuthModule } from './modules/vigilante-auth/vigilante-auth.module';
 
 @Module({
   imports: [
@@ -63,6 +65,8 @@ import { ContratoConfigModule } from './contrato-config/contrato-config.module';
     ContratoModule,
     ClienteModule,
     ContratoConfigModule,
+    RelevosModule,
+    VigilanteAuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

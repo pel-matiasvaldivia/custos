@@ -23,7 +23,9 @@ export class StorageService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    const existe = await this.client.bucketExists(this.bucket).catch(() => false);
+    const existe = await this.client
+      .bucketExists(this.bucket)
+      .catch(() => false);
     if (!existe) {
       await this.client.makeBucket(this.bucket);
     }
@@ -57,14 +59,18 @@ export class StorageService implements OnModuleInit {
   // Servimos el archivo a través de la API en vez de exponer la URL firmada
   // de MinIO directamente: esa URL apunta al hostname interno "minio", que
   // no es resoluble desde el navegador del usuario.
-  async descargar(key: string): Promise<{ stream: Readable; contentType: string }> {
+  async descargar(
+    key: string,
+  ): Promise<{ stream: Readable; contentType: string }> {
     const [stat, stream] = await Promise.all([
       this.client.statObject(this.bucket, key),
       this.client.getObject(this.bucket, key),
     ]);
     return {
       stream,
-      contentType: (stat.metaData?.['content-type'] as string) || 'application/octet-stream',
+      contentType:
+        (stat.metaData?.['content-type'] as string) ||
+        'application/octet-stream',
     };
   }
 }

@@ -33,8 +33,14 @@ export class ContratoConfigController {
 
   @Put()
   @Roles('ADMIN', 'GERENCIA')
-  updatePlantilla(@Request() req: any, @Body() dto: UpdatePlantillaContratoDto) {
-    return this.contratoConfigService.updatePlantilla(req.user.tenantId, dto.plantilla_html);
+  updatePlantilla(
+    @Request() req: any,
+    @Body() dto: UpdatePlantillaContratoDto,
+  ) {
+    return this.contratoConfigService.updatePlantilla(
+      req.user.tenantId,
+      dto.plantilla_html,
+    );
   }
 
   @Post('firma')
@@ -52,8 +58,15 @@ export class ContratoConfigController {
       throw new BadRequestException('La firma debe ser una imagen PNG o JPG.');
     }
     if (file.size > TAMANO_MAXIMO_FIRMA_BYTES) {
-      throw new BadRequestException('La imagen de firma supera el tamaño máximo de 2 MB.');
+      throw new BadRequestException(
+        'La imagen de firma supera el tamaño máximo de 2 MB.',
+      );
     }
-    return this.contratoConfigService.actualizarFirma(req.user.tenantId, file, dto.nombre, dto.cargo);
+    return this.contratoConfigService.actualizarFirma(
+      req.user.tenantId,
+      file,
+      dto.nombre,
+      dto.cargo,
+    );
   }
 }

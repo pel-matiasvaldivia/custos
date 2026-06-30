@@ -18,7 +18,7 @@ import { objetivoService, ObjetivoDetalle } from '../../services/objetivo.servic
 import { ObjetivoForm } from './ObjetivoForm';
 import { PuestoForm } from './PuestoForm';
 import { VehiculoAsignarForm } from './VehiculoAsignarForm';
-import { CuadranteObjetivo } from './CuadranteObjetivo';
+import { EsquemaCuadranteObjetivo } from './EsquemaCuadranteObjetivo';
 
 const ETIQUETAS_MODO: Record<string, string> = {
   POR_PLANIFICADO: 'Por planificado',
@@ -147,7 +147,7 @@ export const ObjetivoDetail = () => {
             <h3 className="text-lg font-display font-bold text-navy mb-4 flex items-center gap-2">
               <Users className="text-brand-blue" size={20} /> Personal Asignado
             </h3>
-            {dotacion.horasMensuales > 0 && (
+            {dotacion.horasSemanales > 0 && (
               <div
                 className={`mb-4 p-3 rounded-lg border text-sm ${
                   dotacion.suficiente
@@ -160,7 +160,7 @@ export const ObjetivoDetail = () => {
                   Dotación requerida: {dotacion.vigiladoresRequeridos} · Disponibles en nómina: {dotacion.vigiladoresActivosTotal}
                 </p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  Calculado sobre {dotacion.horasMensuales}hs mensuales de cobertura.
+                  Calculado sobre {dotacion.horasSemanales}hs semanales de cobertura.
                 </p>
                 {!dotacion.suficiente && (
                   <button
@@ -178,7 +178,7 @@ export const ObjetivoDetail = () => {
                 )}
               </div>
             )}
-            <CuadranteObjetivo objetivoId={id!} puestos={puestos} />
+            <EsquemaCuadranteObjetivo objetivoId={id!} puestos={puestos} />
 
             {personal.length > 0 && (
               <div className="mt-4 pt-4 border-t border-line">

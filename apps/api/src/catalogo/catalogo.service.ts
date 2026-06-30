@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CATALOGO_DEFAULTS, slugifyCodigo } from './catalogo.constants';
 
@@ -14,15 +18,27 @@ export class CatalogoService {
     });
 
     return [
-      ...defaults.map((d) => ({ id: null, codigo: d.codigo, etiqueta: d.etiqueta, esDefault: true })),
-      ...items.map((i) => ({ id: i.id, codigo: i.codigo, etiqueta: i.etiqueta, esDefault: false })),
+      ...defaults.map((d) => ({
+        id: null,
+        codigo: d.codigo,
+        etiqueta: d.etiqueta,
+        esDefault: true,
+      })),
+      ...items.map((i) => ({
+        id: i.id,
+        codigo: i.codigo,
+        etiqueta: i.etiqueta,
+        esDefault: false,
+      })),
     ];
   }
 
   async create(tenantId: string, categoria: string, etiqueta: string) {
     const baseCodigo = slugifyCodigo(etiqueta);
     if (!baseCodigo) {
-      throw new BadRequestException('La etiqueta debe contener al menos una letra o número.');
+      throw new BadRequestException(
+        'La etiqueta debe contener al menos una letra o número.',
+      );
     }
 
     let codigo = baseCodigo;

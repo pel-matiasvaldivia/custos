@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { ClienteService } from './cliente.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateClienteDto } from './dto/create-cliente.dto';
@@ -12,7 +23,11 @@ export class ClienteController {
 
   @Get()
   async findAll(@Request() req: any, @Query() query: FindClientesDto) {
-    return this.clienteService.findAll(req.user.tenantId, query, query.busqueda);
+    return this.clienteService.findAll(
+      req.user.tenantId,
+      query,
+      query.busqueda,
+    );
   }
 
   @Get(':id')
@@ -26,7 +41,11 @@ export class ClienteController {
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() body: UpdateClienteDto, @Request() req: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() body: UpdateClienteDto,
+    @Request() req: any,
+  ) {
     return this.clienteService.update(id, req.user.tenantId, body);
   }
 

@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CostosService } from '../costos/costos.service';
 import { ContratoService } from '../contrato/contrato.service';
@@ -30,7 +34,10 @@ export class CotizacionService {
     clienteNombre: string | undefined,
   ): Promise<string> {
     if (!clienteId) {
-      if (!clienteNombre) throw new BadRequestException('Debe indicar cliente_id o cliente_nombre.');
+      if (!clienteNombre)
+        throw new BadRequestException(
+          'Debe indicar cliente_id o cliente_nombre.',
+        );
       return clienteNombre;
     }
     const cliente = await this.prisma.cliente.findFirst({
@@ -42,7 +49,11 @@ export class CotizacionService {
 
   async create(tenantId: string, data: any) {
     const config = await this.costosService.findOne(tenantId);
-    const clienteNombre = await this.resolverClienteNombre(tenantId, data.cliente_id, data.cliente_nombre);
+    const clienteNombre = await this.resolverClienteNombre(
+      tenantId,
+      data.cliente_id,
+      data.cliente_nombre,
+    );
 
     // Simple calculation logic for the items
     const items = data.items.map((item: any) => {
@@ -146,7 +157,9 @@ export class CotizacionService {
    * Etapa 2 del camino crítico (ver PROCESO_VENTA_A_COBRANZA.md).
    */
   async cambiarEstado(id: string, tenantId: string, nuevoEstado: string) {
-    const cotizacion = await this.prisma.cotizacion.findFirst({ where: { id, tenant_id: tenantId } });
+    const cotizacion = await this.prisma.cotizacion.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
     if (!cotizacion) throw new NotFoundException('Cotización no encontrada.');
 
     const permitidos = TRANSICIONES[cotizacion.estado] ?? [];

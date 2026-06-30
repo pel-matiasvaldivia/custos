@@ -22,7 +22,11 @@ export class PuestoController {
 
   @Get()
   async findAll(@Request() req: any, @Query() query: FindPuestosDto) {
-    return this.puestoService.findAll(req.user.tenantId, query, query.objetivoId);
+    return this.puestoService.findAll(
+      req.user.tenantId,
+      query,
+      query.objetivoId,
+    );
   }
 
   @Post()

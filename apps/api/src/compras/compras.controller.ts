@@ -58,7 +58,11 @@ export class ComprasController {
     @Param('id') id: string,
     @Body() data: RecibirOrdenDto,
   ) {
-    return this.comprasService.recibirParcial(req.user.tenantId, id, data.items);
+    return this.comprasService.recibirParcial(
+      req.user.tenantId,
+      id,
+      data.items,
+    );
   }
 
   @Patch('ordenes/:id/pagar')

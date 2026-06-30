@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsBoolean, IsUUID, IsNumber } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsBoolean,
+  IsUUID,
+  IsNumber,
+} from 'class-validator';
 import { Prisma } from '@prisma/client';
 
 export class CreatePuestoDto {

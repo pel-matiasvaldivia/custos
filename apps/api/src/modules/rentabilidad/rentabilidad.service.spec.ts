@@ -66,7 +66,12 @@ describe('RentabilidadService', () => {
       { id: 'c1', codigo: 'CON-1', cliente_nombre: 'ACME' },
     ]);
     mockPrisma.contratoFacturacion.findMany.mockResolvedValue([
-      { contrato_id: 'c1', modo: 'POR_REAL', tarifa_hora: 2000, abono_mensual: null },
+      {
+        contrato_id: 'c1',
+        modo: 'POR_REAL',
+        tarifa_hora: 2000,
+        abono_mensual: null,
+      },
     ]);
     mockPrisma.ordenCompraItem.findMany.mockResolvedValue([
       { contrato_id: 'c1', subtotal: 5000 },
@@ -92,7 +97,12 @@ describe('RentabilidadService', () => {
       { id: 'c2', codigo: 'CON-2', cliente_nombre: 'Beta' },
     ]);
     mockPrisma.contratoFacturacion.findMany.mockResolvedValue([
-      { contrato_id: 'c2', modo: 'ABONO_FIJO', tarifa_hora: null, abono_mensual: 300000 },
+      {
+        contrato_id: 'c2',
+        modo: 'ABONO_FIJO',
+        tarifa_hora: null,
+        abono_mensual: 300000,
+      },
     ]);
     mockPrisma.ordenCompraItem.findMany.mockResolvedValue([]);
 

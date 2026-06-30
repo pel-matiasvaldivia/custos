@@ -1,3 +1,5 @@
+// Superada por EsquemaCuadranteObjetivo.tsx (afectación automática vía EsquemaTurno).
+// Se deja sin usar en vez de borrarse hasta confirmar que nada más depende de Asignacion.
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
 import { Puesto } from '../../services/objetivo.service';

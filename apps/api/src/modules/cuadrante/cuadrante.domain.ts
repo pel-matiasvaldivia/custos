@@ -37,7 +37,9 @@ function aMedianoche(d: Date): Date {
 
 /** Días calendario completos entre dos fechas (b − a). */
 function diffDias(a: Date, b: Date): number {
-  return Math.round((aMedianoche(a).getTime() - aMedianoche(b).getTime()) / MS_DIA);
+  return Math.round(
+    (aMedianoche(a).getTime() - aMedianoche(b).getTime()) / MS_DIA,
+  );
 }
 
 function combinar(fecha: Date, horaInicio: string): Date {
@@ -70,7 +72,9 @@ export interface ParamsGeneracion {
  * Genera los turnos concretos de una asignación de esquema en [desde, hasta].
  * Determinístico: misma entrada → misma salida.
  */
-export function generarTurnosDesdeEsquema(p: ParamsGeneracion): TurnoGenerado[] {
+export function generarTurnosDesdeEsquema(
+  p: ParamsGeneracion,
+): TurnoGenerado[] {
   const N = p.diasCiclo;
   const turnos: TurnoGenerado[] = [];
   if (N <= 0) return turnos;

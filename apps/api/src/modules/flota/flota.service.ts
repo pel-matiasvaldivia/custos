@@ -48,7 +48,11 @@ export class FlotaService {
     },
   ) {
     const anterior = await this.prisma.cargaCombustible.findFirst({
-      where: { tenant_id: tenantId, vehiculo_id: vehiculoId, km: { lt: dto.km } },
+      where: {
+        tenant_id: tenantId,
+        vehiculo_id: vehiculoId,
+        km: { lt: dto.km },
+      },
       orderBy: { km: 'desc' },
       select: { km: true },
     });

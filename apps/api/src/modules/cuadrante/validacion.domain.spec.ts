@@ -13,26 +13,42 @@ const turno = (ini: string, fin: string): TurnoRef => ({
 
 describe('validarTurno', () => {
   it('turno válido sin existentes: sin errores', () => {
-    const r = validarTurno(turno('2026-06-01T06:00', '2026-06-01T18:00'), [], R);
+    const r = validarTurno(
+      turno('2026-06-01T06:00', '2026-06-01T18:00'),
+      [],
+      R,
+    );
     expect(r.errores).toEqual([]);
   });
 
   it('detecta SOLAPAMIENTO', () => {
     const existentes = [turno('2026-06-01T06:00', '2026-06-01T18:00')];
-    const r = validarTurno(turno('2026-06-01T12:00', '2026-06-01T20:00'), existentes, R);
+    const r = validarTurno(
+      turno('2026-06-01T12:00', '2026-06-01T20:00'),
+      existentes,
+      R,
+    );
     expect(r.errores).toContain('SOLAPAMIENTO');
   });
 
   it('detecta DESCANSO_INSUFICIENTE (menos de 12h entre turnos)', () => {
     const existentes = [turno('2026-06-01T06:00', '2026-06-01T18:00')];
     // nuevo turno arranca 4h después del fin anterior
-    const r = validarTurno(turno('2026-06-01T22:00', '2026-06-02T06:00'), existentes, R);
+    const r = validarTurno(
+      turno('2026-06-01T22:00', '2026-06-02T06:00'),
+      existentes,
+      R,
+    );
     expect(r.errores).toContain('DESCANSO_INSUFICIENTE');
   });
 
   it('respeta descanso suficiente (12h+)', () => {
     const existentes = [turno('2026-06-01T06:00', '2026-06-01T18:00')];
-    const r = validarTurno(turno('2026-06-02T06:00', '2026-06-02T18:00'), existentes, R);
+    const r = validarTurno(
+      turno('2026-06-02T06:00', '2026-06-02T18:00'),
+      existentes,
+      R,
+    );
     expect(r.errores).not.toContain('DESCANSO_INSUFICIENTE');
   });
 
@@ -44,7 +60,11 @@ describe('validarTurno', () => {
       turno('2026-06-03T06:00', '2026-06-03T18:00'),
       turno('2026-06-04T06:00', '2026-06-04T18:00'),
     ];
-    const r = validarTurno(turno('2026-06-05T06:00', '2026-06-05T18:00'), existentes, R);
+    const r = validarTurno(
+      turno('2026-06-05T06:00', '2026-06-05T18:00'),
+      existentes,
+      R,
+    );
     expect(r.errores).toContain('EXCEDE_SEMANAL');
   });
 
@@ -57,7 +77,11 @@ describe('validarTurno', () => {
       turno('2026-06-05T06:00', '2026-06-05T18:00'),
       turno('2026-06-06T06:00', '2026-06-06T18:00'),
     ];
-    const r = validarTurno(turno('2026-06-07T06:00', '2026-06-07T18:00'), existentes, R);
+    const r = validarTurno(
+      turno('2026-06-07T06:00', '2026-06-07T18:00'),
+      existentes,
+      R,
+    );
     expect(r.errores).toContain('EXCEDE_DIAS_CONSECUTIVOS');
   });
 });

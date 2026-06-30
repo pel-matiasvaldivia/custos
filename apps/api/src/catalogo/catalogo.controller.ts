@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CatalogoService } from './catalogo.service';
 import { CreateCatalogoItemDto } from './dto/create-catalogo-item.dto';
@@ -19,7 +28,11 @@ export class CatalogoController {
     @Body() body: CreateCatalogoItemDto,
     @Request() req: any,
   ) {
-    return this.catalogoService.create(req.user.tenantId, categoria, body.etiqueta);
+    return this.catalogoService.create(
+      req.user.tenantId,
+      categoria,
+      body.etiqueta,
+    );
   }
 
   @Delete(':categoria/:id')

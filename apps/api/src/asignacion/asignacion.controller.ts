@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { AsignacionService } from './asignacion.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateAsignacionDto } from './dto/create-asignacion.dto';
@@ -31,7 +42,11 @@ export class AsignacionController {
     @Body() body: AsignarVigiladorDto,
     @Request() req: any,
   ) {
-    return this.asignacionService.asignVigilante(id, req.user.tenantId, body.vigilador_id);
+    return this.asignacionService.asignVigilante(
+      id,
+      req.user.tenantId,
+      body.vigilador_id,
+    );
   }
 
   @Delete(':id/vigilador')

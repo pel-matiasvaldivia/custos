@@ -36,7 +36,10 @@ export class ContratoPdfService {
 
     if (contrato.cotizacion?.items?.length) {
       for (const item of contrato.cotizacion.items) {
-        filas.push({ puesto: item.puesto_nombre, horas: `${item.horas_mensuales} hs/mes` });
+        filas.push({
+          puesto: item.puesto_nombre,
+          horas: `${item.horas_mensuales} hs/mes`,
+        });
       }
     } else if (contrato.objetivo) {
       filas.push({ puesto: contrato.objetivo.nombre, horas: '-' });
@@ -65,10 +68,13 @@ export class ContratoPdfService {
     return 'A definir al activar el contrato.';
   }
 
-  private async buildFirmaImagenHtml(firmaKey: string | null | undefined): Promise<string> {
+  private async buildFirmaImagenHtml(
+    firmaKey: string | null | undefined,
+  ): Promise<string> {
     if (!firmaKey) return '';
     try {
-      const { stream, contentType } = await this.storageService.descargar(firmaKey);
+      const { stream, contentType } =
+        await this.storageService.descargar(firmaKey);
       const chunks: Buffer[] = [];
       for await (const chunk of stream) chunks.push(chunk as Buffer);
       const base64 = Buffer.concat(chunks).toString('base64');
@@ -92,7 +98,9 @@ export class ContratoPdfService {
     });
     if (!contrato) throw new NotFoundException('Contrato no encontrado.');
 
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+    });
     const config = await this.contratoConfigService.findOne(tenantId);
 
     const placeholders: Record<string, string> = {
@@ -109,13 +117,18 @@ export class ContratoPdfService {
         : 'a definir',
       objetivos_tabla: this.buildObjetivosTablaHtml(contrato),
       facturacion_resumen: this.buildFacturacionResumen(contrato),
-      fecha_actual: format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es }),
+      fecha_actual: format(new Date(), "dd 'de' MMMM 'de' yyyy", {
+        locale: es,
+      }),
       firma_imagen: await this.buildFirmaImagenHtml(config.firma_key),
       firma_nombre: config.firma_nombre ?? '',
       firma_cargo: config.firma_cargo ?? '',
     };
 
-    return config.plantilla_html.replace(/\{\{(\w+)\}\}/g, (_match: string, key: string) => placeholders[key] ?? '');
+    return config.plantilla_html.replace(
+      /\{\{(\w+)\}\}/g,
+      (_match: string, key: string) => placeholders[key] ?? '',
+    );
   }
 
   /** Convierte el HTML (ya editado/confirmado por el usuario) a un PDF, lo sube a almacenamiento

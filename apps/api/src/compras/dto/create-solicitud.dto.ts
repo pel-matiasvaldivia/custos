@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsNumber, Min, IsOptional, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  Min,
+  IsOptional,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateSolicitudDto {
   @IsString()

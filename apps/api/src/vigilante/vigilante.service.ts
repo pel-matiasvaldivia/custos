@@ -2,8 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import * as bcrypt from 'bcrypt';
 
-const CREDENCIALES_BASICAS = ['CARNET_VIGILADOR', 'PSICOFISICO', 'ANTECEDENTES'];
+const CREDENCIALES_BASICAS = [
+  'CARNET_VIGILADOR',
+  'PSICOFISICO',
+  'ANTECEDENTES',
+];
 
 @Injectable()
 export class VigilanteService {
@@ -21,7 +26,9 @@ export class VigilanteService {
         take,
         orderBy: { created_at: 'desc' },
       }),
-      this.prisma.vigilador.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.vigilador.count({
+        where: { tenant_id: tenantId, deleted_at: null },
+      }),
     ]);
 
     return { data, total, page: pagination?.page ?? 1, limit: take };
@@ -94,7 +101,9 @@ export class VigilanteService {
     if (!vigilador.foto_url) faltantes.push('foto');
     if (!vigilador.domicilio) faltantes.push('domicilio');
     if (!vigilador.telefono) faltantes.push('telefono');
-    faltantes.push(...credencialesFaltantes.map((tipo) => `credencial:${tipo}`));
+    faltantes.push(
+      ...credencialesFaltantes.map((tipo) => `credencial:${tipo}`),
+    );
 
     return { completo: faltantes.length === 0, faltantes };
   }
@@ -111,5 +120,20 @@ export class VigilanteService {
       where: { id },
       data: { completitud: completo ? 'COMPLETO' : 'INCOMPLETO' },
     });
+  }
+
+  /** Asigna o resetea el PIN de acceso a Vigilancia Móvil de un vigilador. */
+  async setPin(id: string, tenantId: string, pin: string) {
+    const vigilador = await this.prisma.vigilador.findFirst({
+      where: { id, tenant_id: tenantId, deleted_at: null },
+    });
+    if (!vigilador) throw new NotFoundException('Vigilador no encontrado');
+
+    const hash = await bcrypt.hash(pin, 10);
+    await this.prisma.vigilador.update({
+      where: { id },
+      data: { pin: hash },
+    });
+    return { success: true };
   }
 }

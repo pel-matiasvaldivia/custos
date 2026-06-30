@@ -23,9 +23,18 @@ describe('NotificacionesService', () => {
 
   it('crea una notificación por credencial × destinatario ADMIN/RRHH', async () => {
     mockPrisma.credencial.findMany.mockResolvedValue([
-      { id: 'cr1', tenant_id: 't1', tipo: 'CARNET_VIGILADOR', vence_el: new Date(), vigilador_id: 'v1' },
+      {
+        id: 'cr1',
+        tenant_id: 't1',
+        tipo: 'CARNET_VIGILADOR',
+        vence_el: new Date(),
+        vigilador_id: 'v1',
+      },
     ]);
-    mockPrisma.user.findMany.mockResolvedValue([{ id: 'admin1' }, { id: 'rrhh1' }]);
+    mockPrisma.user.findMany.mockResolvedValue([
+      { id: 'admin1' },
+      { id: 'rrhh1' },
+    ]);
     mockPrisma.notificacion.findFirst.mockResolvedValue(null);
     mockPrisma.notificacion.create.mockResolvedValue({});
 
@@ -43,7 +52,13 @@ describe('NotificacionesService', () => {
 
   it('es idempotente: no duplica si ya existe notificación no leída', async () => {
     mockPrisma.credencial.findMany.mockResolvedValue([
-      { id: 'cr1', tenant_id: 't1', tipo: 'PSICOFISICO', vence_el: new Date(), vigilador_id: 'v1' },
+      {
+        id: 'cr1',
+        tenant_id: 't1',
+        tipo: 'PSICOFISICO',
+        vence_el: new Date(),
+        vigilador_id: 'v1',
+      },
     ]);
     mockPrisma.user.findMany.mockResolvedValue([{ id: 'admin1' }]);
     mockPrisma.notificacion.findFirst.mockResolvedValue({ id: 'existente' });
