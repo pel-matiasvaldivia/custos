@@ -6,12 +6,6 @@ const ComprasPage = () => {
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  if (loading) return <div className="p-6">Cargando módulo de compras...</div>;
-
   const loadData = async () => {
     try {
       const data = await comprasService.getOrdenes();
@@ -23,6 +17,10 @@ const ComprasPage = () => {
     }
   };
 
+  useEffect(() => {
+    loadData();
+  }, []);
+
   const getStatusIcon = (estado: string) => {
     switch (estado) {
       case 'EN_APROBACION': return <Clock className="text-amber-500" size={20} />;
@@ -32,6 +30,8 @@ const ComprasPage = () => {
       default: return <AlertTriangle className="text-slate-500" size={20} />;
     }
   };
+
+  if (loading) return <div className="p-6">Cargando módulo de compras...</div>;
 
   return (
     <div className="p-6 space-y-6 animate-in fade-in duration-500">
