@@ -1,6 +1,14 @@
 import api from './api';
 import { Contrato } from './objetivo.service';
 
+export interface ContratoVersionEntry {
+  id: string;
+  version: number;
+  documento_key: string;
+  generado_at: string;
+  notas: string | null;
+}
+
 export interface CreateContratoData {
   cliente_id?: string;
   cliente_nombre?: string;
@@ -50,6 +58,16 @@ export const contratoService = {
 
   descargarDocumento: async (id: string): Promise<Blob> => {
     const response = await api.get(`/contratos/${id}/documento`, { responseType: 'blob' });
+    return response.data;
+  },
+
+  getVersiones: async (id: string): Promise<ContratoVersionEntry[]> => {
+    const response = await api.get<ContratoVersionEntry[]>(`/contratos/${id}/versiones`);
+    return response.data;
+  },
+
+  descargarVersion: async (id: string, version: number): Promise<Blob> => {
+    const response = await api.get(`/contratos/${id}/versiones/${version}/documento`, { responseType: 'blob' });
     return response.data;
   },
 };

@@ -50,6 +50,7 @@ model Tenant {
   procedimientos          Procedimiento[]
   programaciones_horarias ProgramacionHoraria[]
   contratos               Contrato[]
+  contrato_documentos     ContratoDocumento[]
   periodos                Periodo[]
   contrato_facturaciones  ContratoFacturacion[]
   conciliaciones_hh       ConciliacionHH[]
@@ -825,15 +826,14 @@ model Contrato {
   cliente_nombre String
   objetivo_id    String?   @db.Uuid
   cotizacion_id  String?   @db.Uuid
-  estado         String    @default("ACTIVO") // ACTIVO | SUSPENDIDO | FINALIZADO
+  estado         String    @default("BORRADOR") // BORRADOR | ACTIVO | SUSPENDIDO | FINALIZADO
   inicio         DateTime? @db.Date
   fin            DateTime? @db.Date
   created_at     DateTime  @default(now()) @db.Timestamptz
   updated_at     DateTime  @default(now()) @db.Timestamptz
   deleted_at     DateTime? @db.Timestamptz
 
-  // Documento de contrato (PDF generado a partir de la plantilla + firma del
-  // Director, ver ConfiguracionContrato) almacenado en MinIO.
+  // Última versión del documento (snapshot para acceso rápido).
   documento_key         String?
   documento_generado_at DateTime? @db.Timestamptz
 
@@ -843,9 +843,26 @@ model Contrato {
   cotizacion     Cotizacion?          @relation(fields: [cotizacion_id], references: [id])
   facturacion    ContratoFacturacion?
   conciliaciones ConciliacionHH[]
+  versiones      ContratoDocumento[]
 
   @@unique([tenant_id, codigo])
   @@map("contratos")
+}
+
+model ContratoDocumento {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String   @db.Uuid
+  contrato_id  String   @db.Uuid
+  version      Int
+  documento_key String
+  generado_at  DateTime @default(now()) @db.Timestamptz
+  notas        String?
+
+  tenant   Tenant   @relation(fields: [tenant_id], references: [id])
+  contrato Contrato @relation(fields: [contrato_id], references: [id])
+
+  @@unique([contrato_id, version])
+  @@map("contrato_documentos")
 }
 
 // Definición exacta del spec M1 (MODELO_MOTOR_DE_TIEMPO_Y_CUADRANTE.md L170).

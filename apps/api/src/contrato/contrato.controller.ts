@@ -87,6 +87,32 @@ export class ContratoController {
     res.send(buffer);
   }
 
+  @Get(':id/versiones')
+  async versiones(@Param('id') id: string, @Request() req: any) {
+    return this.contratoService.findVersiones(id, req.user.tenantId);
+  }
+
+  @Get(':id/versiones/:version/documento')
+  async descargarVersion(
+    @Param('id') id: string,
+    @Param('version') version: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    await this.contratoService.findOne(id, req.user.tenantId);
+    const rows = await this.contratoService.findVersiones(id, req.user.tenantId);
+    const entry = rows.find((r) => r.version === parseInt(version, 10));
+    if (!entry) {
+      res.status(404).json({ message: 'Versión no encontrada.' });
+      return;
+    }
+    const { stream, contentType } =
+      await this.contratoPdfService.descargarDocumentoGuardado(entry.documento_key);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename=contrato-v${version}.pdf`);
+    stream.pipe(res);
+  }
+
   // Re-descarga el último documento generado (sin volver a renderizar).
   @Get(':id/documento')
   async descargarDocumento(

@@ -157,10 +157,39 @@ export class ContratoPdfService {
       'contratos',
     );
 
-    await this.prisma.contrato.update({
-      where: { id: contratoId },
-      data: { documento_key: subida.key, documento_generado_at: new Date() },
-    });
+    const ahora = new Date();
+
+    // Determine next version number for this contract
+    const ultimaVersion = await this.prisma.$queryRaw<{ max: number | null }[]>`
+      SELECT MAX(version) as max FROM contrato_documentos WHERE contrato_id = ${contratoId}::uuid
+    `;
+    const nextVersion = (ultimaVersion[0]?.max ?? 0) + 1;
+
+    // Persist version entry and update snapshot on Contrato in a transaction
+    const esBorrador = contrato.estado === 'BORRADOR';
+    await this.prisma.$transaction([
+      this.prisma.$executeRaw`
+        INSERT INTO contrato_documentos (id, tenant_id, contrato_id, version, documento_key, generado_at)
+        VALUES (gen_random_uuid(), ${tenantId}::uuid, ${contratoId}::uuid, ${nextVersion}, ${subida.key}, ${ahora})
+      `,
+      this.prisma.contrato.update({
+        where: { id: contratoId },
+        data: {
+          documento_key: subida.key,
+          documento_generado_at: ahora,
+          // First document generation activates the contract
+          ...(esBorrador ? { estado: 'ACTIVO' } : {}),
+        },
+      }),
+    ]);
+
+    // Auto-activate the linked Objetivo when contract goes from BORRADOR → ACTIVO
+    if (esBorrador && contrato.objetivo_id) {
+      await this.prisma.objetivo.updateMany({
+        where: { id: contrato.objetivo_id, estado: 'INACTIVO' },
+        data: { estado: 'ACTIVO' },
+      });
+    }
 
     return buffer;
   }

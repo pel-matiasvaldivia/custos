@@ -125,6 +125,19 @@ export class ContratoService {
     });
   }
 
+  async findVersiones(id: string, tenantId: string) {
+    await this.findOne(id, tenantId);
+    const rows = await this.prisma.$queryRaw<
+      { id: string; version: number; documento_key: string; generado_at: Date; notas: string | null }[]
+    >`
+      SELECT id, version, documento_key, generado_at, notas
+      FROM contrato_documentos
+      WHERE contrato_id = ${id}::uuid
+      ORDER BY version DESC
+    `;
+    return rows;
+  }
+
   async update(id: string, tenantId: string, dto: UpdateContratoDto) {
     const contrato = await this.findOne(id, tenantId);
 
