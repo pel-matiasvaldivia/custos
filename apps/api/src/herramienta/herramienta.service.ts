@@ -37,7 +37,9 @@ export class HerramientaService {
     return herramienta;
   }
 
-  async create(data: Prisma.HerramientaUncheckedCreateInput) {
+  async create(
+    data: Omit<Prisma.HerramientaUncheckedCreateInput, 'codigo'> & { codigo?: string },
+  ) {
     const codigo =
       data.codigo ||
       `HER-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
