@@ -92,8 +92,8 @@ export class ContratoService {
         cliente_id: dto.cliente_id,
         cliente_nombre: clienteNombre,
         objetivo_id: dto.objetivo_id,
-        inicio: dto.inicio,
-        fin: dto.fin,
+        inicio: dto.inicio ? new Date(dto.inicio) : undefined,
+        fin: dto.fin ? new Date(dto.fin) : undefined,
         facturacion: {
           create: {
             tenant_id: tenantId,
@@ -114,11 +114,16 @@ export class ContratoService {
 
     const { modo, tarifa_hora, abono_mensual, redondeo_min, penaliza_hueco, ...contratoFields } =
       dto;
-    if (contratoFields.cliente_id) {
-      contratoFields.cliente_nombre = await this.resolverClienteNombre(
+    const datosContrato: Omit<typeof contratoFields, 'inicio' | 'fin'> & { inicio?: Date; fin?: Date } = {
+      ...contratoFields,
+      inicio: contratoFields.inicio ? new Date(contratoFields.inicio) : undefined,
+      fin: contratoFields.fin ? new Date(contratoFields.fin) : undefined,
+    };
+    if (datosContrato.cliente_id) {
+      datosContrato.cliente_nombre = await this.resolverClienteNombre(
         tenantId,
-        contratoFields.cliente_id,
-        contratoFields.cliente_nombre,
+        datosContrato.cliente_id,
+        datosContrato.cliente_nombre,
       );
     }
     const facturacionFields = { modo, tarifa_hora, abono_mensual, redondeo_min, penaliza_hueco };
@@ -126,7 +131,7 @@ export class ContratoService {
 
     // Regla crítica: un Contrato sin ContratoFacturacion no puede pasar a ACTIVO,
     // o la etapa de facturación más adelante no tiene cómo calcular nada.
-    if (contratoFields.estado === 'ACTIVO' && !contrato.facturacion && !modo) {
+    if (datosContrato.estado === 'ACTIVO' && !contrato.facturacion && !modo) {
       throw new BadRequestException(
         'No se puede activar el contrato sin configurar la facturación (modo, tarifa/abono).',
       );
@@ -135,7 +140,7 @@ export class ContratoService {
     return this.prisma.contrato.update({
       where: { id },
       data: {
-        ...contratoFields,
+        ...datosContrato,
         facturacion: hayCambiosFacturacion
           ? contrato.facturacion
             ? { update: facturacionFields }
