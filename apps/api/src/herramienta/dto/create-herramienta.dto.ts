@@ -1,6 +1,16 @@
 import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
 
-const TIPOS_HERRAMIENTA = ['RADIO', 'HANDIE', 'CHALECO', 'ARMA', 'LINTERNA', 'OTRO'];
+const TIPOS_HERRAMIENTA = [
+  'RADIO',
+  'HANDIE',
+  'CHALECO',
+  'ARMA',
+  'LINTERNA',
+  'CELULAR',
+  'CONO',
+  'CINTA_TRANSITO',
+  'OTRO',
+];
 
 export class CreateHerramientaDto {
   @IsOptional()
