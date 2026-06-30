@@ -25,6 +25,7 @@ import { FlotaModule } from './modules/flota/flota.module';
 import { CuadranteModule } from './modules/cuadrante/cuadrante.module';
 import { StorageModule } from './storage/storage.module';
 import { HerramientaModule } from './herramienta/herramienta.module';
+import { CatalogoModule } from './catalogo/catalogo.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { HerramientaModule } from './herramienta/herramienta.module';
     CuadranteModule,
     StorageModule,
     HerramientaModule,
+    CatalogoModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -63,6 +63,7 @@ model Tenant {
   relevos                 Relevo[]
   herramientas            Herramienta[]
   herramienta_asignaciones HerramientaAsignacion[]
+  catalogo_items          CatalogoItem[]
 
   @@map("tenants")
 }
@@ -135,6 +136,24 @@ model Credencial {
   vigilador Vigilador @relation(fields: [vigilador_id], references: [id])
 
   @@map("credenciales")
+}
+
+// Listas configurables por tenant (ej: tipos de credencial, tipos de vehículo).
+// `categoria` agrupa los items de una misma lista; el tenant puede agregar
+// los suyos además de los valores por defecto que ya entiende el resto del sistema.
+model CatalogoItem {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id  String   @db.Uuid
+  categoria  String
+  codigo     String
+  etiqueta   String
+  activo     Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, categoria, codigo])
+  @@map("catalogo_items")
 }
 
 model Objetivo {

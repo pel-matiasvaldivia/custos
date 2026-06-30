@@ -1,11 +1,9 @@
 import api from './api';
 
-export type TipoCredencial = 'CARNET_VIGILADOR' | 'PSICOFISICO' | 'ANTECEDENTES' | 'ANMAC' | 'CAPACITACION';
-
 export interface Credencial {
   id: string;
   vigilador_id: string;
-  tipo: TipoCredencial;
+  tipo: string;
   numero?: string | null;
   organismo?: string | null;
   emitida_el?: string | null;
@@ -15,7 +13,7 @@ export interface Credencial {
 }
 
 export interface CreateCredencialData {
-  tipo: TipoCredencial;
+  tipo: string;
   numero?: string;
   organismo?: string;
   emitida_el?: string;

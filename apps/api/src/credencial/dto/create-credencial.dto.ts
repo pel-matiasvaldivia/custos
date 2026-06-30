@@ -1,16 +1,8 @@
-import { IsString, IsNotEmpty, IsOptional, IsIn, IsDateString } from 'class-validator';
-
-const TIPOS_CREDENCIAL = [
-  'CARNET_VIGILADOR',
-  'PSICOFISICO',
-  'ANTECEDENTES',
-  'ANMAC',
-  'CAPACITACION',
-];
+import { IsString, IsNotEmpty, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateCredencialDto {
   @IsString()
-  @IsIn(TIPOS_CREDENCIAL)
+  @IsNotEmpty()
   tipo: string;
 
   @IsOptional()

@@ -5,7 +5,7 @@ import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
 import { QuadrantPage } from './pages/quadrant/QuadrantPage';
 import { QuotesPage } from './pages/quoting/QuotesPage';
 import { QuoteWizard } from './pages/quoting/QuoteWizard';
-import { CostConfigPage } from './pages/quoting/CostConfigPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
 import { KioskPage } from './pages/kiosk/KioskPage';
 import { NovedadesPage } from './pages/novedades/NovedadesPage';
 import { MonitoringPage } from './pages/monitoring/MonitoringPage';
@@ -79,7 +79,7 @@ function AppRoutes() {
           <Route path="/quadrant" element={<QuadrantPage />} />
           <Route path="/quotes" element={<QuotesPage />} />
           <Route path="/quotes/new" element={<QuoteWizard />} />
-          <Route path="/settings" element={<CostConfigPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/novedades" element={<NovedadesPage />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="/monitoring/devices" element={<DevicesPage />} />
