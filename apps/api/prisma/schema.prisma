@@ -61,6 +61,8 @@ model Tenant {
   puesto_coberturas       PuestoCobertura[]
   reglas_laborales        ReglaLaboral?
   relevos                 Relevo[]
+  herramientas            Herramienta[]
+  herramienta_asignaciones HerramientaAsignacion[]
 
   @@map("tenants")
 }
@@ -91,6 +93,17 @@ model Vigilador {
   apellido   String
   documento  String
   estado     String    @default("ACTIVO")
+  // Wizard de alta guiada (PROMPT_UX_ONBOARDING_GUIADO.md §4)
+  foto_url                String?
+  domicilio               String?
+  localidad               String?
+  provincia               String?
+  codigo_postal           String?
+  telefono                String?
+  contacto_emerg_nombre   String?
+  contacto_emerg_telefono String?
+  contacto_emerg_vinculo  String?
+  completitud             String    @default("INCOMPLETO") // INCOMPLETO | COMPLETO
   created_at DateTime  @default(now()) @db.Timestamptz
   updated_at DateTime  @default(now()) @db.Timestamptz
   deleted_at DateTime? @db.Timestamptz
@@ -100,6 +113,7 @@ model Vigilador {
   asignaciones Asignacion[]
   novedades    Novedad[]
   rondas       Ronda[]
+  herramientas HerramientaAsignacion[]
 
   @@unique([tenant_id, legajo_nro])
   @@map("vigiladores")
@@ -114,6 +128,7 @@ model Credencial {
   organismo    String?
   emitida_el   DateTime? @db.Date
   vence_el     DateTime? @db.Date
+  documento_url String?
   created_at   DateTime  @default(now()) @db.Timestamptz
 
   tenant    Tenant    @relation(fields: [tenant_id], references: [id])
@@ -429,11 +444,48 @@ model VehiculoVencimiento {
   tipo        String // VTV | SEGURO | PATENTE | HABILITACION_CAUDALES
   vence_el    DateTime @db.Date
   estado      String   @default("VIGENTE") // VIGENTE | POR_VENCER | VENCIDO
+  documento_url String?
   created_at  DateTime @default(now()) @db.Timestamptz
 
   vehiculo Vehiculo @relation(fields: [vehiculo_id], references: [id])
 
   @@map("vehiculo_vencimientos")
+}
+
+// ─── Herramientas/Equipos (PROMPT_UX_ONBOARDING_GUIADO.md §7) ────────────────
+model Herramienta {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  codigo       String // HER-2026-0042
+  tipo         String // RADIO | HANDIE | CHALECO | ARMA | LINTERNA | OTRO
+  descripcion  String
+  numero_serie String?
+  estado       String    @default("DISPONIBLE") // DISPONIBLE | ASIGNADA | EN_REPARACION | BAJA
+  foto_url     String?
+  created_at   DateTime  @default(now()) @db.Timestamptz
+  deleted_at   DateTime? @db.Timestamptz
+
+  tenant       Tenant                  @relation(fields: [tenant_id], references: [id])
+  asignaciones HerramientaAsignacion[]
+
+  @@unique([tenant_id, codigo])
+  @@map("herramientas")
+}
+
+model HerramientaAsignacion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String    @db.Uuid
+  herramienta_id String    @db.Uuid
+  vigilador_id   String    @db.Uuid
+  entregada_el   DateTime  @default(now()) @db.Timestamptz
+  devuelta_el    DateTime?
+  observaciones  String?
+
+  tenant      Tenant      @relation(fields: [tenant_id], references: [id])
+  herramienta Herramienta @relation(fields: [herramienta_id], references: [id])
+  vigilador   Vigilador   @relation(fields: [vigilador_id], references: [id])
+
+  @@map("herramienta_asignaciones")
 }
 
 model PlanMantenimiento {
