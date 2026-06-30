@@ -13,7 +13,8 @@ import {
   Zap,
   Building2
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const navGroups = [
   {
@@ -56,6 +57,14 @@ const navGroups = [
 ];
 
 export const Sidebar = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <aside className="w-64 bg-navy h-screen text-surface flex flex-col fixed left-0 top-0">
       <div className="p-6">
@@ -93,7 +102,10 @@ export const Sidebar = () => {
       </nav>
 
       <div className="p-4 border-t border-surface/10">
-        <button className="flex items-center gap-3 px-3 py-2 w-full text-muted hover:text-surface transition-colors">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2 w-full text-muted hover:text-surface transition-colors"
+        >
           <LogOut size={20} />
           Cerrar Sesión
         </button>
