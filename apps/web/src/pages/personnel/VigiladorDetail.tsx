@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { vigilanteService, Vigilador, Completitud } from '../../services/vigilante.service';
 import { credencialService, Credencial } from '../../services/credencial.service';
-import { ArrowLeft, Plus, AlertCircle, FileCheck, User, MapPin, Phone, Pencil } from 'lucide-react';
+import { ArrowLeft, Plus, AlertCircle, FileCheck, User, MapPin, Phone, Pencil, KeyRound } from 'lucide-react';
 import { CredencialForm } from './CredencialForm';
 import { VigiladorEditForm } from './VigiladorEditForm';
+import { VigiladorPinForm } from './VigiladorPinForm';
 
 const ETIQUETAS_TIPO: Record<string, string> = {
   CARNET_VIGILADOR: 'Carnet de Vigilador',
@@ -43,6 +44,7 @@ export const VigiladorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [modalCredencialAbierto, setModalCredencialAbierto] = useState(false);
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
+  const [modalPinAbierto, setModalPinAbierto] = useState(false);
 
   const cargarTodo = async () => {
     if (!id) return;
@@ -268,6 +270,21 @@ export const VigiladorDetail = () => {
               </div>
             </div>
           </div>
+
+          <div className="card">
+            <h3 className="text-lg font-display font-bold text-navy mb-4 flex items-center gap-2">
+              <KeyRound className="text-brand-blue" size={18} /> Acceso móvil
+            </h3>
+            <p className="text-sm text-muted mb-4">
+              PIN para iniciar sesión en la App Móvil y en el Kiosco de fichaje.
+            </p>
+            <button
+              onClick={() => setModalPinAbierto(true)}
+              className="w-full px-4 py-2 border border-line text-brand-blue font-medium rounded-md hover:bg-canvas transition-colors flex items-center justify-center gap-2"
+            >
+              <KeyRound size={14} /> Configurar PIN
+            </button>
+          </div>
         </div>
       </div>
 
@@ -290,6 +307,14 @@ export const VigiladorDetail = () => {
             setModalEditarAbierto(false);
             cargarTodo();
           }}
+        />
+      )}
+
+      {modalPinAbierto && id && (
+        <VigiladorPinForm
+          vigiladorId={id}
+          onClose={() => setModalPinAbierto(false)}
+          onGuardado={() => setModalPinAbierto(false)}
         />
       )}
     </div>
