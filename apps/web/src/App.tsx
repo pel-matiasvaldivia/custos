@@ -4,6 +4,8 @@ import { NotificationBell } from './components/layout/NotificationBell';
 import { PersonnelPage } from './pages/personnel/PersonnelPage';
 import { VigiladorDetail } from './pages/personnel/VigiladorDetail';
 import { QuadrantPage } from './pages/quadrant/QuadrantPage';
+import { ObjetivosPage } from './pages/objectives/ObjetivosPage';
+import { ObjetivoDetail } from './pages/objectives/ObjetivoDetail';
 import { QuotesPage } from './pages/quoting/QuotesPage';
 import { QuoteWizard } from './pages/quoting/QuoteWizard';
 import { SettingsPage } from './pages/settings/SettingsPage';
@@ -83,6 +85,8 @@ function AppRoutes() {
           <Route path="/personnel" element={<PersonnelPage />} />
           <Route path="/personnel/:id" element={<VigiladorDetail />} />
           <Route path="/quadrant" element={<QuadrantPage />} />
+          <Route path="/objectives" element={<ObjetivosPage />} />
+          <Route path="/objectives/:id" element={<ObjetivoDetail />} />
           <Route path="/quotes" element={<QuotesPage />} />
           <Route path="/quotes/new" element={<QuoteWizard />} />
           <Route path="/settings" element={<SettingsPage />} />

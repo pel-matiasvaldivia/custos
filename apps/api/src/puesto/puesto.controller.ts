@@ -21,8 +21,12 @@ export class PuestoController {
   constructor(private readonly puestoService: PuestoService) {}
 
   @Get()
-  async findAll(@Request() req: any, @Query() pagination: PaginationDto) {
-    return this.puestoService.findAll(req.user.tenantId, pagination);
+  async findAll(
+    @Request() req: any,
+    @Query() pagination: PaginationDto,
+    @Query('objetivoId') objetivoId?: string,
+  ) {
+    return this.puestoService.findAll(req.user.tenantId, pagination, objetivoId);
   }
 
   @Post()

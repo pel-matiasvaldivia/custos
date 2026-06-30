@@ -158,16 +158,20 @@ model CatalogoItem {
 }
 
 model Objetivo {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id  String   @db.Uuid
-  cliente_id String   @db.Uuid
-  codigo     String
-  nombre     String
-  direccion  String?
-  created_at DateTime @default(now()) @db.Timestamptz
-  updated_at DateTime @default(now()) @db.Timestamptz
-  lat        Float?
-  lng        Float?
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  // cliente_nombre sigue la misma convención que Cotizacion/Contrato (este
+  // esquema no tiene tabla Cliente). Reemplaza al ex cliente_id (UUID NOT
+  // NULL sin FK ni fuente de valores válidos: ningún código lo usaba).
+  cliente_nombre String
+  codigo         String
+  nombre         String
+  direccion      String?
+  estado         String   @default("ACTIVO") // ACTIVO | INACTIVO
+  created_at     DateTime @default(now()) @db.Timestamptz
+  updated_at     DateTime @default(now()) @db.Timestamptz
+  lat            Float?
+  lng            Float?
 
   tenant         Tenant                @relation(fields: [tenant_id], references: [id])
   puestos        Puesto[]

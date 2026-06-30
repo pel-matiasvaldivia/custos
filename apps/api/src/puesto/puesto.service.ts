@@ -7,18 +7,19 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 export class PuestoService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string, pagination?: PaginationDto) {
+  async findAll(tenantId: string, pagination?: PaginationDto, objetivoId?: string) {
     const skip = pagination?.skip ?? 0;
     const take = pagination?.limit ?? 50;
+    const where = objetivoId ? { tenant_id: tenantId, objetivo_id: objetivoId } : { tenant_id: tenantId };
 
     const [data, total] = await Promise.all([
       this.prisma.puesto.findMany({
-        where: { tenant_id: tenantId },
+        where,
         skip,
         take,
         orderBy: { created_at: 'desc' },
       }),
-      this.prisma.puesto.count({ where: { tenant_id: tenantId } }),
+      this.prisma.puesto.count({ where }),
     ]);
 
     return { data, total, page: pagination?.page ?? 1, limit: take };
