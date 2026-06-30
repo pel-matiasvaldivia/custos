@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, UserPlus, Settings, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UserPlus, Settings, AlertTriangle, Trash2, Check, X } from 'lucide-react';
 import { Puesto } from '../../services/objetivo.service';
 import {
   cuadranteService,
@@ -44,6 +44,8 @@ export const EsquemaCuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
   const [cargando, setCargando] = useState(true);
   const [modalAfectar, setModalAfectar] = useState<Puesto | null>(null);
   const [modalCobertura, setModalCobertura] = useState<Puesto | null>(null);
+  const [confirmandoFinalizar, setConfirmandoFinalizar] = useState<string | null>(null);
+  const [finalizando, setFinalizando] = useState(false);
 
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(semanaInicio, i));
 
@@ -64,6 +66,17 @@ export const EsquemaCuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
       setCoberturas(new Map(puestos.map((p, i) => [p.id, coberturasData[i]])));
     } finally {
       setCargando(false);
+    }
+  };
+
+  const handleFinalizar = async (asignacionId: string) => {
+    setFinalizando(true);
+    try {
+      await cuadranteService.finalizarAsignacion(asignacionId, new Date().toISOString().slice(0, 10));
+      setConfirmandoFinalizar(null);
+      await cargar();
+    } finally {
+      setFinalizando(false);
     }
   };
 
@@ -184,6 +197,61 @@ export const EsquemaCuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Afectaciones activas */}
+              {asignacionesPuesto.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Afectaciones activas</p>
+                  {asignacionesPuesto.map((a) => {
+                    const confirmando = confirmandoFinalizar === a.id;
+                    return (
+                      <div
+                        key={a.id}
+                        className={`flex items-center justify-between px-3 py-2 rounded-md text-xs border transition-colors ${
+                          confirmando ? 'border-red-300 bg-red-50' : 'border-line bg-canvas'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <span className="font-medium text-navy">
+                            {a.vigilador ? `${a.vigilador.apellido}, ${a.vigilador.nombre}` : 'Vigilador desconocido'}
+                          </span>
+                          <span className="text-muted ml-2">{a.esquemaNombre}</span>
+                          <span className="text-muted/60 ml-2">
+                            desde {new Date(a.vigenteDesde).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                          </span>
+                        </div>
+                        {confirmando ? (
+                          <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                            <span className="text-red-500 font-medium">¿Finalizar?</span>
+                            <button
+                              onClick={() => handleFinalizar(a.id)}
+                              disabled={finalizando}
+                              className="p-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 transition-colors"
+                            >
+                              <Check size={12} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmandoFinalizar(null)}
+                              disabled={finalizando}
+                              className="p-1 border border-line text-muted rounded hover:bg-surface transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmandoFinalizar(a.id)}
+                            className="shrink-0 ml-2 p-1 text-muted hover:text-red-500 transition-colors"
+                            title="Finalizar afectación"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {huecos.length > 0 && (
                 <div className="p-2 rounded-md border border-amber/30 bg-amber/5 text-xs text-amber space-y-1">
