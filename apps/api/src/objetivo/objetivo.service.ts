@@ -156,7 +156,9 @@ export class ObjetivoService {
     return cliente.razon_social;
   }
 
-  async create(data: Prisma.ObjetivoUncheckedCreateInput) {
+  async create(
+    data: Omit<Prisma.ObjetivoUncheckedCreateInput, 'cliente_nombre'> & { cliente_nombre?: string },
+  ) {
     const clienteNombre = await this.resolverClienteNombre(
       data.tenant_id,
       data.cliente_id as string | null | undefined,
