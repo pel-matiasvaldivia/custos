@@ -7,6 +7,7 @@ interface AuthUser {
   role: string;
   tenantId: string;
   tenantNombre?: string;
+  impersonating?: boolean;
 }
 
 interface AuthContextType {
@@ -15,6 +16,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  switchTenant: (tenantId: string) => Promise<void>;
+  exitImpersonation: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -54,12 +57,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('superadmin_token');
+    localStorage.removeItem('superadmin_user');
     setToken(null);
     setUser(null);
   };
 
+  // SUPERADMIN entra a operar dentro de otro tenant (rol efectivo ADMIN ahí).
+  // Guarda la sesión original de superadmin para poder volver sin reloguear.
+  const switchTenant = async (tenantId: string) => {
+    if (!localStorage.getItem('superadmin_token') && token && user?.role === 'SUPERADMIN') {
+      localStorage.setItem('superadmin_token', token);
+      localStorage.setItem('superadmin_user', JSON.stringify(user));
+    }
+    const res = await api.post('/auth/impersonate', { tenant_id: tenantId });
+    const { access_token, user: userData } = res.data;
+    localStorage.setItem('token', access_token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setToken(access_token);
+    setUser(userData);
+  };
+
+  const exitImpersonation = () => {
+    const superadminToken = localStorage.getItem('superadmin_token');
+    const superadminUser = localStorage.getItem('superadmin_user');
+    if (!superadminToken || !superadminUser) return;
+    localStorage.setItem('token', superadminToken);
+    localStorage.setItem('user', superadminUser);
+    localStorage.removeItem('superadmin_token');
+    localStorage.removeItem('superadmin_user');
+    setToken(superadminToken);
+    setUser(JSON.parse(superadminUser));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading, switchTenant, exitImpersonation }}>
       {children}
     </AuthContext.Provider>
   );

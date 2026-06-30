@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaAdminService } from '../prisma/prisma-admin.service';
 import * as bcrypt from 'bcrypt';
@@ -66,6 +66,49 @@ export class AuthService {
         email: user.email,
         role: user.role,
         tenantId: user.tenant_id,
+      },
+    };
+  }
+
+  /** SUPERADMIN-only: lista todos los tenants para elegir a cuál "entrar". */
+  async listTenants() {
+    return this.prisma.tenant.findMany({
+      select: { id: true, nombre: true },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
+  /**
+   * Permite a SUPERADMIN operar dentro de un tenant ajeno: emite un token nuevo
+   * con tenant_id del tenant elegido y rol ADMIN (rol efectivo dentro de ese
+   * tenant), sin tocar RolesGuard ni RLS. `impersonating: true` queda en el
+   * objeto user devuelto para que el frontend lo muestre y permita volver.
+   */
+  async impersonate(
+    currentUser: { userId: string; email: string; role: string },
+    tenantId: string,
+  ) {
+    if (currentUser.role !== 'SUPERADMIN') {
+      throw new ForbiddenException('Solo superadmin puede cambiar de tenant.');
+    }
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
+    if (!tenant) throw new NotFoundException('Tenant no encontrado.');
+
+    const payload = {
+      email: currentUser.email,
+      sub: currentUser.userId,
+      tenant_id: tenant.id,
+      role: 'ADMIN',
+    };
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: currentUser.userId,
+        email: currentUser.email,
+        role: 'ADMIN',
+        tenantId: tenant.id,
+        tenantNombre: tenant.nombre,
+        impersonating: true,
       },
     };
   }
