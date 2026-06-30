@@ -126,6 +126,16 @@ export const ObjetivoDetail = () => {
         </div>
       </div>
 
+      {objetivo.estado === 'ACTIVO' && (!contrato || contrato.estado !== 'ACTIVO') && (
+        <div className="flex items-start gap-3 p-3 rounded-lg border border-amber/40 bg-amber/10 text-sm text-amber">
+          <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <span>
+            Este objetivo está marcado como <strong>ACTIVO</strong> pero no tiene un contrato activo vinculado.
+            Sin contrato no se pueden asignar recursos ni personal. Vinculá un contrato desde la ficha del cliente.
+          </span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <div className="card">
@@ -372,6 +382,7 @@ export const ObjetivoDetail = () => {
       {modalEditar && (
         <ObjetivoForm
           objetivo={objetivo}
+          hasContratoActivo={!!contrato && contrato.estado === 'ACTIVO'}
           onClose={() => setModalEditar(false)}
           onSaved={() => {
             setModalEditar(false);
