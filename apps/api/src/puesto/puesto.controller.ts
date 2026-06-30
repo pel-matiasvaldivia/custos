@@ -13,7 +13,7 @@ import { PuestoService } from './puesto.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreatePuestoDto } from './dto/create-puesto.dto';
 import { UpdatePuestoDto } from './dto/update-puesto.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { FindPuestosDto } from './dto/find-puestos.dto';
 
 @Controller('puestos')
 @UseGuards(JwtAuthGuard)
@@ -21,12 +21,8 @@ export class PuestoController {
   constructor(private readonly puestoService: PuestoService) {}
 
   @Get()
-  async findAll(
-    @Request() req: any,
-    @Query() pagination: PaginationDto,
-    @Query('objetivoId') objetivoId?: string,
-  ) {
-    return this.puestoService.findAll(req.user.tenantId, pagination, objetivoId);
+  async findAll(@Request() req: any, @Query() query: FindPuestosDto) {
+    return this.puestoService.findAll(req.user.tenantId, query, query.objetivoId);
   }
 
   @Post()

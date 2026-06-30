@@ -3,7 +3,7 @@ import { ClienteService } from './cliente.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateClienteDto } from './dto/create-cliente.dto';
 import { UpdateClienteDto } from './dto/update-cliente.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { FindClientesDto } from './dto/find-clientes.dto';
 
 @Controller('clientes')
 @UseGuards(JwtAuthGuard)
@@ -11,8 +11,8 @@ export class ClienteController {
   constructor(private readonly clienteService: ClienteService) {}
 
   @Get()
-  async findAll(@Request() req: any, @Query() pagination: PaginationDto, @Query('busqueda') busqueda?: string) {
-    return this.clienteService.findAll(req.user.tenantId, pagination, busqueda);
+  async findAll(@Request() req: any, @Query() query: FindClientesDto) {
+    return this.clienteService.findAll(req.user.tenantId, query, query.busqueda);
   }
 
   @Get(':id')

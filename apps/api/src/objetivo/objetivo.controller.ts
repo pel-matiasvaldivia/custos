@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateObjetivoDto } from './dto/create-objetivo.dto';
 import { UpdateObjetivoDto } from './dto/update-objetivo.dto';
 import { AsignarVehiculoDto } from './dto/asignar-vehiculo.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { FindObjetivosDto } from './dto/find-objetivos.dto';
 
 @Controller('objetivos')
 @UseGuards(JwtAuthGuard)
@@ -23,12 +23,8 @@ export class ObjetivoController {
   constructor(private readonly objetivoService: ObjetivoService) {}
 
   @Get()
-  async findAll(
-    @Request() req: any,
-    @Query() pagination: PaginationDto,
-    @Query('clienteId') clienteId?: string,
-  ) {
-    return this.objetivoService.findAll(req.user.tenantId, pagination, clienteId);
+  async findAll(@Request() req: any, @Query() query: FindObjetivosDto) {
+    return this.objetivoService.findAll(req.user.tenantId, query, query.clienteId);
   }
 
   @Get(':id')
