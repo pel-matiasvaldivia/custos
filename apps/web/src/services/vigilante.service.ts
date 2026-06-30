@@ -7,6 +7,21 @@ export interface Vigilador {
   apellido: string;
   documento: string;
   estado: 'ACTIVO' | 'SUSPENDIDO' | 'BAJA';
+  foto_url?: string | null;
+  domicilio?: string | null;
+  localidad?: string | null;
+  provincia?: string | null;
+  codigo_postal?: string | null;
+  telefono?: string | null;
+  contacto_emerg_nombre?: string | null;
+  contacto_emerg_telefono?: string | null;
+  contacto_emerg_vinculo?: string | null;
+  completitud?: 'INCOMPLETO' | 'COMPLETO';
+}
+
+export interface Completitud {
+  completo: boolean;
+  faltantes: string[];
 }
 
 export interface PaginatedResponse<T> {
@@ -36,6 +51,18 @@ export const vigilanteService = {
 
   update: async (id: string, data: Partial<Vigilador>): Promise<Vigilador> => {
     const response = await api.put<Vigilador>(`/vigilantes/${id}`, data);
+    return response.data;
+  },
+
+  subirFoto: async (id: string, file: File): Promise<Vigilador> => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await api.post<Vigilador>(`/vigilantes/${id}/foto`, form);
+    return response.data;
+  },
+
+  getCompletitud: async (id: string): Promise<Completitud> => {
+    const response = await api.get<Completitud>(`/vigilantes/${id}/completitud`);
     return response.data;
   },
 };

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { vigilanteService, Vigilador } from '../../services/vigilante.service';
 import { UserPlus, Search, MoreVertical } from 'lucide-react';
-import { VigiladorForm } from './VigiladorForm';
+import { VigiladorWizard } from './VigiladorWizard';
 import { Link } from 'react-router-dom';
 
 export const PersonnelPage = () => {
   const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [wizardAbierto, setWizardAbierto] = useState(false);
 
   const fetchVigiladores = async () => {
     setLoading(true);
@@ -25,16 +25,6 @@ export const PersonnelPage = () => {
     fetchVigiladores();
   }, []);
 
-  const handleCreate = async (data: Partial<Vigilador>) => {
-    try {
-      await vigilanteService.create(data);
-      setIsModalOpen(false);
-      fetchVigiladores();
-    } catch (error) {
-      alert('Error al crear vigilador');
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -42,18 +32,21 @@ export const PersonnelPage = () => {
           <h2 className="text-3xl font-display font-bold text-navy">Personal</h2>
           <p className="text-muted">Gestión de vigiladores y credenciales.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
+        <button
+          onClick={() => setWizardAbierto(true)}
           className="btn-primary flex items-center gap-2"
         >
           <UserPlus size={18} /> Nuevo Vigilador
         </button>
       </div>
 
-      {isModalOpen && (
-        <VigiladorForm 
-          onClose={() => setIsModalOpen(false)} 
-          onSubmit={handleCreate} 
+      {wizardAbierto && (
+        <VigiladorWizard
+          onClose={() => setWizardAbierto(false)}
+          onCreated={() => {
+            setWizardAbierto(false);
+            fetchVigiladores();
+          }}
         />
       )}
 
@@ -77,14 +70,15 @@ export const PersonnelPage = () => {
                 <th className="pb-3 px-4">Nombre Completo</th>
                 <th className="pb-3 px-4">Documento</th>
                 <th className="pb-3 px-4">Estado</th>
+                <th className="pb-3 px-4">Ficha</th>
                 <th className="pb-3 px-4 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {loading ? (
-                <tr><td colSpan={5} className="py-8 text-center text-muted">Cargando personal...</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-muted">Cargando personal...</td></tr>
               ) : vigiladores.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-muted">No se encontraron vigiladores.</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-muted">No se encontraron vigiladores.</td></tr>
               ) : vigiladores.map((v) => (
                 <tr key={v.id} className="hover:bg-canvas/50 transition-colors text-sm">
                   <td className="py-4 px-4 font-mono font-medium text-brand-blue">
@@ -95,6 +89,11 @@ export const PersonnelPage = () => {
                   <td className="py-4 px-4">
                     <span className={`status-badge ${v.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
                       {v.estado}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <span className={`status-badge ${v.completitud === 'COMPLETO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
+                      {v.completitud === 'COMPLETO' ? 'Completa' : 'Incompleta'}
                     </span>
                   </td>
                   <td className="py-4 px-4 text-right">
