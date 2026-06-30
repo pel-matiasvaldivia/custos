@@ -1,11 +1,30 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
 
+const SEMANAS_POR_MES = 4.345;
+const HORAS_NOMINALES_MES = 192;
+const TASA_AUSENTISMO = 0.1;
+
 @Injectable()
 export class ObjetivoService {
   constructor(private prisma: PrismaService) {}
+
+  /** Horas mensuales de cobertura requeridas por un puesto según su esquema horario. */
+  private horasMensualesPuesto(esquemaHorario: unknown): number {
+    if (!esquemaHorario || typeof esquemaHorario !== 'object') return 0;
+    const esquema = esquemaHorario as { horas_dia?: number; dias?: unknown[] };
+    const horasDia = esquema.horas_dia ?? 0;
+    const diasSemana = Array.isArray(esquema.dias) ? esquema.dias.length : 0;
+    return horasDia * diasSemana * SEMANAS_POR_MES;
+  }
+
+  /** Dotación de vigiladores requerida para cubrir `horasMensuales` de un puesto/objetivo. */
+  private dotacionRequerida(horasMensuales: number): number {
+    const horasEfectivas = HORAS_NOMINALES_MES * (1 - TASA_AUSENTISMO);
+    return horasMensuales > 0 ? Math.ceil(horasMensuales / horasEfectivas) : 0;
+  }
 
   async findAll(tenantId: string, pagination?: PaginationDto) {
     const skip = pagination?.skip ?? 0;
@@ -96,6 +115,22 @@ export class ObjetivoService {
             },
           });
 
+    const horasMensuales = puestos.reduce(
+      (acc: number, p: { esquema_horario: unknown }) => acc + this.horasMensualesPuesto(p.esquema_horario),
+      0,
+    );
+    const vigiladoresRequeridos = this.dotacionRequerida(horasMensuales);
+    const vigiladoresActivosTotal = await this.prisma.vigilador.count({
+      where: { tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
+    });
+
+    const dotacion = {
+      horasMensuales: parseFloat(horasMensuales.toFixed(1)),
+      vigiladoresRequeridos,
+      vigiladoresActivosTotal,
+      suficiente: vigiladoresActivosTotal >= vigiladoresRequeridos,
+    };
+
     return {
       objetivo,
       puestos,
@@ -103,6 +138,7 @@ export class ObjetivoService {
       vehiculosAsignados,
       personal,
       herramientas,
+      dotacion,
     };
   }
 
@@ -122,15 +158,78 @@ export class ObjetivoService {
     });
     if (!vehiculo) throw new NotFoundException('Vehículo no encontrado');
 
+    const yaAsignado = await this.prisma.asignacionMovil.findFirst({
+      where: { vehiculo_id: vehiculoId, hasta: null },
+    });
+    if (yaAsignado) {
+      throw new ConflictException('El vehículo ya está asignado a otro objetivo.');
+    }
+
+    const puestos = await this.prisma.puesto.findMany({
+      where: { objetivo_id: objetivoId, tenant_id: tenantId },
+      select: { esquema_horario: true },
+    });
+    const horasMensuales = puestos.reduce(
+      (acc: number, p: { esquema_horario: unknown }) => acc + this.horasMensualesPuesto(p.esquema_horario),
+      0,
+    );
+    const costoEstimadoMensual = vehiculo.costo_hora
+      ? horasMensuales * Number(vehiculo.costo_hora)
+      : null;
+
     return this.prisma.asignacionMovil.create({
       data: {
         tenant_id: tenantId,
         objetivo_id: objetivoId,
         vehiculo_id: vehiculoId,
         desde: new Date(),
+        horas_estimadas_mes: horasMensuales > 0 ? parseFloat(horasMensuales.toFixed(1)) : null,
+        costo_estimado_mensual: costoEstimadoMensual,
       },
       include: { vehiculo: true },
     });
+  }
+
+  async notificarPersonalInsuficiente(objetivoId: string, tenantId: string) {
+    const objetivo = await this.findOne(objetivoId, tenantId);
+    const puestos = await this.prisma.puesto.findMany({
+      where: { objetivo_id: objetivoId, tenant_id: tenantId },
+      select: { esquema_horario: true },
+    });
+    const horasMensuales = puestos.reduce(
+      (acc: number, p: { esquema_horario: unknown }) => acc + this.horasMensualesPuesto(p.esquema_horario),
+      0,
+    );
+    const vigiladoresRequeridos = this.dotacionRequerida(horasMensuales);
+    const vigiladoresActivosTotal = await this.prisma.vigilador.count({
+      where: { tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
+    });
+
+    if (vigiladoresActivosTotal >= vigiladoresRequeridos) {
+      throw new ConflictException('La nómina actual ya cubre la dotación requerida para este objetivo.');
+    }
+
+    const destinatarios = await this.prisma.user.findMany({
+      where: { tenant_id: tenantId, role: { in: ['ADMIN', 'RRHH'] }, deleted_at: null },
+      select: { id: true },
+    });
+
+    await this.prisma.notificacion.createMany({
+      data: destinatarios.map((d: { id: string }) => ({
+        tenant_id: tenantId,
+        destinatario_id: d.id,
+        tipo: 'PERSONAL_INSUFICIENTE',
+        canal: 'IN_APP' as const,
+        payload: {
+          objetivo_id: objetivoId,
+          objetivo_nombre: objetivo.nombre,
+          vigiladores_requeridos: vigiladoresRequeridos,
+          vigiladores_activos_total: vigiladoresActivosTotal,
+        },
+      })),
+    });
+
+    return { notificados: destinatarios.length };
   }
 
   async liberarVehiculo(objetivoId: string, tenantId: string, asignacionId: string) {

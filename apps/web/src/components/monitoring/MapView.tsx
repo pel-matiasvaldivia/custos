@@ -30,13 +30,23 @@ const guardIcon = new L.Icon({
   shadowSize: [41, 41]
 });
 
+const puestoIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
+
 interface MapViewProps {
   objectives: any[];
   incidents: any[];
   guards: Record<string, any>;
+  puestos?: any[];
 }
 
-export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards }) => {
+export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards, puestos = [] }) => {
   const center: [number, number] = [-34.6037, -58.3816]; // Buenos Aires default
 
   return (
@@ -60,6 +70,19 @@ export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards 
                 <h4 className="font-bold text-navy">{obj.nombre}</h4>
                 <p className="text-xs text-muted">{obj.direccion}</p>
                 <div className="mt-2 text-[10px] font-black uppercase text-brand-blue tracking-widest">OBJETIVO</div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* Puestos */}
+        {puestos.filter(p => p.lat && p.lng).map(p => (
+          <Marker key={p.id} position={[p.lat, p.lng]} icon={puestoIcon}>
+            <Popup>
+              <div className="p-2">
+                <h4 className="font-bold text-navy">{p.nombre}</h4>
+                {p.ubicacion && <p className="text-xs text-muted">{p.ubicacion}</p>}
+                <div className="mt-2 text-[10px] font-black uppercase text-purple-600 tracking-widest">PUESTO</div>
               </div>
             </Popup>
           </Marker>

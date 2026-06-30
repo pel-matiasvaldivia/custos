@@ -19,6 +19,7 @@ import { useSocket } from '../../hooks/useSocket';
 import { VideoPlayer } from './VideoPlayer';
 import { MapView } from '../../components/monitoring/MapView';
 import api from '../../services/api';
+import { puestoService } from '../../services/puesto.service';
 
 // Mock/Context - Replace with real auth context when available
 const TENANT_ID = 'your-tenant-id'; 
@@ -30,11 +31,13 @@ export const MonitoringPage = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [devices, setDevices] = useState<any[]>([]);
+  const [puestos, setPuestos] = useState<any[]>([]);
   const { isConnected, on } = useSocket('co', TENANT_ID);
 
   useEffect(() => {
     fetchActiveIncidents();
     fetchDevices();
+    fetchPuestos();
   }, []);
 
   const fetchDevices = async () => {
@@ -43,6 +46,15 @@ export const MonitoringPage = () => {
       setDevices(res.data);
     } catch (err) {
       console.error('Error fetching devices', err);
+    }
+  };
+
+  const fetchPuestos = async () => {
+    try {
+      const data = await puestoService.findAll();
+      setPuestos(data);
+    } catch (err) {
+      console.error('Error fetching puestos', err);
     }
   };
 
@@ -178,8 +190,9 @@ export const MonitoringPage = () => {
             </div>
           ) : (
             <div className="h-[calc(100vh-250px)] w-full">
-              <MapView 
-                objectives={devices.map(d => d.objetivo).filter((v, i, a) => v && a.findIndex(t => t?.id === v.id) === i)} 
+              <MapView
+                objectives={devices.map(d => d.objetivo).filter((v, i, a) => v && a.findIndex(t => t?.id === v.id) === i)}
+                puestos={puestos}
                 incidents={incidents}
                 guards={guards}
               />

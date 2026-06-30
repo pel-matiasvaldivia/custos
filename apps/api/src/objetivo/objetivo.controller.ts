@@ -66,4 +66,9 @@ export class ObjetivoController {
   ) {
     return this.objetivoService.liberarVehiculo(id, req.user.tenantId, asignacionId);
   }
+
+  @Post(':id/notificar-personal-insuficiente')
+  async notificarPersonalInsuficiente(@Param('id') id: string, @Request() req: any) {
+    return this.objetivoService.notificarPersonalInsuficiente(id, req.user.tenantId);
+  }
 }

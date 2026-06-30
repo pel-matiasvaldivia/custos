@@ -15,6 +15,7 @@ interface Props {
 export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
   const [nombre, setNombre] = useState('');
   const [ubicacion, setUbicacion] = useState('');
+  const [coordenadas, setCoordenadas] = useState('');
   const [requiereArma, setRequiereArma] = useState(false);
   const [requiereMovil, setRequiereMovil] = useState(false);
   const [enviando, setEnviando] = useState(false);
@@ -25,10 +26,23 @@ export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
     setEnviando(true);
     setError(null);
     try {
+      let lat: number | undefined;
+      let lng: number | undefined;
+      if (coordenadas.trim()) {
+        const partes = coordenadas.split(',').map((p) => parseFloat(p.trim()));
+        if (partes.length !== 2 || partes.some((n) => Number.isNaN(n))) {
+          setError('Las coordenadas deben tener el formato: latitud, longitud. Ej: -32.928311, -68.815628');
+          setEnviando(false);
+          return;
+        }
+        [lat, lng] = partes;
+      }
       await puestoService.create({
         objetivo_id: objetivoId,
         nombre,
         ubicacion: ubicacion || undefined,
+        lat,
+        lng,
         requiere_arma: requiereArma,
         requiere_movil: requiereMovil,
       });
@@ -57,6 +71,16 @@ export const PuestoForm = ({ objetivoId, onClose, onCreated }: Props) => {
           <div className="space-y-1">
             <label className={labelClase}>Ubicación</label>
             <input className={campoClase} value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} />
+          </div>
+          <div className="space-y-1">
+            <label className={labelClase}>Coordenadas (mapa en vivo)</label>
+            <input
+              className={campoClase}
+              value={coordenadas}
+              onChange={(e) => setCoordenadas(e.target.value)}
+              placeholder="-32.928311, -68.815628"
+            />
+            <p className="text-xs text-muted">Latitud, longitud separadas por coma. Opcional.</p>
           </div>
           <div className="flex gap-6">
             <label className="flex items-center gap-2 text-sm text-navy">

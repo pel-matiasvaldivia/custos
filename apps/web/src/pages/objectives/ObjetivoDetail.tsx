@@ -11,6 +11,8 @@ import {
   FileText,
   Pencil,
   Trash2,
+  AlertTriangle,
+  Bell,
 } from 'lucide-react';
 import { objetivoService, ObjetivoDetalle } from '../../services/objetivo.service';
 import { ObjetivoForm } from './ObjetivoForm';
@@ -33,6 +35,8 @@ export const ObjetivoDetail = () => {
   const [modalPuesto, setModalPuesto] = useState(false);
   const [modalVehiculo, setModalVehiculo] = useState(false);
   const [modalContrato, setModalContrato] = useState(false);
+  const [enviandoNotificacion, setEnviandoNotificacion] = useState(false);
+  const [notificacionEnviada, setNotificacionEnviada] = useState(false);
 
   const cargar = async () => {
     if (!id) return;
@@ -52,10 +56,23 @@ export const ObjetivoDetail = () => {
     cargar();
   };
 
+  const handleNotificarPersonal = async () => {
+    if (!id) return;
+    setEnviandoNotificacion(true);
+    try {
+      await objetivoService.notificarPersonalInsuficiente(id);
+      setNotificacionEnviada(true);
+    } catch {
+      // el botón ya está deshabilitado al estar suficiente la dotación
+    } finally {
+      setEnviandoNotificacion(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-muted">Cargando objetivo...</div>;
   if (!detalle) return <div className="p-8 text-amber">Objetivo no encontrado.</div>;
 
-  const { objetivo, puestos, contrato, vehiculosAsignados, personal, herramientas } = detalle;
+  const { objetivo, puestos, contrato, vehiculosAsignados, personal, herramientas, dotacion } = detalle;
 
   return (
     <div className="space-y-6">
@@ -131,6 +148,37 @@ export const ObjetivoDetail = () => {
             <h3 className="text-lg font-display font-bold text-navy mb-4 flex items-center gap-2">
               <Users className="text-brand-blue" size={20} /> Personal Asignado
             </h3>
+            {dotacion.horasMensuales > 0 && (
+              <div
+                className={`mb-4 p-3 rounded-lg border text-sm ${
+                  dotacion.suficiente
+                    ? 'border-emerald/30 bg-emerald/5 text-emerald'
+                    : 'border-amber/30 bg-amber/5 text-amber'
+                }`}
+              >
+                <p className="font-medium flex items-center gap-1.5">
+                  {!dotacion.suficiente && <AlertTriangle size={14} />}
+                  Dotación requerida: {dotacion.vigiladoresRequeridos} · Disponibles en nómina: {dotacion.vigiladoresActivosTotal}
+                </p>
+                <p className="text-xs opacity-80 mt-0.5">
+                  Calculado sobre {dotacion.horasMensuales}hs mensuales de cobertura.
+                </p>
+                {!dotacion.suficiente && (
+                  <button
+                    onClick={handleNotificarPersonal}
+                    disabled={enviandoNotificacion || notificacionEnviada}
+                    className="mt-2 text-amber hover:text-amber/80 transition-colors text-xs font-medium flex items-center gap-1 disabled:opacity-60"
+                  >
+                    <Bell size={12} />
+                    {notificacionEnviada
+                      ? 'Notificación enviada'
+                      : enviandoNotificacion
+                        ? 'Enviando...'
+                        : 'Notificar necesidad de contratación'}
+                  </button>
+                )}
+              </div>
+            )}
             {personal.length === 0 ? (
               <p className="text-sm text-muted py-2 text-center">
                 Sin vigiladores asignados en los últimos 30 días. Gestioná las asignaciones desde el Cuadrante.
@@ -239,6 +287,11 @@ export const ObjetivoDetail = () => {
                     <div>
                       <p className="font-mono font-medium text-navy">{va.vehiculo.patente}</p>
                       <p className="text-xs text-muted">{va.vehiculo.marca} {va.vehiculo.modelo}</p>
+                      {va.costo_estimado_mensual && (
+                        <p className="text-xs text-brand-blue font-medium">
+                          ~${Number(va.costo_estimado_mensual).toLocaleString('es-AR')}/mes ({va.horas_estimadas_mes}hs)
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={() => handleLiberarVehiculo(va.id)}

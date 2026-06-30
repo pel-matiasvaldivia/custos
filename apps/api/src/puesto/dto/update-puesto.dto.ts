@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsUUID, IsNumber } from 'class-validator';
 import { Prisma } from '@prisma/client';
 
 export class UpdatePuestoDto {
@@ -13,6 +13,14 @@ export class UpdatePuestoDto {
   @IsOptional()
   @IsString()
   ubicacion?: string;
+
+  @IsOptional()
+  @IsNumber()
+  lat?: number;
+
+  @IsOptional()
+  @IsNumber()
+  lng?: number;
 
   @IsOptional()
   @IsBoolean()

@@ -24,6 +24,17 @@ export class VehiculoService {
     return { data, total, page: pagination?.page ?? 1, limit: take };
   }
 
+  async findDisponibles(tenantId: string) {
+    return this.prisma.vehiculo.findMany({
+      where: {
+        tenant_id: tenantId,
+        estado: 'OPERATIVO',
+        asignaciones: { none: { hasta: null } },
+      },
+      orderBy: { patente: 'asc' },
+    });
+  }
+
   async findOne(id: string, tenantId: string) {
     const vehiculo = await this.prisma.vehiculo.findFirst({
       where: { id, tenant_id: tenantId },
