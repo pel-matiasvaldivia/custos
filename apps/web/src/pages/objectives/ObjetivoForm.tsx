@@ -17,7 +17,6 @@ interface Props {
 export const ObjetivoForm = ({ objetivo, hasContratoActivo = false, onClose, onSaved }: Props) => {
   const [clienteId, setClienteId] = useState(objetivo?.cliente_id || '');
   const [clienteNombre, setClienteNombre] = useState(objetivo?.cliente_nombre || '');
-  const [codigo, setCodigo] = useState(objetivo?.codigo || '');
   const [nombre, setNombre] = useState(objetivo?.nombre || '');
   const [direccion, setDireccion] = useState(objetivo?.direccion || '');
   const [estado, setEstado] = useState<'ACTIVO' | 'INACTIVO'>(objetivo?.estado || 'ACTIVO');
@@ -32,7 +31,6 @@ export const ObjetivoForm = ({ objetivo, hasContratoActivo = false, onClose, onS
       const data = {
         cliente_id: clienteId || undefined,
         cliente_nombre: clienteNombre,
-        codigo,
         nombre,
         direccion: direccion || undefined,
         ...(objetivo ? { estado } : {}),
@@ -70,15 +68,17 @@ export const ObjetivoForm = ({ objetivo, hasContratoActivo = false, onClose, onS
               setClienteNombre(nombre);
             }}
           />
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className={labelClase}>Código</label>
-              <input className={campoClase} value={codigo} onChange={(e) => setCodigo(e.target.value)} required />
-            </div>
-            <div className="space-y-1">
-              <label className={labelClase}>Nombre del Sitio</label>
-              <input className={campoClase} value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-            </div>
+          <div className="space-y-1">
+            {objetivo && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className={labelClase}>Código</span>
+                <span className="font-mono text-xs font-bold text-navy bg-canvas border border-line rounded px-2 py-0.5">
+                  {objetivo.codigo}
+                </span>
+              </div>
+            )}
+            <label className={labelClase}>Nombre del Sitio</label>
+            <input className={campoClase} value={nombre} onChange={(e) => setNombre(e.target.value)} required />
           </div>
           <div className="space-y-1">
             <label className={labelClase}>Dirección</label>

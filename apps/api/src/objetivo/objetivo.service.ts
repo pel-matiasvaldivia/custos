@@ -213,8 +213,22 @@ export class ObjetivoService {
     return cliente.razon_social;
   }
 
+  private async generarCodigoObjetivo(tenantId: string): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `OBJ-${year}-`;
+    const ultimo = await this.prisma.objetivo.findFirst({
+      where: { tenant_id: tenantId, codigo: { startsWith: prefix } },
+      orderBy: { codigo: 'desc' },
+      select: { codigo: true },
+    });
+    const siguiente = ultimo
+      ? parseInt(ultimo.codigo.slice(prefix.length), 10) + 1
+      : 1;
+    return `${prefix}${String(siguiente).padStart(4, '0')}`;
+  }
+
   async create(
-    data: Omit<Prisma.ObjetivoUncheckedCreateInput, 'cliente_nombre'> & {
+    data: Omit<Prisma.ObjetivoUncheckedCreateInput, 'cliente_nombre' | 'codigo'> & {
       cliente_nombre?: string;
     },
   ) {
@@ -228,21 +242,10 @@ export class ObjetivoService {
         'Debe indicar cliente_id o cliente_nombre.',
       );
     }
-    try {
-      return await this.prisma.objetivo.create({
-        data: { ...data, cliente_nombre: clienteNombre },
-      });
-    } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          `Ya existe un objetivo con el código "${data.codigo}" en este tenant.`,
-        );
-      }
-      throw e;
-    }
+    const codigo = await this.generarCodigoObjetivo(data.tenant_id);
+    return this.prisma.objetivo.create({
+      data: { ...data, cliente_nombre: clienteNombre, codigo },
+    });
   }
 
   async update(
@@ -272,19 +275,7 @@ export class ObjetivoService {
       );
       data = { ...data, cliente_nombre: clienteNombre };
     }
-    try {
-      return await this.prisma.objetivo.update({ where: { id }, data });
-    } catch (e) {
-      if (
-        e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2002'
-      ) {
-        throw new ConflictException(
-          `Ya existe un objetivo con ese código en este tenant.`,
-        );
-      }
-      throw e;
-    }
+    return this.prisma.objetivo.update({ where: { id }, data });
   }
 
   async asignarVehiculo(
