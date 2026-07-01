@@ -8,7 +8,8 @@ const formatFechaHora = (iso: string) =>
 const mensajeError = (err: unknown) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
 
-export const RelevosPage = () => {
+/** Aprobación de solicitudes de cambio de turno (relevos) enviadas por los guardias desde el móvil. */
+export const SolicitudesCambioTab = () => {
   const [pendientes, setPendientes] = useState<RelevoPendiente[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,11 +83,11 @@ export const RelevosPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-display font-bold text-navy">Cambios de turno</h2>
-        <p className="text-muted">Solicitudes de relevo pendientes de aprobación.</p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-muted">
+        Cuando un guardia pide un cambio de turno desde la app móvil, la solicitud aparece acá para que la apruebes
+        y elijas quién lo releva.
+      </p>
 
       {error && <div className="p-3 bg-amber/10 border border-amber/30 rounded-md text-sm text-amber">{error}</div>}
 

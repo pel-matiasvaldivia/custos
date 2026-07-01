@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Sun, Moon, Clock, Sunset, Zap, Pencil } from 'lucide-react';
+import { X, Sun, Moon, Clock, Sunset, Zap, Pencil, Users, CalendarClock } from 'lucide-react';
 import { cuadranteService, DiaDef, EsquemaTurno } from '../../services/cuadrante.service';
 
 interface Props {
@@ -19,7 +19,7 @@ interface Plantilla {
   label: string;
   turno: string;
   detalle: string;
-  dotacion: string;
+  vigiladores: number;
   nombre: string;
   diasCiclo: number;
   dias: DiaFormState[];
@@ -33,9 +33,9 @@ const PLANTILLAS: Plantilla[] = [
     id: '12x24-diurno',
     icono: <Sun size={18} />,
     label: '12×24 Diurno',
-    turno: '07:00 – 19:00',
-    detalle: 'Trabaja 12hs, descansa 24hs. Ciclo 2 días.',
-    dotacion: '3 vigiladores por puesto 24/7',
+    turno: '07:00 a 19:00',
+    detalle: 'Cada persona trabaja 12hs y descansa 24hs. Se necesitan 3 personas rotando para cubrir el puesto las 24hs, todos los días.',
+    vigiladores: 3,
     nombre: '12×24 Diurno',
     diasCiclo: 2,
     dias: [T('07:00', 12), F()],
@@ -44,9 +44,9 @@ const PLANTILLAS: Plantilla[] = [
     id: '12x24-nocturno',
     icono: <Moon size={18} />,
     label: '12×24 Nocturno',
-    turno: '19:00 – 07:00',
-    detalle: 'Trabaja 12hs, descansa 24hs. Ciclo 2 días.',
-    dotacion: '3 vigiladores por puesto 24/7',
+    turno: '19:00 a 07:00',
+    detalle: 'Turno de noche. Cada persona trabaja 12hs y descansa 24hs. 3 personas rotando cubren la franja nocturna todos los días. Aplica recargo nocturno.',
+    vigiladores: 3,
     nombre: '12×24 Nocturno',
     diasCiclo: 2,
     dias: [T('19:00', 12), F()],
@@ -55,9 +55,9 @@ const PLANTILLAS: Plantilla[] = [
     id: '12x36',
     icono: <Sunset size={18} />,
     label: '12×36 Rotativo',
-    turno: 'Alterna día / noche',
-    detalle: 'Trabaja 12hs, descansa 36hs. Ciclo 4 días. ~42hs/sem. Más favorable al trabajador.',
-    dotacion: '4 vigiladores por puesto 24/7',
+    turno: 'Alterna día y noche',
+    detalle: 'Trabaja 12hs y descansa 36hs, alternando día y noche. Ronda las 42hs semanales: es el esquema más favorable al trabajador. Requiere 4 personas para cubrir 24/7.',
+    vigiladores: 4,
     nombre: '12×36 Rotativo',
     diasCiclo: 4,
     dias: [T('07:00', 12), F(), F(), T('19:00', 12)],
@@ -66,9 +66,9 @@ const PLANTILLAS: Plantilla[] = [
     id: '24x48',
     icono: <Zap size={18} />,
     label: '24×48',
-    turno: '08:00 – 08:00 (+1 día)',
-    detalle: 'Trabaja 24hs continuas, descansa 48hs. Ciclo 3 días. Puede generar horas extra.',
-    dotacion: '3 vigiladores por puesto 24/7',
+    turno: '08:00 a 08:00 del día siguiente',
+    detalle: 'Jornada de 24hs continuas seguida de 48hs de descanso. 3 personas cubren el puesto 24/7. Ojo: puede generar horas extra según el convenio.',
+    vigiladores: 3,
     nombre: '24×48',
     diasCiclo: 3,
     dias: [T('08:00', 24), F(), F()],
@@ -76,10 +76,10 @@ const PLANTILLAS: Plantilla[] = [
   {
     id: '8hs-diurno-lv',
     icono: <Clock size={18} />,
-    label: '8hs Lun–Vie',
-    turno: '08:00 – 16:00',
-    detalle: 'Jornada estándar. 5 días trabajo + 2 franco. 40hs semanales.',
-    dotacion: '1 vigilador por puesto',
+    label: '8hs Lun a Vie',
+    turno: '08:00 a 16:00',
+    detalle: 'Jornada de oficina estándar: 8hs, de lunes a viernes, con sábado y domingo libres. 40hs semanales. 1 sola persona cubre el puesto.',
+    vigiladores: 1,
     nombre: '8hs Diurno Lun–Vie',
     diasCiclo: 7,
     dias: [T('08:00', 8), T('08:00', 8), T('08:00', 8), T('08:00', 8), T('08:00', 8), F(), F()],
@@ -87,10 +87,10 @@ const PLANTILLAS: Plantilla[] = [
   {
     id: '8hs-nocturno-lv',
     icono: <Moon size={18} />,
-    label: '8hs Noche Lun–Vie',
-    turno: '22:00 – 06:00',
-    detalle: 'Turno nocturno estándar. Aplica recargo nocturno CCT 421/05.',
-    dotacion: '1 vigilador por puesto',
+    label: '8hs Noche Lun a Vie',
+    turno: '22:00 a 06:00',
+    detalle: 'Turno nocturno de 8hs, de lunes a viernes. 40hs semanales. Aplica recargo nocturno del CCT 421/05. 1 sola persona cubre el puesto.',
+    vigiladores: 1,
     nombre: '8hs Nocturno Lun–Vie',
     diasCiclo: 7,
     dias: [T('22:00', 8), T('22:00', 8), T('22:00', 8), T('22:00', 8), T('22:00', 8), F(), F()],
@@ -98,6 +98,22 @@ const PLANTILLAS: Plantilla[] = [
 ];
 
 const diaInicial = (): DiaFormState => ({ tipo: 'TRABAJO', hora_inicio: '08:00', duracion_horas: 12 });
+
+/** Horas de trabajo promedio por semana del patrón (para mostrar al usuario). */
+const horasSemana = (dias: DiaFormState[], diasCiclo: number): number => {
+  const totalTrabajo = dias
+    .slice(0, diasCiclo)
+    .filter((d) => d.tipo === 'TRABAJO')
+    .reduce((acc, d) => acc + d.duracion_horas, 0);
+  if (diasCiclo <= 0) return 0;
+  return Math.round((totalTrabajo / diasCiclo) * 7);
+};
+
+const finDeTurno = (inicio: string, duracion: number): string => {
+  const [h, m] = inicio.split(':').map(Number);
+  const fin = (h + duracion) % 24;
+  return `${String(fin).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+};
 
 export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
   const [plantillaId, setPlantillaId] = useState<string | null>(null);
@@ -173,6 +189,8 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
   const labelClase = 'text-xs font-medium text-muted uppercase tracking-wider';
 
   const mostrarFormulario = plantillaId !== null;
+  const plantillaSel = PLANTILLAS.find((p) => p.id === plantillaId);
+  const hsSem = horasSemana(dias, diasCiclo);
 
   return (
     <div className="fixed inset-0 bg-navy/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -180,9 +198,11 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
         <div className="p-6 border-b border-line flex justify-between items-center shrink-0">
           <div>
             <h3 className="text-lg font-display font-bold text-navy">Nuevo esquema de turno</h3>
-            {!mostrarFormulario && (
-              <p className="text-xs text-muted mt-0.5">Elegí una plantilla CCT para empezar</p>
-            )}
+            <p className="text-xs text-muted mt-0.5">
+              {mostrarFormulario
+                ? 'Revisá cómo queda el turno y ajustá si hace falta'
+                : 'Elegí un patrón según cómo se cubre el puesto'}
+            </p>
           </div>
           <button onClick={onClose} className="text-muted hover:text-navy transition-colors">
             <X size={20} />
@@ -192,9 +212,7 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
         <div className="overflow-y-auto flex-1">
           {/* Selección de plantilla */}
           <div className="p-6 space-y-3">
-            <p className="text-xs font-medium text-muted uppercase tracking-wider">
-              Plantillas CCT 421/05
-            </p>
+            <p className={labelClase}>Patrones más usados (CCT 421/05)</p>
             <div className="grid grid-cols-2 gap-2">
               {PLANTILLAS.map((p) => {
                 const seleccionada = plantillaId === p.id;
@@ -214,7 +232,14 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
                       {p.label}
                     </div>
                     <p className="text-xs text-muted leading-snug">{p.turno}</p>
-                    <p className="text-[10px] text-muted/70 mt-1 leading-snug">{p.dotacion}</p>
+                    <div className="flex items-center gap-2 mt-2 text-[10px] text-muted/80">
+                      <span className="inline-flex items-center gap-1 bg-canvas border border-line rounded-full px-2 py-0.5">
+                        <CalendarClock size={11} /> {horasSemana(p.dias, p.diasCiclo)} hs/sem
+                      </span>
+                      <span className="inline-flex items-center gap-1 bg-canvas border border-line rounded-full px-2 py-0.5">
+                        <Users size={11} /> {p.vigiladores}
+                      </span>
+                    </div>
                   </button>
                 );
               })}
@@ -230,16 +255,16 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
                 }`}
               >
                 <div className={`flex items-center gap-2 font-bold text-sm ${plantillaId === 'custom' ? 'text-brand-blue' : 'text-muted'}`}>
-                  <Pencil size={16} /> Esquema personalizado
+                  <Pencil size={16} /> Armar un esquema a medida
                 </div>
-                <p className="text-xs text-muted mt-0.5">Configurá manualmente el ciclo y los bloques</p>
+                <p className="text-xs text-muted mt-0.5">Definí vos mismo el ciclo, los horarios y los francos</p>
               </button>
             </div>
 
-            {/* Detalle de la plantilla seleccionada */}
-            {plantillaId && plantillaId !== 'custom' && (
-              <div className="p-3 rounded-lg bg-brand-blue/5 border border-brand-blue/20 text-xs text-navy">
-                {PLANTILLAS.find((p) => p.id === plantillaId)?.detalle}
+            {/* Detalle en lenguaje simple de la plantilla seleccionada */}
+            {plantillaSel && (
+              <div className="p-3 rounded-lg bg-brand-blue/5 border border-brand-blue/20 text-xs text-navy leading-relaxed">
+                {plantillaSel.detalle}
               </div>
             )}
           </div>
@@ -247,15 +272,42 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
           {/* Formulario — visible solo tras elegir */}
           {mostrarFormulario && (
             <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4 border-t border-line pt-5">
-              <p className="text-xs font-medium text-muted uppercase tracking-wider">
-                {plantillaId === 'custom' ? 'Configuración' : 'Revisá y ajustá si es necesario'}
-              </p>
+              {/* Resumen legible del ciclo */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className={labelClase}>Así queda el ciclo</p>
+                  <span className="text-[11px] font-semibold text-brand-blue bg-brand-blue/5 border border-brand-blue/20 rounded-full px-2.5 py-0.5">
+                    ≈ {hsSem} hs/semana
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {dias.slice(0, diasCiclo).map((d, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex flex-col items-center rounded-md border px-2.5 py-1.5 text-center min-w-[64px] ${
+                        d.tipo === 'TRABAJO'
+                          ? 'border-emerald/30 bg-emerald/5'
+                          : 'border-line bg-canvas'
+                      }`}
+                    >
+                      <span className="text-[9px] uppercase tracking-wider text-muted">Día {idx + 1}</span>
+                      {d.tipo === 'TRABAJO' ? (
+                        <span className="text-[10px] font-bold text-emerald-700">
+                          {d.hora_inicio}–{finDeTurno(d.hora_inicio, d.duracion_horas)}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted">Franco</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               <div className="space-y-1">
-                <label className={labelClase}>Nombre</label>
+                <label className={labelClase}>Nombre del esquema</label>
                 <input
                   type="text"
-                  placeholder="Ej: 12x36, 24x48"
+                  placeholder="Ej: 12x36, 24x48, Guardia fin de semana"
                   className={campoClase}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
@@ -265,7 +317,7 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
               </div>
 
               <div className="space-y-1">
-                <label className={labelClase}>Días del ciclo</label>
+                <label className={labelClase}>Cada cuántos días se repite (ciclo)</label>
                 <input
                   type="number"
                   min={1}
@@ -275,11 +327,14 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
                   onChange={(e) => handleCambiarDiasCiclo(Number(e.target.value))}
                   required
                 />
+                <p className="text-[11px] text-muted">
+                  El patrón de abajo se repite en bucle. Ej: en 12x24 el ciclo es de 2 días (trabaja, franco).
+                </p>
               </div>
 
               <div className="space-y-3">
-                <label className={labelClase}>Patrón por día del ciclo</label>
-                {dias.map((d, idx) => (
+                <label className={labelClase}>Qué hace la persona cada día del ciclo</label>
+                {dias.slice(0, diasCiclo).map((d, idx) => (
                   <div key={idx} className="p-3 border border-line rounded-lg bg-canvas space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-navy">Día {idx + 1}</span>
@@ -288,14 +343,14 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
                         value={d.tipo}
                         onChange={(e) => actualizarDia(idx, { tipo: e.target.value as 'TRABAJO' | 'FRANCO' })}
                       >
-                        <option value="TRABAJO">Trabajo</option>
-                        <option value="FRANCO">Franco</option>
+                        <option value="TRABAJO">Trabaja</option>
+                        <option value="FRANCO">Franco (descanso)</option>
                       </select>
                     </div>
                     {d.tipo === 'TRABAJO' && (
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-[10px] text-muted uppercase">Hora inicio</label>
+                          <label className="text-[10px] text-muted uppercase">Entra a las</label>
                           <input
                             type="time"
                             className={campoClase}
@@ -305,7 +360,7 @@ export const EsquemaTurnoForm = ({ onClose, onCreado }: Props) => {
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] text-muted uppercase">Duración (hs)</label>
+                          <label className="text-[10px] text-muted uppercase">Cuántas horas</label>
                           <input
                             type="number"
                             min={1}
