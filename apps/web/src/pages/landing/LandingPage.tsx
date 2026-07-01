@@ -1,158 +1,235 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   Shield, ShieldCheck, Users, FileText, BarChart3, Smartphone,
-  MapPin, AlertTriangle, CheckCircle, CheckCircle2, ChevronRight,
-  ArrowRight, X, Eye, EyeOff, Activity, Zap,
+  MapPin, AlertTriangle, CheckCircle, CheckCircle2, ChevronRight, ChevronLeft,
+  ArrowRight, X, Eye, EyeOff, Activity, Building2, User, Check,
   ClipboardList, Truck, Wrench, Bell, Lock, Globe, Star,
   Calendar, CreditCard, UploadCloud, Menu,
 } from 'lucide-react';
 
-/* ─── IVA OPTIONS ─── */
-const IVA_OPTIONS = ['Responsable Inscripto', 'Monotributista', 'Exento', 'Consumidor Final'];
-
-/* ─── FIELD HELPER ─── */
-function Field({ label, value, onChange, placeholder, type = 'text', full = false }: {
-  label: string; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder: string; type?: string; full?: boolean;
-}) {
-  return (
-    <div className={full ? 'col-span-2' : ''}>
-      <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 font-mono">{label}</label>
-      <input
-        type={type} value={value} onChange={onChange} placeholder={placeholder}
-        className="w-full bg-white border border-line rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all font-medium"
-      />
-    </div>
-  );
-}
-
-/* ─── ONBOARDING MODAL ─── */
+/* ─── ONBOARDING MODAL — usa el mismo endpoint que /registro ─── */
 function DemoModal({ onClose }: { onClose: () => void }) {
+  const { registro } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
-    nombre: '', razon_social: '', cuit: '', condicion_iva: 'Responsable Inscripto',
-    direccion: '', email_contacto: '', telefono_contacto: '', email_admin: '', password: '',
+    empresa_nombre: '',
+    razon_social: '',
+    cuit: '',
+    telefono: '',
+    email: '',
+    password: '',
+    confirmar_password: '',
   });
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const validStep1 = form.nombre && form.razon_social && form.cuit && form.email_contacto;
-  const validStep2 = form.email_admin && form.password.length >= 8;
+  const validateStep1 = () => {
+    if (form.empresa_nombre.trim().length < 2) return 'El nombre debe tener al menos 2 caracteres.';
+    if (form.cuit && !/^\d{2}-\d{7,8}-\d$/.test(form.cuit)) return 'CUIT inválido. Formato: XX-XXXXXXXX-X';
+    return '';
+  };
 
-  const handleCreate = async () => {
+  const validateStep2 = () => {
+    if (!form.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Email inválido.';
+    if (form.password.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+    if (form.password !== form.confirmar_password) return 'Las contraseñas no coinciden.';
+    return '';
+  };
+
+  const next = () => {
+    setError('');
+    const err = step === 1 ? validateStep1() : step === 2 ? validateStep2() : '';
+    if (err) { setError(err); return; }
+    setStep(s => (s + 1) as 1 | 2 | 3);
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
     setLoading(true); setError('');
     try {
-      await api.post('/system/tenants', form);
-      navigate('/dashboard');
+      await registro({
+        empresa_nombre: form.empresa_nombre.trim(),
+        razon_social: form.razon_social.trim() || undefined,
+        cuit: form.cuit.trim() || undefined,
+        email: form.email.trim(),
+        password: form.password,
+        telefono: form.telefono.trim() || undefined,
+      });
+      navigate('/dashboard', { replace: true });
     } catch (err: any) {
-      setError(err?.response?.data?.message ?? 'Error al crear la empresa. Intentá de nuevo.');
+      const msg = err?.response?.data?.message;
+      setError(Array.isArray(msg) ? msg[0] : (msg ?? 'Error al crear la cuenta. Intentá de nuevo.'));
+      setStep(2);
     } finally {
       setLoading(false);
     }
   };
 
+  const stepsMeta = [
+    { label: 'Empresa', icon: Building2 },
+    { label: 'Acceso', icon: User },
+    { label: 'Confirmar', icon: Check },
+  ];
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-navy/70 backdrop-blur-md p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="bg-canvas rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-line">
-        {/* Modal header */}
-        <div className="bg-navy px-10 py-8 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-brand-blue/20 to-transparent" />
-          <button onClick={onClose} className="absolute top-5 right-5 text-white/40 hover:text-white transition-colors z-10"><X size={20} /></button>
-          <div className="relative z-10">
-            <div className="flex items-center gap-2 mb-4">
-              {[1, 2].map(n => (
-                <div key={n} className={`h-1 rounded-full transition-all ${n <= step ? 'bg-brand-blue w-12' : 'bg-white/10 w-6'}`} />
-              ))}
-              <span className="text-white/30 text-[10px] font-black font-mono uppercase tracking-widest ml-2">Paso {step} de 2</span>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy/70 backdrop-blur-md p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-canvas rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-line">
+        {/* Header */}
+        <div className="bg-navy px-8 py-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-brand-blue/20 to-transparent pointer-events-none" />
+          <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-10">
+            <X size={18} />
+          </button>
+          <div className="relative z-10 flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center shadow-lg shadow-brand-blue/30">
+              <Shield size={16} className="text-white" />
             </div>
-            <h2 className="font-display text-2xl font-black text-white uppercase italic tracking-tighter">
-              {step === 1 ? 'Datos de la empresa' : 'Tu cuenta de acceso'}
-            </h2>
-            <p className="text-white/50 text-sm mt-1">
-              {step === 1 ? 'Completá los datos de tu empresa de seguridad.' : 'Con esto ingresás como administrador.'}
-            </p>
+            <span className="font-display text-lg font-black text-white uppercase italic tracking-tighter">CustOS</span>
+          </div>
+          {/* Step pills */}
+          <div className="relative z-10 flex items-center gap-2">
+            {stepsMeta.map((s, i) => {
+              const n = (i + 1) as 1 | 2 | 3;
+              const done = n < step;
+              const active = n === step;
+              const Icon = s.icon;
+              return (
+                <div key={n} className="flex items-center gap-2">
+                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black font-mono uppercase tracking-wider transition-colors ${
+                    done ? 'bg-emerald text-white' : active ? 'bg-brand-blue text-white' : 'bg-white/10 text-white/30'
+                  }`}>
+                    <Icon size={11} />
+                    <span>{s.label}</span>
+                  </div>
+                  {i < stepsMeta.length - 1 && <ChevronRight size={12} className="text-white/20" />}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Modal body */}
-        <div className="p-10 space-y-5">
+        {/* Body */}
+        <form onSubmit={step === 3 ? submit : (e) => { e.preventDefault(); next(); }} className="px-8 py-6 space-y-4">
           {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-              <AlertTriangle size={15} className="shrink-0" /> {error}
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-sm">
+              <AlertTriangle size={14} className="shrink-0" /> {error}
             </div>
           )}
 
-          {step === 1 ? (
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 gap-5">
-                <Field label="Nombre comercial *" value={form.nombre} onChange={set('nombre')} placeholder="Seguridad Austral" />
-                <Field label="Razón social *" value={form.razon_social} onChange={set('razon_social')} placeholder="Austral S.A." />
-                <Field label="CUIT *" value={form.cuit} onChange={set('cuit')} placeholder="20-12345678-9" />
+          {/* Step 1: Empresa */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <h2 className="font-semibold text-navy text-base">Datos de la empresa</h2>
+              <div>
+                <label className="block text-sm font-medium text-navy mb-1">Nombre de fantasía <span className="text-red-500">*</span></label>
+                <input autoFocus className="input w-full" value={form.empresa_nombre} onChange={set('empresa_nombre')} placeholder="Seguridad Austral S.A." required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy mb-1">Razón social</label>
+                <input className="input w-full" value={form.razon_social} onChange={set('razon_social')} placeholder="Austral S.A. (opcional)" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-black text-muted uppercase tracking-widest mb-2 font-mono">Condición IVA</label>
-                  <select value={form.condicion_iva} onChange={set('condicion_iva')} className="w-full bg-white border border-line rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-blue/20">
-                    {IVA_OPTIONS.map(o => <option key={o}>{o}</option>)}
-                  </select>
+                  <label className="block text-sm font-medium text-navy mb-1">CUIT</label>
+                  <input className="input w-full" value={form.cuit} onChange={set('cuit')} placeholder="30-12345678-9" />
+                  <p className="text-xs text-muted mt-1">Formato: XX-XXXXXXXX-X</p>
                 </div>
-                <Field label="Email de contacto *" value={form.email_contacto} onChange={set('email_contacto')} placeholder="admin@empresa.com" type="email" />
-                <Field label="Teléfono" value={form.telefono_contacto} onChange={set('telefono_contacto')} placeholder="011 4xxx-xxxx" />
-              </div>
-              <Field label="Dirección legal" value={form.direccion} onChange={set('direccion')} placeholder="Av. Corrientes 1234, CABA" full />
-              <div className="flex justify-end pt-2">
-                <button
-                  disabled={!validStep1}
-                  onClick={() => setStep(2)}
-                  className="bg-brand-blue text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-deep transition-all disabled:opacity-40 flex items-center gap-2"
-                >
-                  Siguiente <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <Field label="Email del administrador *" value={form.email_admin} onChange={set('email_admin')} placeholder="tumail@empresa.com" type="email" full />
-              <div className="relative">
-                <Field label="Contraseña *" value={form.password} onChange={set('password')} placeholder="Mínimo 8 caracteres" type={showPwd ? 'text' : 'password'} full />
-                <button type="button" className="absolute right-3 top-10 text-muted" onClick={() => setShowPwd(s => !s)}>
-                  {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-
-              <div className="bg-navy/5 rounded-2xl p-5 border border-line text-sm space-y-2">
-                <p className="text-[10px] font-black text-muted uppercase tracking-widest font-mono flex items-center gap-2"><FileText size={12} /> Resumen</p>
-                <div className="grid grid-cols-2 gap-y-2 mt-3 text-xs">
-                  <span className="text-muted">Empresa</span><span className="font-bold text-navy text-right">{form.nombre}</span>
-                  <span className="text-muted">Aislamiento</span><span className="font-bold text-emerald text-right">PostgreSQL RLS ✓</span>
-                  <span className="text-muted">Período de prueba</span><span className="font-bold text-brand-blue text-right">30 días gratis</span>
+                <div>
+                  <label className="block text-sm font-medium text-navy mb-1">Teléfono</label>
+                  <input className="input w-full" value={form.telefono} onChange={set('telefono')} placeholder="+54 11 1234-5678" />
                 </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <Lock size={12} className="text-emerald" />
-                Tus datos nunca se comparten. Instancia aislada garantizada.
-              </div>
-
-              <div className="flex justify-between pt-2">
-                <button onClick={() => setStep(1)} className="text-muted font-black text-xs uppercase tracking-widest hover:text-navy transition-colors">
-                  ← Volver
-                </button>
-                <button
-                  disabled={!validStep2 || loading}
-                  onClick={handleCreate}
-                  className="bg-brand-blue text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-deep transition-all disabled:opacity-40 shadow-xl shadow-brand-blue/20 flex items-center gap-2"
-                >
-                  {loading ? 'Creando cuenta…' : <><Zap size={14} /> Activar mi cuenta</>}
-                </button>
               </div>
             </div>
           )}
-        </div>
+
+          {/* Step 2: Acceso */}
+          {step === 2 && (
+            <div className="space-y-4">
+              <h2 className="font-semibold text-navy text-base">Acceso del administrador</h2>
+              <div>
+                <label className="block text-sm font-medium text-navy mb-1">Email <span className="text-red-500">*</span></label>
+                <input autoFocus className="input w-full" type="email" value={form.email} onChange={set('email')} placeholder="admin@tuempresa.com" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy mb-1">Contraseña <span className="text-red-500">*</span></label>
+                <div className="relative">
+                  <input className="input w-full pr-10" type={showPwd ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="Mínimo 8 caracteres" required />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" onClick={() => setShowPwd(v => !v)}>
+                    {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-navy mb-1">Confirmar contraseña <span className="text-red-500">*</span></label>
+                <input className="input w-full" type={showPwd ? 'text' : 'password'} value={form.confirmar_password} onChange={set('confirmar_password')} placeholder="Repetir contraseña" required />
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Confirm */}
+          {step === 3 && (
+            <div className="space-y-4">
+              <h2 className="font-semibold text-navy text-base">Confirmar datos</h2>
+              <div className="bg-white border border-line rounded-xl p-4 space-y-2 text-sm">
+                {[
+                  ['Empresa', form.empresa_nombre],
+                  form.razon_social ? ['Razón social', form.razon_social] : null,
+                  form.cuit ? ['CUIT', form.cuit] : null,
+                  form.telefono ? ['Teléfono', form.telefono] : null,
+                  ['Email admin', form.email],
+                ].filter(Boolean).map((pair) => { const [k, v] = pair as [string, string]; return (
+                  <div key={k} className="flex justify-between">
+                    <span className="text-muted">{k}</span>
+                    <span className="font-medium text-navy">{v}</span>
+                  </div>
+                ); })}
+              </div>
+              <div className="bg-emerald/5 border border-emerald/20 rounded-xl p-4 text-sm">
+                <p className="font-semibold text-emerald mb-1">30 días de prueba gratuita</p>
+                <p className="text-muted text-xs">Acceso completo a todos los módulos. Sin tarjeta de crédito.</p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted">
+                <Lock size={11} className="text-emerald" />
+                Instancia aislada con PostgreSQL RLS. Tus datos son solo tuyos.
+              </div>
+            </div>
+          )}
+
+          {/* Nav */}
+          <div className="flex items-center justify-between pt-2 border-t border-line">
+            {step > 1 ? (
+              <button type="button" onClick={() => { setError(''); setStep(s => (s - 1) as 1 | 2 | 3); }} className="btn-secondary flex items-center gap-1">
+                <ChevronLeft size={15} /> Atrás
+              </button>
+            ) : (
+              <div />
+            )}
+            {step < 3 ? (
+              <button type="submit" className="btn-primary flex items-center gap-1">
+                Siguiente <ChevronRight size={15} />
+              </button>
+            ) : (
+              <button type="submit" disabled={loading} className="btn-primary flex items-center gap-2 min-w-[140px] justify-center disabled:opacity-50">
+                {loading ? <span className="animate-spin w-4 h-4 border-2 border-white/30 border-t-white rounded-full" /> : <><Check size={15} /> Crear cuenta</>}
+              </button>
+            )}
+          </div>
+        </form>
+
+        <p className="text-center text-xs text-muted pb-5">
+          ¿Ya tenés cuenta?{' '}
+          <Link to="/login" onClick={onClose} className="text-brand-blue font-semibold hover:underline">Iniciar sesión</Link>
+        </p>
       </div>
     </div>
   );
