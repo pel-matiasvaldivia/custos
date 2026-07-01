@@ -35,6 +35,7 @@ import { ClienteModule } from './cliente/cliente.module';
 import { ContratoConfigModule } from './contrato-config/contrato-config.module';
 import { RelevosModule } from './modules/relevos/relevos.module';
 import { LiquidacionesModule } from './modules/liquidaciones/liquidaciones.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { VigilanteAuthModule } from './modules/vigilante-auth/vigilante-auth.module';
 import { SuscripcionModule } from './modules/suscripcion/suscripcion.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
@@ -72,6 +73,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     ContratoConfigModule,
     RelevosModule,
     LiquidacionesModule,
+    DashboardModule,
     VigilanteAuthModule,
     SuscripcionModule,
     UsuariosModule,
