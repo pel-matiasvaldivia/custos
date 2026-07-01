@@ -25,6 +25,8 @@ export const QuoteWizard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<any>(null);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const [quote, setQuote] = useState({
     cliente_id: '',
     cliente_nombre: '',
@@ -82,21 +84,45 @@ export const QuoteWizard = () => {
   };
 
   const handleSave = async () => {
-    const payload = {
-      cliente_id: quote.cliente_id || undefined,
-      cliente_nombre: quote.cliente_nombre || undefined,
-      vencimiento: quote.vencimiento,
-      items: quote.items.map(item => ({
-        puesto_nombre: item.puesto_nombre,
-        tipo: item.tipo,
-        horas_mensuales: item.horas_mensuales,
-        margen: item.margen,
-        costo_hora: item.costo_hora,
-        subtotal: calculateSubtotal(item),
-      })),
-    };
-    await api.post('/cotizaciones', payload);
-    navigate('/quotes');
+    setError('');
+    // Descarta ítems totalmente vacíos y completa la descripción faltante con la
+    // etiqueta del tipo (el backend exige puesto_nombre no vacío, por eso el 400
+    // cuando se agregaba, p. ej., un ítem de vehículo sin descripción).
+    const items = quote.items
+      .filter(it => it.puesto_nombre.trim() !== '' || it.horas_mensuales > 0)
+      .map(it => ({
+        puesto_nombre: it.puesto_nombre.trim() || TIPO_HORA_LABELS[it.tipo],
+        tipo: it.tipo,
+        horas_mensuales: it.horas_mensuales,
+        margen: it.margen,
+        costo_hora: it.costo_hora,
+        subtotal: calculateSubtotal(it),
+      }));
+
+    if (items.length === 0) {
+      setError('Agregá al menos un ítem con horas.');
+      return;
+    }
+    if (items.some(it => !(it.horas_mensuales >= 1))) {
+      setError('Cada ítem debe tener al menos 1 hora mensual.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.post('/cotizaciones', {
+        cliente_id: quote.cliente_id || undefined,
+        cliente_nombre: quote.cliente_nombre || undefined,
+        vencimiento: quote.vencimiento,
+        items,
+      });
+      navigate('/quotes');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message;
+      setError(Array.isArray(msg) ? msg.join(' · ') : (msg || 'No se pudo generar la cotización.'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) return <div className="p-8 text-muted">Cargando motor de cálculo...</div>;
@@ -272,14 +298,19 @@ export const QuoteWizard = () => {
             <button
               onClick={handleSave}
               className="btn btn-primary w-full mt-8 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!quote.cliente_id || total === 0}
+              disabled={!quote.cliente_id || total === 0 || saving}
             >
               <Save size={20} />
-              Generar Cotización
+              {saving ? 'Generando...' : 'Generar Cotización'}
             </button>
             {!quote.cliente_id && (
               <p className="text-xs text-amber mt-2 text-center">
                 Seleccioná o creá un cliente para poder generar la cotización.
+              </p>
+            )}
+            {error && (
+              <p className="text-xs text-red-300 bg-red-500/10 border border-red-400/20 rounded-lg px-3 py-2 mt-2 text-center">
+                {error}
               </p>
             )}
           </div>

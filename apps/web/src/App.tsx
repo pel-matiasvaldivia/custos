@@ -22,6 +22,7 @@ import ComprasPage from './pages/compras/ComprasPage';
 import { HerramientasPage } from './pages/herramientas/HerramientasPage';
 import { RelevosPage } from './pages/relevos/RelevosPage';
 import { LiquidacionesPage } from './pages/liquidaciones/LiquidacionesPage';
+import { DashboardPage } from './pages/dashboard/DashboardPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -33,27 +34,7 @@ import { TrialBanner } from './components/layout/TrialBanner';
 import { ExpiredGate } from './components/layout/ExpiredGate';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-/* ─── Dashboard placeholder ─── */
-const Dashboard = () => (
-  <div>
-    <h2 className="text-3xl font-display font-bold text-navy mb-2">Bienvenido a CustOS</h2>
-    <p className="text-muted text-lg">Resumen de operaciones y alertas rápidas.</p>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-      <div className="card">
-        <h3 className="text-muted font-medium mb-1 uppercase text-xs tracking-wider">Vigiladores Activos</h3>
-        <p className="text-4xl font-bold text-navy">24</p>
-      </div>
-      <div className="card border-amber/20 bg-amber/5">
-        <h3 className="text-amber font-medium mb-1 uppercase text-xs tracking-wider">Credenciales por Vencer</h3>
-        <p className="text-4xl font-bold text-amber">3</p>
-      </div>
-      <div className="card">
-        <h3 className="text-muted font-medium mb-1 uppercase text-xs tracking-wider">Cobertura Hoy</h3>
-        <p className="text-4xl font-bold text-emerald">98%</p>
-      </div>
-    </div>
-  </div>
-);
+const Dashboard = DashboardPage;
 
 /* ─── ERP Layout (sidebar + content) ─── */
 const AppLayout = () => (
