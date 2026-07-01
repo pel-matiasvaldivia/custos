@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calculator, Search, Clock, AlertTriangle, Lock, CheckCircle2 } from 'lucide-react';
 import { liquidacionService, LiquidacionItem } from '../../services/liquidacion.service';
+import { PageHint } from '../../components/common/PageHint';
 
 const hoy = new Date();
 const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
@@ -71,6 +72,10 @@ export const LiquidacionesPage = () => {
 
   return (
     <div className="space-y-8">
+      <PageHint id="liquidaciones" title="Cerrá el período y liquidá horas">
+        Elegí el período y el sistema calcula las horas exactas por vigilador según la asistencia real
+        (presentes, ausencias, llegadas tarde, recargos). Necesitás tener el valor hora cargado en cada ficha.
+      </PageHint>
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy flex items-center gap-2">

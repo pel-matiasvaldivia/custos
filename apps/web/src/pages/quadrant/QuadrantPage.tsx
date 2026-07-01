@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { PageHint } from '../../components/common/PageHint';
 
 export const QuadrantPage = () => {
   const [currentMonth] = useState(new Date());
@@ -9,6 +10,10 @@ export const QuadrantPage = () => {
 
   return (
     <div className="space-y-6 overflow-hidden flex flex-col h-full">
+      <PageHint id="cuadrante" title="La vista global de la operación">
+        Acá ves la distribución de servicios y turnos del mes. Los turnos se arman desde cada objetivo
+        (afectando vigiladores a los puestos); esta pantalla es la foto consolidada.
+      </PageHint>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy">Cuadrante Operativo</h2>

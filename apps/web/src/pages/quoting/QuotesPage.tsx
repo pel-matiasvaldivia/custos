@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { cotizacionService, Cotizacion, EstadoCotizacion } from '../../services/cotizacion.service';
 import { CotizacionDocumentoModal } from './CotizacionDocumentoModal';
 import { ContratoCreatedModal } from './ContratoCreatedModal';
+import { PageHint } from '../../components/common/PageHint';
 import { Contrato } from '../../services/objetivo.service';
 
 export const QuotesPage = () => {
@@ -59,6 +60,10 @@ export const QuotesPage = () => {
 
   return (
     <div className="space-y-8">
+      <PageHint id="cotizaciones" title="Presupuestá servicios y generá el PDF">
+        Creá una cotización cargando ítems por horas hombre, vehículo o servicios especiales. Al aceptarla
+        podés convertirla en contrato, y generar el PDF con tu logo y la firma del director.
+      </PageHint>
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy">Cotizaciones</h2>

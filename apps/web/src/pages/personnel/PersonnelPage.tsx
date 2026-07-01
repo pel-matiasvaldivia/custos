@@ -6,6 +6,7 @@ import {
   estadoMeta,
 } from '../../services/vigilante.service';
 import { UserPlus, Search, MoreVertical, Pencil, Upload } from 'lucide-react';
+import { PageHint } from '../../components/common/PageHint';
 
 const badgeClase = (badge: 'ok' | 'alert' | 'muted') =>
   badge === 'ok' ? 'status-badge-ok' : badge === 'alert' ? 'status-badge-alert' : 'status-badge';
@@ -53,6 +54,10 @@ export const PersonnelPage = () => {
 
   return (
     <div className="space-y-6">
+      <PageHint id="personal" title="Acá cargás a tus vigiladores">
+        Dá de alta al personal con "Nuevo Vigilador" o importalos en masa desde Excel. El estado de cada uno
+        (Activo, Vacaciones, Licencia, etc.) define si está disponible para asignarse a un puesto.
+      </PageHint>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy">Personal</h2>
