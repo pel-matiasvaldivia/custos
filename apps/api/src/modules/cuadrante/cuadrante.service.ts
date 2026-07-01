@@ -493,10 +493,27 @@ export class CuadranteService {
     });
     if (!asig)
       throw new NotFoundException('Asignación de esquema no encontrada');
-    return this.prisma.asignacionEsquema.update({
-      where: { id },
-      data: { vigente_hasta: vigenteHasta },
-    });
+
+    const now = new Date();
+    const [asignacionActualizada, { count: turnosBorrados }] =
+      await this.prisma.$transaction([
+        this.prisma.asignacionEsquema.update({
+          where: { id },
+          data: { vigente_hasta: vigenteHasta },
+        }),
+        // Borrar turnos futuros PLANIFICADOS de esta asignación. Los que ya
+        // ocurrieron (inicio_plan <= now) se conservan para historial/liquidaciones.
+        this.prisma.turnoPlanificado.deleteMany({
+          where: {
+            tenant_id: tenantId,
+            asignacion_esquema_id: id,
+            inicio_plan: { gt: now },
+            estado: 'PLANIFICADA',
+          },
+        }),
+      ]);
+
+    return { ...asignacionActualizada, turnosBorrados };
   }
 
   // ─── Cobertura por puesto ───
