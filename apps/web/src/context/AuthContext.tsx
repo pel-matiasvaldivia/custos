@@ -10,10 +10,20 @@ interface AuthUser {
   impersonating?: boolean;
 }
 
+export interface RegistroPayload {
+  empresa_nombre: string;
+  razon_social?: string;
+  cuit?: string;
+  email: string;
+  password: string;
+  telefono?: string;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  registro: (data: RegistroPayload) => Promise<{ trial_hasta: string }>;
   logout: () => void;
   isLoading: boolean;
   switchTenant: (tenantId: string) => Promise<void>;
@@ -54,6 +64,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setToken(access_token);
   };
 
+  const registro = async (data: RegistroPayload) => {
+    const res = await api.post('/auth/registro', data);
+    const { access_token, user: userData, trial_hasta } = res.data;
+    localStorage.setItem('token', access_token);
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    }
+    setToken(access_token);
+    return { trial_hasta };
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -91,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading, switchTenant, exitImpersonation }}>
+    <AuthContext.Provider value={{ user, token, login, registro, logout, isLoading, switchTenant, exitImpersonation }}>
       {children}
     </AuthContext.Provider>
   );

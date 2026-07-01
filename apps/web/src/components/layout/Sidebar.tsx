@@ -13,7 +13,8 @@ import {
   Zap,
   Building2,
   Wrench,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -55,6 +56,7 @@ const navGroups = [
   {
     label: 'Sistema',
     items: [
+      { icon: CreditCard, label: 'Suscripción', path: '/suscripcion' },
       { icon: Settings, label: 'Onboarding', path: '/onboarding' },
       { icon: Settings, label: 'Configuración', path: '/settings' },
     ],

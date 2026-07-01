@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -117,6 +118,87 @@ export class AuthService {
         tenantNombre: tenant.nombre,
         impersonating: true,
       },
+    };
+  }
+
+  /**
+   * Registro público: crea un nuevo Tenant + User ADMIN y devuelve el JWT
+   * listo para usar (el cliente no tiene que hacer un login por separado).
+   * El tenant arranca en plan TRIAL con 30 días de validez.
+   */
+  async registro(data: {
+    empresa_nombre: string;
+    razon_social?: string;
+    cuit?: string;
+    email: string;
+    password: string;
+    telefono?: string;
+  }) {
+    // Email must be unique
+    const existeUser = await this.prisma.user.findUnique({
+      where: { email: data.email },
+    });
+    if (existeUser) {
+      throw new BadRequestException(
+        'Ya existe una cuenta con ese correo electrónico.',
+      );
+    }
+
+    // CUIT unique across tenants (if provided)
+    if (data.cuit) {
+      const existeCuit = await this.prisma.tenant.findUnique({
+        where: { cuit: data.cuit },
+      });
+      if (existeCuit) {
+        throw new BadRequestException('Ya existe una empresa registrada con ese CUIT.');
+      }
+    }
+
+    const trialHasta = new Date();
+    trialHasta.setDate(trialHasta.getDate() + 30);
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    // Create tenant
+    const tenant = await this.prisma.tenant.create({
+      data: {
+        nombre: data.empresa_nombre,
+        razon_social: data.razon_social,
+        cuit: data.cuit,
+        email_contacto: data.email,
+        telefono_contacto: data.telefono,
+        plan: 'TRIAL',
+        trial_hasta: trialHasta,
+      },
+    });
+
+    // Create ADMIN user for this tenant
+    const user = await this.prisma.user.create({
+      data: {
+        tenant_id: tenant.id,
+        email: data.email,
+        password: hashedPassword,
+        role: 'ADMIN',
+      },
+    });
+
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      tenant_id: tenant.id,
+      role: 'ADMIN',
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        role: 'ADMIN',
+        tenantId: tenant.id,
+        tenantNombre: tenant.nombre,
+      },
+      trial_hasta: trialHasta,
     };
   }
 }
