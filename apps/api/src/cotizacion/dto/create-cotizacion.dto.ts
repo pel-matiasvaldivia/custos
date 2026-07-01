@@ -2,6 +2,7 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
+  IsIn,
   IsUUID,
   IsDateString,
   IsArray,
@@ -15,6 +16,10 @@ class CotizacionItemDto {
   @IsString()
   @IsNotEmpty()
   puesto_nombre: string;
+
+  @IsOptional()
+  @IsIn(['HORAS_HOMBRE', 'HORAS_VEHICULO', 'HORAS_SERVICIO_ESPECIAL'])
+  tipo?: string;
 
   @IsNumber()
   @Min(1)
