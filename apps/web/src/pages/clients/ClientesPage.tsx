@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { clienteService, Cliente } from '../../services/cliente.service';
 import { ClienteForm } from './ClienteForm';
+import { PageHint } from '../../components/common/PageHint';
 
 export const ClientesPage = () => {
   const navigate = useNavigate();
@@ -38,6 +39,10 @@ export const ClientesPage = () => {
 
   return (
     <div className="space-y-6">
+      <PageHint id="clientes" title="Tus clientes viven acá">
+        Registrá las empresas o personas a las que les prestás servicio. Después vas a poder vincularles
+        objetivos, contratos y cotizaciones.
+      </PageHint>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy">Clientes</h2>

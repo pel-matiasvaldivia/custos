@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, MessageSquare, Clock, User, MapPin } from 'lucide-react';
 import api from '../../services/api';
 import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
+import { PageHint } from '../../components/common/PageHint';
 
 export const NovedadesPage = () => {
   const [novedades, setNovedades] = useState<any[]>([]);
@@ -59,6 +60,10 @@ export const NovedadesPage = () => {
 
   return (
     <div className="space-y-8">
+      <PageHint id="novedades" title="El registro vivo de lo que pasa en los puestos">
+        Cargá incidencias, partes y eventos (incluido "Adelanto de sueldo", que impacta en la liquidación).
+        El tipo de novedad sale del catálogo que configurás en Configuración › Catálogos.
+      </PageHint>
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy">Novedades del Servicio</h2>

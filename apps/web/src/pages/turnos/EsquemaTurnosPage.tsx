@@ -3,6 +3,7 @@ import { LayoutGrid, FileText, RefreshCw } from 'lucide-react';
 import { CatalogoEsquemasTab } from './CatalogoEsquemasTab';
 import { PorContratoTab } from './PorContratoTab';
 import { SolicitudesCambioTab } from './SolicitudesCambioTab';
+import { PageHint } from '../../components/common/PageHint';
 
 type TabPrincipal = 'esquemas' | 'solicitudes';
 type VistaEsquemas = 'catalogo' | 'contrato';
@@ -19,6 +20,12 @@ export const EsquemaTurnosPage = () => {
           Definí cómo se cubren los puestos y gestioná los cambios de turno del personal.
         </p>
       </div>
+
+      <PageHint id="esquema_turnos" title="Dos formas de ver lo mismo">
+        En "Por contrato" ves cada objetivo con sus horas a cubrir y qué falta; en "Catálogo" armás los
+        patrones de turno reutilizables (12×24, 24×48…). La pestaña "Solicitudes de cambio" es para aprobar
+        los relevos que piden los guardias desde el móvil.
+      </PageHint>
 
       {/* Pestañas principales */}
       <div className="flex gap-1 border-b border-line">

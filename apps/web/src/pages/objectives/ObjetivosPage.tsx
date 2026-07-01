@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Search, MapPin } from 'lucide-react';
 import { objetivoService, Objetivo } from '../../services/objetivo.service';
 import { ObjetivoForm } from './ObjetivoForm';
+import { PageHint } from '../../components/common/PageHint';
 
 export const ObjetivosPage = () => {
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
@@ -37,6 +38,10 @@ export const ObjetivosPage = () => {
 
   return (
     <div className="space-y-6">
+      <PageHint id="objetivos" title="Los lugares que cubrís">
+        Un objetivo es el sitio a vigilar (barrio, fábrica, local). Creá el objetivo, cargale sus puestos y
+        desde el detalle armás el cuadrante afectando vigiladores a cada puesto.
+      </PageHint>
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-display font-bold text-navy">Objetivos</h2>
