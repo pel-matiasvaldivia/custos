@@ -5,12 +5,15 @@ import {
   Get,
   Put,
   Post,
+  Param,
+  Res,
   Request,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { ContratoConfigService } from './contrato-config.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -22,15 +25,35 @@ const TIPOS_FIRMA_PERMITIDOS = ['image/png', 'image/jpeg'];
 const TAMANO_MAXIMO_FIRMA_BYTES = 2 * 1024 * 1024; // 2 MB
 
 @Controller('config/contrato')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class ContratoConfigController {
   constructor(private readonly contratoConfigService: ContratoConfigService) {}
 
+  /** Proxy público — los navegadores no pueden enviar Authorization en <img src>. */
+  @Get('tenants/:tenantId/logo')
+  async servirLogo(@Param('tenantId') tenantId: string, @Res() res: Response) {
+    const { stream, contentType } =
+      await this.contratoConfigService.servirLogo(tenantId);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    stream.pipe(res);
+  }
+
+  @Get('tenants/:tenantId/firma')
+  async servirFirma(@Param('tenantId') tenantId: string, @Res() res: Response) {
+    const { stream, contentType } =
+      await this.contratoConfigService.servirFirma(tenantId);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    stream.pipe(res);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Get()
   findOne(@Request() req: any) {
     return this.contratoConfigService.findOne(req.user.tenantId);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Put()
   @Roles('ADMIN', 'GERENCIA')
   updatePlantilla(
@@ -43,6 +66,7 @@ export class ContratoConfigController {
     );
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('firma')
   @Roles('ADMIN', 'GERENCIA')
   @UseInterceptors(FileInterceptor('file'))
@@ -70,6 +94,7 @@ export class ContratoConfigController {
     );
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Post('logo')
   @Roles('ADMIN', 'GERENCIA')
   @UseInterceptors(FileInterceptor('file'))

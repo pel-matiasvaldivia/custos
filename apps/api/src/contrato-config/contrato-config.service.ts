@@ -24,8 +24,10 @@ export class ContratoConfigService {
       });
     }
 
+    // Use proxy URLs (/api/v1/config/contrato/tenants/:id/...) so the browser
+    // doesn't try to reach the internal MinIO host directly via a presigned URL.
     const firma_url = config.firma_key
-      ? await this.storageService.obtenerUrlFirmada(config.firma_key)
+      ? `/api/v1/config/contrato/tenants/${tenantId}/firma?v=${config.firma_key.slice(-8)}`
       : null;
 
     // logo_key is a new column — read via queryRaw to avoid Prisma client type mismatch
@@ -34,7 +36,7 @@ export class ContratoConfigService {
     `;
     const logo_key = logoRows[0]?.logo_key ?? null;
     const logo_url = logo_key
-      ? await this.storageService.obtenerUrlFirmada(logo_key)
+      ? `/api/v1/config/contrato/tenants/${tenantId}/logo?v=${logo_key.slice(-8)}`
       : null;
 
     return { ...config, firma_url, logo_key, logo_url };
@@ -87,10 +89,25 @@ export class ContratoConfigService {
         .catch(() => undefined);
     }
 
-    const firma_url = await this.storageService.obtenerUrlFirmada(
-      actualizado.firma_key!,
-    );
+    const firma_url = `/api/v1/config/contrato/tenants/${tenantId}/firma?v=${actualizado.firma_key!.slice(-8)}`;
     return { ...actualizado, firma_url };
+  }
+
+  async servirLogo(tenantId: string) {
+    const rows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
+      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
+    `;
+    const key = rows[0]?.logo_key;
+    if (!key) throw new Error('Sin logo');
+    return this.storageService.descargar(key);
+  }
+
+  async servirFirma(tenantId: string) {
+    const config = await this.prisma.configuracionContrato.findUnique({
+      where: { tenant_id: tenantId },
+    });
+    if (!config?.firma_key) throw new Error('Sin firma');
+    return this.storageService.descargar(config.firma_key);
   }
 
   async actualizarLogo(tenantId: string, file: Express.Multer.File) {
@@ -115,7 +132,7 @@ export class ContratoConfigService {
       await this.storageService.eliminar(existenteLogo).catch(() => undefined);
     }
 
-    const logo_url = await this.storageService.obtenerUrlFirmada(subida.key);
+    const logo_url = `/api/v1/config/contrato/tenants/${tenantId}/logo?v=${subida.key.slice(-8)}`;
     return { logo_key: subida.key, logo_url };
   }
 }
