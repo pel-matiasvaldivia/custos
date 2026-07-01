@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
 /**
@@ -7,9 +7,13 @@ import { PrismaService } from '../../prisma/prisma.service';
  * (inicio_real / fin_real / asistencia_estado) y de las novedades del período
  * (ausencias, llegadas tarde, suspensiones y adelantos de sueldo).
  *
- * El cómputo de horas no depende de ninguna tabla nueva: se apoya en los datos
- * que ya genera la operación. El valor monetario se aplica en el frontend según
- * el modo elegido (valor hora manual, básico 507 o sólo cómputo de horas).
+ * El modo de cálculo lo define el tenant (elegido en el onboarding):
+ *   - VALOR_HORA_MANUAL: valor hora por vigilador (o el default del período).
+ *   - BASICO_507:        idem, tomando el valor hora de la categoría (a cargar).
+ *   - SOLO_HORAS:        sólo computa horas, sin montos.
+ *
+ * Los adelantos de sueldo se descuentan del neto tomándolos del ledger `adelantos`
+ * (una cuota por período; ante baja del vigilador, el saldo completo).
  */
 @Injectable()
 export class LiquidacionesService {
@@ -21,7 +25,6 @@ export class LiquidacionesService {
 
   /** Horas del intervalo [ini,fin] que caen dentro de la ventana nocturna. */
   private horasNocturnas(ini: Date, fin: Date, desdeH: number, hastaH: number): number {
-    // Ventana nocturna cruza medianoche (ej. 21 → 06). Recorremos hora a hora.
     let noct = 0;
     const cursor = new Date(ini);
     while (cursor < fin) {
@@ -35,66 +38,272 @@ export class LiquidacionesService {
     return noct;
   }
 
-  async computar(tenantId: string, desdeStr: string, hastaStr: string) {
+  private parseFechas(desdeStr: string, hastaStr: string) {
     const desde = new Date(desdeStr);
     const hasta = new Date(hastaStr);
     if (isNaN(desde.getTime()) || isNaN(hasta.getTime())) {
       throw new BadRequestException('Rango de fechas inválido.');
     }
     hasta.setHours(23, 59, 59, 999);
+    return { desde, hasta };
+  }
 
-    const regla = await this.prisma.reglaLaboral.findUnique({
-      where: { tenant_id: tenantId },
-      select: { ventana_nocturna_inicio: true, ventana_nocturna_fin: true },
-    });
+  /**
+   * Cómputo (preview, no persiste). Devuelve horas + montos por vigilador.
+   * El descuento de adelanto es proyectado (una cuota) sin mutar el ledger.
+   */
+  async computar(
+    tenantId: string,
+    desdeStr: string,
+    hastaStr: string,
+    valorHoraDefault = 0,
+  ) {
+    const { desde, hasta } = this.parseFechas(desdeStr, hastaStr);
+
+    const [tenant, regla] = await Promise.all([
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { modo_liquidacion: true },
+      }),
+      this.prisma.reglaLaboral.findUnique({
+        where: { tenant_id: tenantId },
+        select: {
+          ventana_nocturna_inicio: true,
+          ventana_nocturna_fin: true,
+          recargo_nocturno_pct: true,
+          recargo_extra_pct: true,
+        },
+      }),
+    ]);
+
+    const modo = tenant?.modo_liquidacion ?? 'VALOR_HORA_MANUAL';
+    const conMontos = modo !== 'SOLO_HORAS';
     const noctIni = parseInt((regla?.ventana_nocturna_inicio ?? '21:00').split(':')[0], 10);
     const noctFin = parseInt((regla?.ventana_nocturna_fin ?? '06:00').split(':')[0], 10);
+    const recNoct = (regla?.recargo_nocturno_pct ?? 20) / 100;
+    const recExtra = (regla?.recargo_extra_pct ?? 50) / 100;
 
-    const [vigiladores, turnos, novedades] = await Promise.all([
+    const [vigiladores, turnos, adelantos] = await Promise.all([
       this.prisma.vigilador.findMany({
         where: { tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
-        select: { id: true, legajo_nro: true, nombre: true, apellido: true },
+        select: {
+          id: true, legajo_nro: true, nombre: true, apellido: true,
+          valor_hora: true, estado: true,
+        },
         orderBy: { apellido: 'asc' },
       }),
       this.prisma.turnoPlanificado.findMany({
         where: { tenant_id: tenantId, inicio_plan: { gte: desde, lte: hasta } },
         select: {
-          vigilador_id: true,
-          inicio_plan: true,
-          fin_plan: true,
-          inicio_real: true,
-          fin_real: true,
-          asistencia_estado: true,
-          estado: true,
+          vigilador_id: true, inicio_plan: true, fin_plan: true,
+          inicio_real: true, fin_real: true, asistencia_estado: true, estado: true,
         },
       }),
-      this.prisma.novedad.findMany({
-        where: { tenant_id: tenantId, created_at: { gte: desde, lte: hasta } },
-        select: { vigilador_id: true, tipo: true, descripcion: true },
+      this.prisma.adelanto.findMany({
+        where: { tenant_id: tenantId, estado: 'VIGENTE' },
+        select: { vigilador_id: true, monto: true, cuotas: true, saldo: true },
       }),
     ]);
 
+    const acc = this.agregarTurnos(vigiladores.map((v) => v.id), turnos, noctIni, noctFin);
+
+    // Suspensiones desde novedades
+    const susp = await this.prisma.novedad.findMany({
+      where: {
+        tenant_id: tenantId,
+        created_at: { gte: desde, lte: hasta },
+        tipo: 'SUSPENSION',
+      },
+      select: { vigilador_id: true },
+    });
+    for (const s of susp) {
+      if (s.vigilador_id && acc[s.vigilador_id]) acc[s.vigilador_id].suspension_dias += 1;
+    }
+
+    // Adelanto proyectado por vigilador (una cuota)
+    const cuotaPorVig: Record<string, number> = {};
+    for (const a of adelantos) {
+      if (!a.vigilador_id) continue;
+      const cuota = Math.min(Number(a.saldo), Number(a.monto) / (a.cuotas || 1));
+      cuotaPorVig[a.vigilador_id] = (cuotaPorVig[a.vigilador_id] ?? 0) + cuota;
+    }
+
+    const round = (n: number) => Math.round(n * 100) / 100;
+    return {
+      modo,
+      con_montos: conMontos,
+      items: vigiladores.map((v) => {
+        const a = acc[v.id];
+        const vh = conMontos ? Number(v.valor_hora ?? 0) || valorHoraDefault : 0;
+        const bruto =
+          vh * a.hh_trabajadas + vh * recNoct * a.hh_nocturnas + vh * recExtra * a.hh_extra;
+        const descSuspension = vh * a.suspension_dias * 8;
+        const adelanto = round(cuotaPorVig[v.id] ?? 0);
+        const neto = Math.max(0, bruto - descSuspension - adelanto);
+        return {
+          vigilador_id: v.id,
+          legajo: v.legajo_nro,
+          nombre: v.nombre,
+          apellido: v.apellido,
+          valor_hora: vh,
+          turnos: a.turnos_count,
+          hh_planificadas: round(a.hh_planificadas),
+          hh_trabajadas: round(a.hh_trabajadas),
+          hh_ausentes: round(a.hh_ausentes),
+          hh_nocturnas: round(a.hh_nocturnas),
+          hh_extra: round(a.hh_extra),
+          llegadas_tarde: a.llegadas_tarde_count,
+          llegadas_tarde_min: a.llegadas_tarde_min,
+          suspension_dias: a.suspension_dias,
+          bruto: round(bruto),
+          descuentos: round(descSuspension),
+          adelanto_desc: adelanto,
+          neto: round(neto),
+        };
+      }),
+    };
+  }
+
+  /** Cierra el período: persiste la liquidación + items y descuenta los adelantos. */
+  async cerrar(
+    tenantId: string,
+    dto: { desde: string; hasta: string; modo?: string; valor_hora_default?: number },
+  ) {
+    const preview = await this.computar(
+      tenantId,
+      dto.desde,
+      dto.hasta,
+      dto.valor_hora_default ?? 0,
+    );
+    const { desde, hasta } = this.parseFechas(dto.desde, dto.hasta);
+
+    return this.prisma.$transaction(async (tx) => {
+      const cabecera = await tx.liquidacion.create({
+        data: {
+          tenant_id: tenantId,
+          periodo_desde: desde,
+          periodo_hasta: hasta,
+          modo: dto.modo ?? preview.modo,
+          estado: 'CERRADA',
+          total_neto: preview.items.reduce((s, i) => s + i.neto, 0),
+        },
+      });
+
+      for (const it of preview.items) {
+        await tx.liquidacionItem.create({
+          data: {
+            tenant_id: tenantId,
+            liquidacion_id: cabecera.id,
+            vigilador_id: it.vigilador_id,
+            hh_trabajadas: it.hh_trabajadas,
+            hh_nocturnas: it.hh_nocturnas,
+            hh_extra: it.hh_extra,
+            hh_ausentes: it.hh_ausentes,
+            llegadas_tarde: it.llegadas_tarde,
+            suspension_dias: it.suspension_dias,
+            bruto: it.bruto,
+            descuentos: it.descuentos,
+            adelanto_desc: it.adelanto_desc,
+            neto: it.neto,
+          },
+        });
+      }
+
+      // Amortiza los adelantos vigentes: una cuota por período (o el saldo total
+      // si el vigilador ya no está activo — baja → descuento final).
+      const adelantos = await tx.adelanto.findMany({
+        where: { tenant_id: tenantId, estado: 'VIGENTE' },
+        include: { vigilador: { select: { estado: true } } },
+      });
+      for (const a of adelantos) {
+        const baja = a.vigilador?.estado !== 'ACTIVO';
+        const cuota = baja
+          ? Number(a.saldo)
+          : Math.min(Number(a.saldo), Number(a.monto) / (a.cuotas || 1));
+        const nuevoSaldo = Math.max(0, Number(a.saldo) - cuota);
+        const cuotasPagas = Math.min(a.cuotas, a.cuotas_pagas + 1);
+        await tx.adelanto.update({
+          where: { id: a.id },
+          data: {
+            saldo: nuevoSaldo,
+            cuotas_pagas: cuotasPagas,
+            estado: nuevoSaldo <= 0 || baja ? 'SALDADO' : 'VIGENTE',
+          },
+        });
+      }
+
+      return cabecera;
+    });
+  }
+
+  /** Modo de liquidación configurado por el tenant (elegible en el onboarding). */
+  async getConfig(tenantId: string) {
+    const t = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { modo_liquidacion: true },
+    });
+    return { modo: t?.modo_liquidacion ?? 'VALOR_HORA_MANUAL' };
+  }
+
+  async setModo(tenantId: string, modo: string) {
+    const permitidos = ['VALOR_HORA_MANUAL', 'BASICO_507', 'SOLO_HORAS'];
+    if (!permitidos.includes(modo)) {
+      throw new BadRequestException('Modo de liquidación inválido.');
+    }
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: { modo_liquidacion: modo },
+    });
+    return { modo };
+  }
+
+  /** Historial de liquidaciones cerradas. */
+  async historial(tenantId: string) {
+    return this.prisma.liquidacion.findMany({
+      where: { tenant_id: tenantId },
+      orderBy: { periodo_desde: 'desc' },
+    });
+  }
+
+  async obtener(tenantId: string, id: string) {
+    const liq = await this.prisma.liquidacion.findFirst({
+      where: { id, tenant_id: tenantId },
+      include: {
+        items: { include: { vigilador: { select: { legajo_nro: true, nombre: true, apellido: true } } } },
+      },
+    });
+    if (!liq) throw new NotFoundException('Liquidación no encontrada.');
+    return liq;
+  }
+
+  // ── helpers ──
+  private agregarTurnos(
+    vigiladorIds: string[],
+    turnos: Array<{
+      vigilador_id: string;
+      inicio_plan: Date;
+      fin_plan: Date;
+      inicio_real: Date | null;
+      fin_real: Date | null;
+      asistencia_estado: string;
+      estado: string;
+    }>,
+    noctIni: number,
+    noctFin: number,
+  ) {
     type Acc = {
-      hh_planificadas: number;
-      hh_trabajadas: number;
-      hh_ausentes: number;
-      hh_nocturnas: number;
-      hh_extra: number;
-      llegadas_tarde_count: number;
-      llegadas_tarde_min: number;
-      suspension_dias: number;
-      adelanto_monto: number;
-      turnos_count: number;
+      hh_planificadas: number; hh_trabajadas: number; hh_ausentes: number;
+      hh_nocturnas: number; hh_extra: number; llegadas_tarde_count: number;
+      llegadas_tarde_min: number; suspension_dias: number; turnos_count: number;
     };
     const base = (): Acc => ({
       hh_planificadas: 0, hh_trabajadas: 0, hh_ausentes: 0, hh_nocturnas: 0,
       hh_extra: 0, llegadas_tarde_count: 0, llegadas_tarde_min: 0,
-      suspension_dias: 0, adelanto_monto: 0, turnos_count: 0,
+      suspension_dias: 0, turnos_count: 0,
     });
     const acc: Record<string, Acc> = {};
-    for (const v of vigiladores) acc[v.id] = base();
+    for (const id of vigiladorIds) acc[id] = base();
 
-    // Turnos → horas trabajadas, ausencias, extra, nocturnas, llegadas tarde
     for (const t of turnos) {
       const a = acc[t.vigilador_id];
       if (!a) continue;
@@ -119,40 +328,6 @@ export class LiquidacionesService {
         a.llegadas_tarde_min += Math.round(tardeMin);
       }
     }
-
-    // Novedades → suspensiones, adelantos, ausencias declaradas
-    for (const n of novedades) {
-      const a = n.vigilador_id ? acc[n.vigilador_id] : undefined;
-      if (!a) continue;
-      if (n.tipo === 'SUSPENSION') {
-        a.suspension_dias += 1;
-      } else if (n.tipo === 'ADELANTO_SUELDO') {
-        // El modal codifica el monto como "[ADELANTO monto=NNN cuotas=N]".
-        const m = /monto=(\d+(?:\.\d+)?)/.exec(n.descripcion || '');
-        if (m) a.adelanto_monto += parseFloat(m[1]);
-      }
-    }
-
-    const round = (n: number) => Math.round(n * 100) / 100;
-    return vigiladores.map((v) => {
-      const a = acc[v.id];
-      const hhNetas = round(a.hh_trabajadas); // horas efectivamente trabajadas a pagar
-      return {
-        vigilador_id: v.id,
-        legajo: v.legajo_nro,
-        nombre: v.nombre,
-        apellido: v.apellido,
-        turnos: a.turnos_count,
-        hh_planificadas: round(a.hh_planificadas),
-        hh_trabajadas: hhNetas,
-        hh_ausentes: round(a.hh_ausentes),
-        hh_nocturnas: round(a.hh_nocturnas),
-        hh_extra: round(a.hh_extra),
-        llegadas_tarde: a.llegadas_tarde_count,
-        llegadas_tarde_min: a.llegadas_tarde_min,
-        suspension_dias: a.suspension_dias,
-        adelanto_monto: round(a.adelanto_monto),
-      };
-    });
+    return acc;
   }
 }

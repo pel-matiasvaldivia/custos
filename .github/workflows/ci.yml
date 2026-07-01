@@ -1,0 +1,39 @@
+name: CI
+
+# Verificación de tipos. Corre en cada PR y push. El paso clave es
+# `prisma generate` ANTES del type-check: regenera el cliente Prisma con los
+# modelos del schema (Liquidacion, Adelanto, etc.) para que `tsc` los conozca.
+# Sin este paso, el type-check fallaría con "Property 'adelanto' does not exist
+# on type 'PrismaService'".
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --include=dev
+
+      - name: Generate Prisma client
+        run: npx prisma generate --schema=apps/api/prisma/schema.prisma
+
+      - name: Type-check API
+        run: npx tsc --noEmit
+        working-directory: apps/api
+
+      - name: Type-check Web
+        run: npx tsc --noEmit
+        working-directory: apps/web

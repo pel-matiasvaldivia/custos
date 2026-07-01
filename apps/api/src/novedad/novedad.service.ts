@@ -8,7 +8,7 @@ export class NovedadService {
   constructor(private prisma: PrismaService) {}
 
   async create(tenantId: string, data: CreateNovedadDto) {
-    return this.prisma.novedad.create({
+    const novedad = await this.prisma.novedad.create({
       data: {
         tenant_id: tenantId,
         puesto_id: data.puesto_id,
@@ -23,6 +23,28 @@ export class NovedadService {
         vigilador: true,
       },
     });
+
+    // Adelanto de sueldo: la descripción trae "[ADELANTO monto=NNN cuotas=N]".
+    // Se registra en el ledger de adelantos para que Liquidaciones lo descuente.
+    if (data.tipo === 'ADELANTO_SUELDO' && data.vigilador_id) {
+      const monto = parseFloat(/monto=(\d+(?:\.\d+)?)/.exec(data.descripcion || '')?.[1] ?? '0');
+      const cuotas = parseInt(/cuotas=(\d+)/.exec(data.descripcion || '')?.[1] ?? '1', 10);
+      if (monto > 0) {
+        await this.prisma.adelanto.create({
+          data: {
+            tenant_id: tenantId,
+            vigilador_id: data.vigilador_id,
+            novedad_id: novedad.id,
+            monto,
+            cuotas: Math.min(Math.max(cuotas, 1), 6),
+            saldo: monto,
+            estado: 'VIGENTE',
+          },
+        });
+      }
+    }
+
+    return novedad;
   }
 
   async findAll(tenantId: string, pagination?: PaginationDto) {

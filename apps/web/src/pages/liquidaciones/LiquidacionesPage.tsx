@@ -1,8 +1,6 @@
-import { useState } from 'react';
-import { Calculator, Search, Clock, AlertTriangle, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Calculator, Search, Clock, AlertTriangle, Lock, CheckCircle2 } from 'lucide-react';
 import { liquidacionService, LiquidacionItem } from '../../services/liquidacion.service';
-
-type Modo = 'VALOR_HORA_MANUAL' | 'BASICO_507' | 'SOLO_HORAS';
 
 const hoy = new Date();
 const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10);
@@ -14,21 +12,33 @@ const hh = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 1 }
 export const LiquidacionesPage = () => {
   const [desde, setDesde] = useState(primerDia);
   const [hasta, setHasta] = useState(ultimoDia);
-  const [modo, setModo] = useState<Modo>('VALOR_HORA_MANUAL');
   const [valorHora, setValorHora] = useState(2500);
-  const [recargoNoct, setRecargoNoct] = useState(20);
-  const [recargoExtra, setRecargoExtra] = useState(50);
   const [items, setItems] = useState<LiquidacionItem[]>([]);
+  const [modo, setModo] = useState('VALOR_HORA_MANUAL');
+  const [conMontos, setConMontos] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [cerrando, setCerrando] = useState(false);
   const [buscado, setBuscado] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [modoConfig, setModoConfig] = useState('VALOR_HORA_MANUAL');
 
-  const conMontos = modo !== 'SOLO_HORAS';
+  useEffect(() => {
+    liquidacionService.getConfig().then((c) => { setModoConfig(c.modo); setModo(c.modo); }).catch(() => {});
+  }, []);
+
+  const guardarModo = async (nuevo: string) => {
+    setModoConfig(nuevo);
+    try { await liquidacionService.setModo(nuevo); } catch { /* noop */ }
+  };
 
   const calcular = async () => {
     setLoading(true);
+    setMsg('');
     try {
-      const data = await liquidacionService.computar(desde, hasta);
-      setItems(data);
+      const data = await liquidacionService.computar(desde, hasta, valorHora);
+      setItems(data.items);
+      setModo(data.modo);
+      setConMontos(data.con_montos);
       setBuscado(true);
     } catch {
       setItems([]);
@@ -37,15 +47,27 @@ export const LiquidacionesPage = () => {
     }
   };
 
-  const bruto = (i: LiquidacionItem) =>
-    valorHora * i.hh_trabajadas +
-    valorHora * (recargoNoct / 100) * i.hh_nocturnas +
-    valorHora * (recargoExtra / 100) * i.hh_extra;
-  const descSuspension = (i: LiquidacionItem) => valorHora * i.suspension_dias * 8;
-  const neto = (i: LiquidacionItem) => Math.max(0, bruto(i) - descSuspension(i) - i.adelanto_monto);
+  const cerrar = async () => {
+    if (!confirm('Cerrar la liquidación del período descuenta las cuotas de adelanto y no se puede deshacer. ¿Continuar?')) return;
+    setCerrando(true);
+    setMsg('');
+    try {
+      await liquidacionService.cerrar(desde, hasta, valorHora);
+      setMsg('Liquidación cerrada. Los adelantos del período fueron descontados.');
+    } catch (e: any) {
+      setMsg(e?.response?.data?.message || 'No se pudo cerrar la liquidación.');
+    } finally {
+      setCerrando(false);
+    }
+  };
 
-  const totalNeto = items.reduce((s, i) => s + neto(i), 0);
+  const totalNeto = items.reduce((s, i) => s + i.neto, 0);
   const totalHoras = items.reduce((s, i) => s + i.hh_trabajadas, 0);
+  const modoLabel: Record<string, string> = {
+    VALOR_HORA_MANUAL: 'Valor hora manual',
+    BASICO_507: 'Básico Convenio 507',
+    SOLO_HORAS: 'Sólo cómputo de horas',
+  };
 
   return (
     <div className="space-y-8">
@@ -60,7 +82,15 @@ export const LiquidacionesPage = () => {
 
       {/* Controles */}
       <div className="card space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div>
+            <label className="label text-xs uppercase font-black">Modo de cálculo</label>
+            <select className="input" value={modoConfig} onChange={(e) => guardarModo(e.target.value)}>
+              <option value="VALOR_HORA_MANUAL">Valor hora manual</option>
+              <option value="BASICO_507">Básico Convenio 507</option>
+              <option value="SOLO_HORAS">Sólo horas</option>
+            </select>
+          </div>
           <div>
             <label className="label text-xs uppercase font-black">Desde</label>
             <input type="date" className="input" value={desde} onChange={(e) => setDesde(e.target.value)} />
@@ -70,12 +100,8 @@ export const LiquidacionesPage = () => {
             <input type="date" className="input" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           </div>
           <div>
-            <label className="label text-xs uppercase font-black">Modo de cálculo</label>
-            <select className="input" value={modo} onChange={(e) => setModo(e.target.value as Modo)}>
-              <option value="VALOR_HORA_MANUAL">Valor hora manual + recargos</option>
-              <option value="BASICO_507">Básico Convenio 507</option>
-              <option value="SOLO_HORAS">Sólo cómputo de horas</option>
-            </select>
+            <label className="label text-xs uppercase font-black">Valor hora por defecto</label>
+            <input type="number" className="input" value={valorHora} onChange={(e) => setValorHora(Number(e.target.value))} />
           </div>
           <div className="flex items-end">
             <button onClick={calcular} disabled={loading} className="btn btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">
@@ -83,34 +109,23 @@ export const LiquidacionesPage = () => {
             </button>
           </div>
         </div>
-
-        {conMontos && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-line">
-            <div>
-              <label className="label text-xs uppercase font-black">Valor hora {modo === 'BASICO_507' && '(estimado)'}</label>
-              <input type="number" className="input" value={valorHora} onChange={(e) => setValorHora(Number(e.target.value))} />
-            </div>
-            <div>
-              <label className="label text-xs uppercase font-black">Recargo nocturno %</label>
-              <input type="number" className="input" value={recargoNoct} onChange={(e) => setRecargoNoct(Number(e.target.value))} />
-            </div>
-            <div>
-              <label className="label text-xs uppercase font-black">Recargo horas extra %</label>
-              <input type="number" className="input" value={recargoExtra} onChange={(e) => setRecargoExtra(Number(e.target.value))} />
-            </div>
-          </div>
-        )}
-
-        {modo === 'BASICO_507' && (
-          <p className="flex items-center gap-2 text-xs text-muted">
-            <Info size={13} className="text-brand-blue" /> La escala salarial del Convenio 507 se cargará por categoría en una próxima versión; por ahora usá el valor hora estimado.
+        {buscado && (
+          <p className="text-xs text-muted flex items-center gap-2">
+            <AlertTriangle size={13} className="text-brand-blue" />
+            Modo del tenant: <b className="text-navy">{modoLabel[modo] ?? modo}</b>. El modo y los recargos se configuran en el onboarding / reglas laborales.
           </p>
         )}
       </div>
 
+      {msg && (
+        <div className="flex items-center gap-2 bg-emerald/10 border border-emerald/20 text-emerald rounded-lg px-4 py-3 text-sm">
+          <CheckCircle2 size={15} /> {msg}
+        </div>
+      )}
+
       {/* Resumen */}
       {buscado && (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="card">
             <p className="text-xs uppercase tracking-wider text-muted font-bold">Vigiladores</p>
             <p className="text-3xl font-black text-navy">{items.length}</p>
@@ -125,6 +140,11 @@ export const LiquidacionesPage = () => {
               <p className="text-3xl font-black text-emerald">{money(totalNeto)}</p>
             </div>
           )}
+          <div className="card flex items-center justify-center">
+            <button onClick={cerrar} disabled={cerrando || items.length === 0} className="btn btn-secondary w-full flex items-center justify-center gap-2 disabled:opacity-50">
+              <Lock size={15} /> {cerrando ? 'Cerrando...' : 'Cerrar liquidación'}
+            </button>
+          </div>
         </div>
       )}
 
@@ -153,7 +173,7 @@ export const LiquidacionesPage = () => {
               <tr key={i.vigilador_id} className="hover:bg-canvas/50">
                 <td className="px-4 py-3">
                   <span className="font-bold text-navy block">{i.apellido}, {i.nombre}</span>
-                  <span className="text-xs text-muted font-mono">Legajo {i.legajo} · {i.turnos} turnos</span>
+                  <span className="text-xs text-muted font-mono">Legajo {i.legajo} · {i.turnos} turnos{conMontos && ` · ${money(i.valor_hora)}/h`}</span>
                 </td>
                 <td className="px-4 py-3 text-right font-mono font-bold text-navy">{hh(i.hh_trabajadas)}</td>
                 <td className="px-4 py-3 text-right font-mono text-muted">{hh(i.hh_nocturnas)}</td>
@@ -168,10 +188,10 @@ export const LiquidacionesPage = () => {
                   {i.suspension_dias > 0 ? <span className="text-red-500">{i.suspension_dias}d</span> : <span className="text-muted">—</span>}
                 </td>
                 {conMontos && (
-                  <td className="px-4 py-3 text-right font-mono text-red-500">{i.adelanto_monto > 0 ? '-' + money(i.adelanto_monto) : '—'}</td>
+                  <td className="px-4 py-3 text-right font-mono text-red-500">{i.adelanto_desc > 0 ? '-' + money(i.adelanto_desc) : '—'}</td>
                 )}
                 {conMontos && (
-                  <td className="px-4 py-3 text-right font-mono font-black text-emerald">{money(neto(i))}</td>
+                  <td className="px-4 py-3 text-right font-mono font-black text-emerald">{money(i.neto)}</td>
                 )}
               </tr>
             ))}
@@ -181,7 +201,7 @@ export const LiquidacionesPage = () => {
 
       <p className="flex items-center gap-2 text-xs text-muted">
         <AlertTriangle size={13} className="text-amber" />
-        El cómputo de horas surge de la asistencia real (check-in/out) y las novedades del período. Verificá los datos antes de generar los pagos.
+        El cómputo surge de la asistencia real (check-in/out) y las novedades del período. Verificá los datos antes de cerrar la liquidación.
       </p>
     </div>
   );

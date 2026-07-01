@@ -1,9 +1,19 @@
-import { IsString, IsOptional, IsIn } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsNumber, Min } from 'class-validator';
 
 export class UpdateVigilanteDto {
   @IsOptional()
   @IsString()
   legajo_nro?: string;
+
+  // Liquidaciones: valor hora y categoría del Convenio 507.
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  valor_hora?: number;
+
+  @IsOptional()
+  @IsString()
+  categoria_laboral?: string;
 
   @IsOptional()
   @IsString()
