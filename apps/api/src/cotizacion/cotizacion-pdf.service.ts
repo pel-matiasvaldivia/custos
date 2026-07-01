@@ -8,6 +8,14 @@ import { parseBlocks, PDF_STYLES } from '../contrato/html-to-pdf-content.util';
 // @ts-ignore
 import pdfMake = require('pdfmake');
 
+export interface DocumentoVersionRow {
+  id: string;
+  version: number;
+  documento_key: string;
+  generado_at: Date;
+  notas: string | null;
+}
+
 @Injectable()
 export class CotizacionPdfService {
   constructor(
@@ -196,10 +204,8 @@ export class CotizacionPdfService {
     });
     if (!cot) throw new NotFoundException('Cotización no encontrada.');
 
-    return this.conTenant(tenantId, (tx) =>
-      tx.$queryRaw<
-        { id: string; version: number; documento_key: string; generado_at: Date; notas: string | null }[]
-      >`
+    return this.conTenant<DocumentoVersionRow[]>(tenantId, (tx) =>
+      tx.$queryRaw`
         SELECT id, version, documento_key, generado_at, notas
         FROM cotizacion_documentos
         WHERE cotizacion_id = ${cotizacionId}::uuid
