@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { PLANTILLA_CONTRATO_DEFAULT } from './plantilla-contrato.default';
@@ -98,7 +98,7 @@ export class ContratoConfigService {
       SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
     `;
     const key = rows[0]?.logo_key;
-    if (!key) throw new Error('Sin logo');
+    if (!key) throw new NotFoundException('Sin logo');
     return this.storageService.descargar(key);
   }
 
@@ -106,7 +106,7 @@ export class ContratoConfigService {
     const config = await this.prisma.configuracionContrato.findUnique({
       where: { tenant_id: tenantId },
     });
-    if (!config?.firma_key) throw new Error('Sin firma');
+    if (!config?.firma_key) throw new NotFoundException('Sin firma');
     return this.storageService.descargar(config.firma_key);
   }
 
