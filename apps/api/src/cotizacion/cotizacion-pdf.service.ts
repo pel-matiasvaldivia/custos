@@ -76,15 +76,21 @@ export class CotizacionPdfService {
     const subtitulo = `<h2>Cotización de Servicios de Seguridad</h2>`;
     const clienteInfo = `<p>Cliente: <strong>${cotizacion.cliente_nombre}</strong></p>`;
 
+    const TIPO_LABEL: Record<string, string> = {
+      HORAS_HOMBRE: 'Horas Hombre',
+      HORAS_VEHICULO: 'Horas Vehículo',
+      HORAS_SERVICIO_ESPECIAL: 'Servicios Especiales',
+    };
+
     // Items table
     const filaItems = cotizacion.items
       .map(
         (i) =>
-          `<tr><td>${i.puesto_nombre}</td><td>${i.horas_mensuales} hs/mes</td><td>$${Number(i.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}/mes</td></tr>`,
+          `<tr><td>${i.puesto_nombre}</td><td>${TIPO_LABEL[(i as any).tipo] ?? (i as any).tipo ?? 'Horas Hombre'}</td><td>${(i as any).horas_mensuales} hs/mes</td><td>$${Number(i.subtotal).toLocaleString('es-AR', { minimumFractionDigits: 2 })}/mes</td></tr>`,
       )
       .join('');
     const tablaItems = `<table>
-  <tr><th>Puesto / Servicio</th><th>Horas mensuales</th><th>Subtotal mensual</th></tr>
+  <tr><th>Puesto / Servicio</th><th>Tipo de Hora</th><th>Horas mensuales</th><th>Subtotal mensual</th></tr>
   ${filaItems}
 </table>`;
 

@@ -360,6 +360,7 @@ model CotizacionItem {
   id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cotizacion_id   String  @db.Uuid
   puesto_nombre   String
+  tipo            String  @default("HORAS_HOMBRE") // HORAS_HOMBRE | HORAS_VEHICULO | HORAS_SERVICIO_ESPECIAL
   horas_mensuales Int
   costo_hora      Decimal @db.Decimal(12, 2)
   margen          Decimal @db.Decimal(5, 4)

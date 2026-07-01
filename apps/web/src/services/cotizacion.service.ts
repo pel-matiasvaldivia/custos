@@ -1,9 +1,18 @@
 import api from './api';
 import { Contrato } from './objetivo.service';
 
+export type TipoHora = 'HORAS_HOMBRE' | 'HORAS_VEHICULO' | 'HORAS_SERVICIO_ESPECIAL';
+
+export const TIPO_HORA_LABELS: Record<TipoHora, string> = {
+  HORAS_HOMBRE: 'Horas Hombre',
+  HORAS_VEHICULO: 'Horas Vehículo',
+  HORAS_SERVICIO_ESPECIAL: 'Servicios Especiales',
+};
+
 export interface CotizacionItem {
   id: string;
   puesto_nombre: string;
+  tipo: TipoHora;
   horas_mensuales: number;
   costo_hora?: string;
   margen?: string;
