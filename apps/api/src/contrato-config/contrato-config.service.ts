@@ -28,7 +28,16 @@ export class ContratoConfigService {
       ? await this.storageService.obtenerUrlFirmada(config.firma_key)
       : null;
 
-    return { ...config, firma_url };
+    // logo_key is a new column — read via queryRaw to avoid Prisma client type mismatch
+    const logoRows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
+      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
+    `;
+    const logo_key = logoRows[0]?.logo_key ?? null;
+    const logo_url = logo_key
+      ? await this.storageService.obtenerUrlFirmada(logo_key)
+      : null;
+
+    return { ...config, firma_url, logo_key, logo_url };
   }
 
   async updatePlantilla(tenantId: string, plantillaHtml: string) {
@@ -82,5 +91,31 @@ export class ContratoConfigService {
       actualizado.firma_key!,
     );
     return { ...actualizado, firma_url };
+  }
+
+  async actualizarLogo(tenantId: string, file: Express.Multer.File) {
+    // Get existing logo_key via queryRaw (new column)
+    const rows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
+      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
+    `;
+    const existenteLogo = rows[0]?.logo_key ?? null;
+
+    const subida = await this.storageService.subir(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+      'logos',
+    );
+
+    await this.prisma.$executeRaw`
+      UPDATE configuraciones_contrato SET logo_key = ${subida.key} WHERE tenant_id = ${tenantId}::uuid
+    `;
+
+    if (existenteLogo && existenteLogo !== subida.key) {
+      await this.storageService.eliminar(existenteLogo).catch(() => undefined);
+    }
+
+    const logo_url = await this.storageService.obtenerUrlFirmada(subida.key);
+    return { logo_key: subida.key, logo_url };
   }
 }

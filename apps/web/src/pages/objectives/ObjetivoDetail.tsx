@@ -13,6 +13,7 @@ import {
   Trash2,
   AlertTriangle,
   Bell,
+  Link2,
 } from 'lucide-react';
 import { objetivoService, ObjetivoDetalle, Puesto } from '../../services/objetivo.service';
 import { puestoService } from '../../services/puesto.service';
@@ -20,6 +21,7 @@ import { ObjetivoForm } from './ObjetivoForm';
 import { PuestoForm } from './PuestoForm';
 import { VehiculoAsignarForm } from './VehiculoAsignarForm';
 import { EsquemaCuadranteObjetivo } from './EsquemaCuadranteObjetivo';
+import { VincularContratoModal } from './VincularContratoModal';
 
 const ETIQUETAS_MODO: Record<string, string> = {
   POR_PLANIFICADO: 'Por planificado',
@@ -40,6 +42,7 @@ export const ObjetivoDetail = () => {
   const [modalVehiculo, setModalVehiculo] = useState(false);
   const [enviandoNotificacion, setEnviandoNotificacion] = useState(false);
   const [notificacionEnviada, setNotificacionEnviada] = useState(false);
+  const [modalVincularContrato, setModalVincularContrato] = useState(false);
 
   const cargar = async () => {
     if (!id) return;
@@ -307,6 +310,14 @@ export const ObjetivoDetail = () => {
               <h3 className="text-lg font-display font-bold text-navy flex items-center gap-2">
                 <FileText className="text-brand-blue" size={18} /> Contrato
               </h3>
+              {!contrato && objetivo.cliente_id && (
+                <button
+                  onClick={() => setModalVincularContrato(true)}
+                  className="text-brand-blue hover:text-brand-deep transition-colors text-sm font-medium flex items-center gap-1"
+                >
+                  <Link2 size={14} /> Vincular contrato
+                </button>
+              )}
             </div>
             {contrato ? (
               <div className="space-y-2 text-sm">
@@ -329,10 +340,18 @@ export const ObjetivoDetail = () => {
                 )}
               </div>
             ) : (
-              <div className="text-center py-2">
-                <p className="text-sm text-muted">
-                  Este objetivo todavía no tiene contrato vinculado. El contrato se crea desde la ficha del cliente.
+              <div className="space-y-3 py-2">
+                <p className="text-sm text-muted text-center">
+                  Este objetivo todavía no tiene contrato vinculado.
                 </p>
+                {objetivo.cliente_id && (
+                  <button
+                    onClick={() => setModalVincularContrato(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-dashed border-brand-blue/40 text-brand-blue text-sm font-medium rounded-lg hover:bg-brand-blue/5 transition-colors"
+                  >
+                    <Link2 size={15} /> Vincular contrato existente
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -420,6 +439,19 @@ export const ObjetivoDetail = () => {
           onClose={() => setModalVehiculo(false)}
           onAsignado={() => {
             setModalVehiculo(false);
+            cargar();
+          }}
+        />
+      )}
+
+      {modalVincularContrato && id && (
+        <VincularContratoModal
+          objetivoId={id}
+          clienteId={objetivo.cliente_id}
+          clienteNombre={objetivo.cliente_nombre}
+          onClose={() => setModalVincularContrato(false)}
+          onVinculado={() => {
+            setModalVincularContrato(false);
             cargar();
           }}
         />

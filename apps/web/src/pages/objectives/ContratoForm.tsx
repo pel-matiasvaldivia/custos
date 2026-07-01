@@ -49,8 +49,11 @@ export const ContratoForm = ({ clienteId, clienteNombre, onClose, onCreated }: P
         inicio: inicio || undefined,
       });
       onCreated();
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'No se pudo guardar el contrato.');
+    } catch (err) {
+      setError(
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'No se pudo guardar el contrato.',
+      );
     } finally {
       setEnviando(false);
     }

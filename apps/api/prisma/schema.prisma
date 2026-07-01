@@ -51,6 +51,7 @@ model Tenant {
   programaciones_horarias ProgramacionHoraria[]
   contratos               Contrato[]
   contrato_documentos     ContratoDocumento[]
+  cotizacion_documentos   CotizacionDocumento[]
   periodos                Periodo[]
   contrato_facturaciones  ContratoFacturacion[]
   conciliaciones_hh       ConciliacionHH[]
@@ -320,6 +321,7 @@ model ConfiguracionContrato {
   firma_key      String? // key en MinIO de la imagen de firma
   firma_nombre   String? // nombre del Director/Responsable que firma
   firma_cargo    String? // ej. "Director", "Responsable de Seguridad"
+  logo_key       String? // key en MinIO del logo del tenant para documentos
   updated_at     DateTime @default(now()) @db.Timestamptz
 
   tenant Tenant @relation(fields: [tenant_id], references: [id])
@@ -328,20 +330,23 @@ model ConfiguracionContrato {
 }
 
 model Cotizacion {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id      String   @db.Uuid
-  cliente_id     String?  @db.Uuid
-  cliente_nombre String
-  vencimiento    DateTime @db.Date
-  estado         String   @default("BORRADOR") // BORRADOR | ENVIADA | ACEPTADA | RECHAZADA
-  total_mensual  Decimal  @db.Decimal(14, 2)
-  created_at     DateTime @default(now()) @db.Timestamptz
-  updated_at     DateTime @default(now()) @db.Timestamptz
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id            String    @db.Uuid
+  cliente_id           String?   @db.Uuid
+  cliente_nombre       String
+  vencimiento          DateTime  @db.Date
+  estado               String    @default("BORRADOR") // BORRADOR | ENVIADA | ACEPTADA | RECHAZADA
+  total_mensual        Decimal   @db.Decimal(14, 2)
+  documento_key        String?
+  documento_generado_at DateTime? @db.Timestamptz
+  created_at           DateTime  @default(now()) @db.Timestamptz
+  updated_at           DateTime  @default(now()) @db.Timestamptz
 
-  tenant    Tenant           @relation(fields: [tenant_id], references: [id])
-  cliente   Cliente?         @relation(fields: [cliente_id], references: [id])
+  tenant    Tenant                @relation(fields: [tenant_id], references: [id])
+  cliente   Cliente?              @relation(fields: [cliente_id], references: [id])
   items     CotizacionItem[]
   contratos Contrato[]
+  versiones CotizacionDocumento[]
 
   @@map("cotizaciones")
 }
@@ -358,6 +363,22 @@ model CotizacionItem {
   cotizacion Cotizacion @relation(fields: [cotizacion_id], references: [id])
 
   @@map("cotizacion_items")
+}
+
+model CotizacionDocumento {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cotizacion_id String   @db.Uuid
+  tenant_id     String   @db.Uuid
+  version       Int
+  documento_key String
+  generado_at   DateTime @default(now()) @db.Timestamptz
+  notas         String?  @db.Text
+
+  cotizacion Cotizacion @relation(fields: [cotizacion_id], references: [id])
+  tenant     Tenant     @relation(fields: [tenant_id], references: [id])
+
+  @@unique([cotizacion_id, version])
+  @@map("cotizacion_documentos")
 }
 
 model Novedad {
