@@ -71,11 +71,11 @@ const AppLayout = () => (
   </div>
 );
 
-/* ─── Root redirect: / → /login or /dashboard ─── */
+/* ─── Root redirect: / → /landing (public) or /dashboard (logged in) ─── */
 const RootRedirect = () => {
   const { user, isLoading } = useAuth();
   if (isLoading) return null;
-  return <Navigate to={user ? '/dashboard' : '/login'} replace />;
+  return <Navigate to={user ? '/dashboard' : '/landing'} replace />;
 };
 
 /* ─── Route tree ─── */
