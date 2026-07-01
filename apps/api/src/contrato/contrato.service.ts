@@ -128,15 +128,20 @@ export class ContratoService {
 
   async findVersiones(id: string, tenantId: string) {
     await this.findOne(id, tenantId);
-    const rows = await this.prisma.$queryRaw<
-      { id: string; version: number; documento_key: string; generado_at: Date; notas: string | null }[]
-    >`
-      SELECT id, version, documento_key, generado_at, notas
-      FROM contrato_documentos
-      WHERE contrato_id = ${id}::uuid
-      ORDER BY version DESC
-    `;
-    return rows;
+    // contrato_documentos tiene FORCE RLS; las queries crudas no pasan por el
+    // wrapper de tenant de PrismaService, así que hay que setear app.current_tenant
+    // dentro de la misma transacción o el SELECT devuelve 0 filas.
+    return this.prisma.$transaction(async (tx: any) => {
+      await tx.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`;
+      return tx.$queryRaw<
+        { id: string; version: number; documento_key: string; generado_at: Date; notas: string | null }[]
+      >`
+        SELECT id, version, documento_key, generado_at, notas
+        FROM contrato_documentos
+        WHERE contrato_id = ${id}::uuid
+        ORDER BY version DESC
+      `;
+    });
   }
 
   async update(id: string, tenantId: string, dto: UpdateContratoDto) {

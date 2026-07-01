@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PrismaService } from '../prisma/prisma.service';
@@ -159,29 +160,29 @@ export class ContratoPdfService {
 
     const ahora = new Date();
 
-    // Determine next version number for this contract
-    const ultimaVersion = await this.prisma.$queryRaw<{ max: number | null }[]>`
-      SELECT MAX(version) as max FROM contrato_documentos WHERE contrato_id = ${contratoId}::uuid
-    `;
-    const nextVersion = (ultimaVersion[0]?.max ?? 0) + 1;
-
-    // Persist version entry and update snapshot on Contrato in a transaction
+    // contrato_documentos tiene FORCE ROW LEVEL SECURITY y estas queries crudas no
+    // pasan por el wrapper de RLS de PrismaService (solo cubre operaciones de modelo),
+    // así que hay que setear app.current_tenant dentro de la misma transacción o el
+    // INSERT viola la política de aislamiento (falla con 500).
     const esBorrador = contrato.estado === 'BORRADOR';
-    await this.prisma.$transaction([
-      this.prisma.$executeRaw`
+    await this.prisma.$transaction(async (tx: any) => {
+      await tx.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`;
+      const ultimaVersion = await tx.$queryRaw<{ max: number | null }[]>`
+        SELECT MAX(version) as max FROM contrato_documentos WHERE contrato_id = ${contratoId}::uuid
+      `;
+      const nextVersion = (ultimaVersion[0]?.max ?? 0) + 1;
+      await tx.$executeRaw`
         INSERT INTO contrato_documentos (id, tenant_id, contrato_id, version, documento_key, generado_at)
         VALUES (gen_random_uuid(), ${tenantId}::uuid, ${contratoId}::uuid, ${nextVersion}, ${subida.key}, ${ahora})
-      `,
-      this.prisma.contrato.update({
-        where: { id: contratoId },
-        data: {
-          documento_key: subida.key,
-          documento_generado_at: ahora,
-          // First document generation activates the contract
-          ...(esBorrador ? { estado: 'ACTIVO' } : {}),
-        },
-      }),
-    ]);
+      `;
+      await tx.$executeRaw`
+        UPDATE contratos
+        SET documento_key = ${subida.key},
+            documento_generado_at = ${ahora}
+            ${esBorrador ? Prisma.sql`, estado = 'ACTIVO'` : Prisma.empty}
+        WHERE id = ${contratoId}::uuid
+      `;
+    });
 
     // Auto-activate the linked Objetivo when contract goes from BORRADOR → ACTIVO
     if (esBorrador && contrato.objetivo_id) {
