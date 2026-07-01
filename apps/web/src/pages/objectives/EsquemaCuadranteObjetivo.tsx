@@ -73,10 +73,30 @@ export const EsquemaCuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
     setFinalizando(true);
     try {
       await cuadranteService.finalizarAsignacion(asignacionId, new Date().toISOString().slice(0, 10));
-      // Optimistic: remove from local state immediately so the row disappears at once
-      setAsignaciones((prev) => prev.filter((a) => a.id !== asignacionId));
       setConfirmandoFinalizar(null);
-      // Then refresh the full cuadrante in background
+      // Quitar la asignación y los turnos de esa asignación del estado local
+      // de inmediato (el backend ya los borró), para que la grilla refleje el
+      // cambio sin esperar el refetch.
+      setAsignaciones((prev) => prev.filter((a) => a.id !== asignacionId));
+      const asig = asignaciones.find((a) => a.id === asignacionId);
+      if (asig) {
+        const now = new Date();
+        setCuadrante((prev) =>
+          prev.map((cp) =>
+            cp.puestoId !== asig.puestoId
+              ? cp
+              : {
+                  ...cp,
+                  turnos: cp.turnos.filter(
+                    (t) =>
+                      t.vigiladorId !== asig.vigiladorId ||
+                      new Date(t.inicioPlan) <= now,
+                  ),
+                },
+          ),
+        );
+      }
+      // Recarga completa en background para actualizar cobertura/huecos
       cargar();
     } catch (err) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
