@@ -1,24 +1,28 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaAdminService } from '../prisma/prisma-admin.service';
 import { StorageService } from '../storage/storage.service';
-import { TenantContextService } from '../common/context/tenant-context.service';
 import { PLANTILLA_CONTRATO_DEFAULT } from './plantilla-contrato.default';
 
+/**
+ * Usa PrismaAdminService (bypassa RLS) porque:
+ *  - Las rutas proxy de logo/firma son públicas (sin JWT), sin contexto de tenant.
+ *  - El aislamiento multi-tenant se mantiene por código: cada operación filtra por
+ *    tenant_id explícitamente, tal como indica el comentario de PrismaAdminService.
+ */
 @Injectable()
 export class ContratoConfigService {
   constructor(
-    private prisma: PrismaService,
+    private prismaAdmin: PrismaAdminService,
     private storageService: StorageService,
-    private tenantContext: TenantContextService,
   ) {}
 
   async findOne(tenantId: string) {
-    let config = await this.prisma.configuracionContrato.findUnique({
+    let config = await this.prismaAdmin.configuracionContrato.findUnique({
       where: { tenant_id: tenantId },
     });
 
     if (!config) {
-      config = await this.prisma.configuracionContrato.create({
+      config = await this.prismaAdmin.configuracionContrato.create({
         data: {
           tenant_id: tenantId,
           plantilla_html: PLANTILLA_CONTRATO_DEFAULT,
@@ -39,7 +43,7 @@ export class ContratoConfigService {
   }
 
   async updatePlantilla(tenantId: string, plantillaHtml: string) {
-    return this.prisma.configuracionContrato.upsert({
+    return this.prismaAdmin.configuracionContrato.upsert({
       where: { tenant_id: tenantId },
       update: { plantilla_html: plantillaHtml },
       create: { tenant_id: tenantId, plantilla_html: plantillaHtml },
@@ -52,7 +56,7 @@ export class ContratoConfigService {
     nombre?: string,
     cargo?: string,
   ) {
-    const existente = await this.prisma.configuracionContrato.findUnique({
+    const existente = await this.prismaAdmin.configuracionContrato.findUnique({
       where: { tenant_id: tenantId },
     });
 
@@ -63,7 +67,7 @@ export class ContratoConfigService {
       'firmas',
     );
 
-    const actualizado = await this.prisma.configuracionContrato.upsert({
+    const actualizado = await this.prismaAdmin.configuracionContrato.upsert({
       where: { tenant_id: tenantId },
       update: {
         firma_key: subida.key,
@@ -90,28 +94,24 @@ export class ContratoConfigService {
   }
 
   async servirLogo(tenantId: string) {
-    const config = await this.tenantContext.run(tenantId, () =>
-      this.prisma.configuracionContrato.findUnique({
-        where: { tenant_id: tenantId },
-      }),
-    );
+    const config = await this.prismaAdmin.configuracionContrato.findUnique({
+      where: { tenant_id: tenantId },
+    });
     const key = (config as any)?.logo_key as string | null | undefined;
     if (!key) throw new NotFoundException('Sin logo');
     return this.storageService.descargar(key);
   }
 
   async servirFirma(tenantId: string) {
-    const config = await this.tenantContext.run(tenantId, () =>
-      this.prisma.configuracionContrato.findUnique({
-        where: { tenant_id: tenantId },
-      }),
-    );
+    const config = await this.prismaAdmin.configuracionContrato.findUnique({
+      where: { tenant_id: tenantId },
+    });
     if (!config?.firma_key) throw new NotFoundException('Sin firma');
     return this.storageService.descargar(config.firma_key);
   }
 
   async actualizarLogo(tenantId: string, file: Express.Multer.File) {
-    const existente = await this.prisma.configuracionContrato.findUnique({
+    const existente = await this.prismaAdmin.configuracionContrato.findUnique({
       where: { tenant_id: tenantId },
     });
     const existenteLogo = (existente as any)?.logo_key as string | null ?? null;
@@ -123,7 +123,7 @@ export class ContratoConfigService {
       'logos',
     );
 
-    await this.prisma.configuracionContrato.upsert({
+    await this.prismaAdmin.configuracionContrato.upsert({
       where: { tenant_id: tenantId },
       update: { logo_key: subida.key } as any,
       create: {
