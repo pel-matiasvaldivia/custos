@@ -13,6 +13,10 @@ async function bootstrap() {
   // Trust proxy headers from Nginx Proxy Manager
   app.set('trust proxy', 1);
 
+  // Increase body size limit for contract/quote document HTML payloads
+  app.use(require('express').json({ limit: '10mb' }));
+  app.use(require('express').urlencoded({ extended: true, limit: '10mb' }));
+
   // Global API prefix
   app.setGlobalPrefix('api/v1');
 
