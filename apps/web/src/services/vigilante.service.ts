@@ -1,12 +1,36 @@
 import api from './api';
 
+export type VigiladorEstado = 'ACTIVO' | 'PE' | 'SP' | 'VC' | 'LC' | 'BAJA';
+
+/** Estados de personal, su etiqueta legible, color de badge y si permite afectación a un puesto. */
+export const ESTADO_META: Record<
+  string,
+  { label: string; badge: 'ok' | 'alert' | 'muted'; disponible: boolean; descripcion: string }
+> = {
+  ACTIVO: { label: 'Activo', badge: 'ok', disponible: true, descripcion: 'Disponible para asignar a un puesto.' },
+  PE: { label: 'Parte de Enfermo', badge: 'alert', disponible: false, descripcion: 'De licencia por enfermedad. No disponible.' },
+  SP: { label: 'Suspendido', badge: 'alert', disponible: false, descripcion: 'Suspensión disciplinaria. No disponible.' },
+  VC: { label: 'Vacaciones', badge: 'muted', disponible: false, descripcion: 'De vacaciones. No disponible.' },
+  LC: { label: 'Licencia Especial', badge: 'muted', disponible: false, descripcion: 'Licencia especial (paternidad, familiar enfermo, etc.). No disponible.' },
+  BAJA: { label: 'Baja', badge: 'alert', disponible: false, descripcion: 'Desvinculado. No disponible.' },
+  // Alias legacy
+  SUSPENDIDO: { label: 'Suspendido', badge: 'alert', disponible: false, descripcion: 'Suspensión. No disponible.' },
+  INACTIVO: { label: 'Inactivo', badge: 'muted', disponible: false, descripcion: 'Inactivo. No disponible.' },
+};
+
+/** Estados ofrecidos en los selectores de la UI (los canónicos). */
+export const ESTADOS_SELECCIONABLES: VigiladorEstado[] = ['ACTIVO', 'PE', 'SP', 'VC', 'LC', 'BAJA'];
+
+export const estadoMeta = (estado: string) =>
+  ESTADO_META[estado] ?? { label: estado, badge: 'muted' as const, disponible: false, descripcion: '' };
+
 export interface Vigilador {
   id: string;
   legajo_nro: string;
   nombre: string;
   apellido: string;
   documento: string;
-  estado: 'ACTIVO' | 'SUSPENDIDO' | 'BAJA';
+  estado: string;
   foto_url?: string | null;
   domicilio?: string | null;
   localidad?: string | null;

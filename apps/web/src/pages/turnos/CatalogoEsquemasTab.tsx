@@ -1,24 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, CalendarClock, Loader2 } from 'lucide-react';
-import { cuadranteService, EsquemaTurno } from '../../services/cuadrante.service';
+import { cuadranteService, EsquemaTurno, horasSemanaEsquema } from '../../services/cuadrante.service';
 import { EsquemaTurnoForm } from '../objectives/EsquemaTurnoForm';
 
 const mensajeError = (err: unknown) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-
-/** Horas de trabajo promedio por semana de un esquema, a partir de su definición. */
-const horasSemana = (esquema: EsquemaTurno): number => {
-  const { dias_ciclo, dias } = esquema.definicion;
-  if (!dias?.length || dias_ciclo <= 0) return 0;
-  const totalTrabajo = dias
-    .slice(0, dias_ciclo)
-    .reduce(
-      (acc, d) =>
-        acc + (d.tipo === 'TRABAJO' ? (d.bloques ?? []).reduce((a, b) => a + b.duracion_horas, 0) : 0),
-      0,
-    );
-  return Math.round((totalTrabajo / dias_ciclo) * 7);
-};
 
 /** Resumen legible del patrón: "Trabaja 07:00 (12h) · Franco". */
 const resumenPatron = (esquema: EsquemaTurno): string => {
@@ -112,7 +98,7 @@ export const CatalogoEsquemasTab = () => {
                     <p className="text-xs text-muted mt-0.5">Ciclo de {e.dias_ciclo} día(s)</p>
                   </div>
                   <span className="inline-flex items-center gap-1 text-[10px] text-brand-blue bg-brand-blue/5 border border-brand-blue/20 rounded-full px-2 py-0.5 shrink-0">
-                    <CalendarClock size={11} /> {horasSemana(e)} hs/sem
+                    <CalendarClock size={11} /> {horasSemanaEsquema(e)} hs/sem
                   </span>
                 </div>
 

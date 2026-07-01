@@ -24,11 +24,14 @@ export const AfectarVigiladorModal = ({ puesto, onClose, onAfectado }: Props) =>
   const [error, setError] = useState<string | null>(null);
   const [modalNuevoEsquema, setModalNuevoEsquema] = useState(false);
   const [resultado, setResultado] = useState<GeneracionResultado | null>(null);
+  const [noDisponibles, setNoDisponibles] = useState(0);
 
   const cargar = async () => {
     const [eList, vList] = await Promise.all([cuadranteService.listarEsquemas(), vigilanteService.getAll()]);
     setEsquemas(eList);
-    setVigiladores(vList.filter((v) => v.estado === 'ACTIVO'));
+    const activos = vList.filter((v) => v.estado === 'ACTIVO');
+    setVigiladores(activos);
+    setNoDisponibles(vList.length - activos.length);
     if (eList.length > 0) setEsquemaId((prev) => prev || eList[0].id);
   };
 
@@ -155,6 +158,11 @@ export const AfectarVigiladorModal = ({ puesto, onClose, onAfectado }: Props) =>
                 ))}
               </select>
             )}
+            <p className="text-[11px] text-muted">
+              Solo se puede afectar personal Activo.
+              {noDisponibles > 0 &&
+                ` ${noDisponibles} vigilador(es) no figuran por estar de enfermo, vacaciones, licencia, suspendidos o de baja.`}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

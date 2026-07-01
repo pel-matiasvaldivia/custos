@@ -16,6 +16,10 @@ import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateEsquemaTurnoDto } from './dto/create-esquema-turno.dto';
 import { CreateAsignacionEsquemaDto } from './dto/create-asignacion-esquema.dto';
 import { UpsertPuestoCoberturaDto } from './dto/upsert-puesto-cobertura.dto';
+import {
+  estaDisponibleParaAsignacion,
+  VIGILADOR_ESTADO_LABEL,
+} from '../../vigilante/vigilador-estado';
 
 function horaNum(hhmm: string): number {
   return parseInt(hhmm.split(':')[0], 10);
@@ -414,6 +418,15 @@ export class CuadranteService {
     if (!puesto) throw new NotFoundException('Puesto no encontrado');
     if (!vigilador) throw new NotFoundException('Vigilador no encontrado');
     if (!esquema) throw new NotFoundException('Esquema de turno no encontrado');
+
+    // Solo el personal ACTIVO puede afectarse a un puesto. Si está de parte de
+    // enfermo, vacaciones, licencia, suspendido o dado de baja, no está disponible.
+    if (!estaDisponibleParaAsignacion(vigilador.estado)) {
+      const label = VIGILADOR_ESTADO_LABEL[vigilador.estado] ?? vigilador.estado;
+      throw new BadRequestException(
+        `El vigilador no está disponible para asignación (estado: ${label}). Solo se puede afectar personal Activo.`,
+      );
+    }
 
     const asignacion = await this.prisma.asignacionEsquema.create({
       data: {

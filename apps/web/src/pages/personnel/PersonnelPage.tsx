@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
-import { vigilanteService, Vigilador } from '../../services/vigilante.service';
+import {
+  vigilanteService,
+  Vigilador,
+  ESTADOS_SELECCIONABLES,
+  estadoMeta,
+} from '../../services/vigilante.service';
 import { UserPlus, Search, MoreVertical, Pencil, Upload } from 'lucide-react';
+
+const badgeClase = (badge: 'ok' | 'alert' | 'muted') =>
+  badge === 'ok' ? 'status-badge-ok' : badge === 'alert' ? 'status-badge-alert' : 'status-badge';
 import { VigiladorWizard } from './VigiladorWizard';
 import { VigiladorEditForm } from './VigiladorEditForm';
 import { ImportarVigiladoresModal } from './ImportarVigiladoresModal';
@@ -13,6 +21,8 @@ export const PersonnelPage = () => {
   const [importarAbierto, setImportarAbierto] = useState(false);
   const [menuAbiertoId, setMenuAbiertoId] = useState<string | null>(null);
   const [vigiladorEditando, setVigiladorEditando] = useState<Vigilador | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState<string>('TODOS');
 
   const fetchVigiladores = async () => {
     setLoading(true);
@@ -29,6 +39,17 @@ export const PersonnelPage = () => {
   useEffect(() => {
     fetchVigiladores();
   }, []);
+
+  const vigiladoresFiltrados = vigiladores.filter((v) => {
+    const coincideEstado = filtroEstado === 'TODOS' || v.estado === filtroEstado;
+    const q = busqueda.trim().toLowerCase();
+    const coincideBusqueda =
+      q === '' ||
+      `${v.nombre} ${v.apellido}`.toLowerCase().includes(q) ||
+      v.legajo_nro.toLowerCase().includes(q) ||
+      v.documento.toLowerCase().includes(q);
+    return coincideEstado && coincideBusqueda;
+  });
 
   return (
     <div className="space-y-6">
@@ -74,12 +95,26 @@ export const PersonnelPage = () => {
         <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
-            <input 
-              type="text" 
-              placeholder="Buscar por nombre, apellido o legajo..."
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre, apellido, legajo o documento..."
               className="w-full pl-10 pr-4 py-2 bg-canvas border border-line rounded-md focus:outline-none focus:ring-2 focus:ring-brand-blue/20 transition-all text-sm"
             />
           </div>
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className="px-3 py-2 bg-canvas border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+          >
+            <option value="TODOS">Todos los estados</option>
+            {ESTADOS_SELECCIONABLES.map((e) => (
+              <option key={e} value={e}>
+                {estadoMeta(e).label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="overflow-x-auto">
@@ -97,9 +132,9 @@ export const PersonnelPage = () => {
             <tbody className="divide-y divide-line">
               {loading ? (
                 <tr><td colSpan={6} className="py-8 text-center text-muted">Cargando personal...</td></tr>
-              ) : vigiladores.length === 0 ? (
+              ) : vigiladoresFiltrados.length === 0 ? (
                 <tr><td colSpan={6} className="py-8 text-center text-muted">No se encontraron vigiladores.</td></tr>
-              ) : vigiladores.map((v) => (
+              ) : vigiladoresFiltrados.map((v) => (
                 <tr key={v.id} className="hover:bg-canvas/50 transition-colors text-sm">
                   <td className="py-4 px-4 font-mono font-medium text-brand-blue">
                     <Link to={`/personnel/${v.id}`} className="hover:underline">{v.legajo_nro}</Link>
@@ -107,8 +142,8 @@ export const PersonnelPage = () => {
                   <td className="py-4 px-4 font-medium">{v.apellido}, {v.nombre}</td>
                   <td className="py-4 px-4 text-muted">{v.documento}</td>
                   <td className="py-4 px-4">
-                    <span className={`status-badge ${v.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
-                      {v.estado}
+                    <span className={`status-badge ${badgeClase(estadoMeta(v.estado).badge)}`}>
+                      {estadoMeta(v.estado).label}
                     </span>
                   </td>
                   <td className="py-4 px-4">
