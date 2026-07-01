@@ -113,6 +113,20 @@ export function sugerirDotacion(horasDia: number, dias: number, jornadaMaxSemana
   return Math.ceil((horasDia * dias) / jornadaMaxSemanalH);
 }
 
+/** Horas de trabajo promedio por semana de un esquema, a partir de su definición (1 persona). */
+export function horasSemanaEsquema(esquema: Pick<EsquemaTurno, 'definicion'>): number {
+  const { dias_ciclo, dias } = esquema.definicion;
+  if (!dias?.length || dias_ciclo <= 0) return 0;
+  const totalTrabajo = dias
+    .slice(0, dias_ciclo)
+    .reduce(
+      (acc, d) =>
+        acc + (d.tipo === 'TRABAJO' ? (d.bloques ?? []).reduce((a, b) => a + b.duracion_horas, 0) : 0),
+      0,
+    );
+  return Math.round((totalTrabajo / dias_ciclo) * 7);
+}
+
 export const cuadranteService = {
   crearEsquema: async (data: CreateEsquemaTurnoData): Promise<EsquemaTurno> => {
     const response = await api.post<EsquemaTurno>('/cuadrante/esquemas', data);
