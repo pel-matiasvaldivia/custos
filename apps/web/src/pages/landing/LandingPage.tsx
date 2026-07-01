@@ -298,7 +298,7 @@ export default function LandingPage() {
       <section
         className="relative min-h-screen flex items-center overflow-hidden bg-slate-900"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1920&q=80)',
+          backgroundImage: 'url(https://images.unsplash.com/photo-bqmS7urhd3M?auto=format&fit=crop&w=1920&q=80)',
           backgroundSize: 'cover',
           backgroundPosition: 'center top',
         }}
@@ -440,8 +440,8 @@ export default function LandingPage() {
             {/* Imagen de equipo profesional */}
             <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-200">
               <img
-                src="https://images.unsplash.com/photo-1521791055366-0d553872952f?auto=format&fit=crop&w=800&q=80"
-                alt="Equipo de seguridad profesional"
+                src="https://images.unsplash.com/photo-vhKSJjv-yBM?auto=format&fit=crop&w=800&q=80"
+                alt="Guardia de seguridad en ronda, vista panorámica de la ciudad"
                 className="w-full h-[520px] object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-navy/70 via-navy/10 to-transparent" />
@@ -568,7 +568,7 @@ export default function LandingPage() {
       {/* ── FACTOR 4.2 — imagen de fondo con overlay claro ── */}
       <section className="relative py-28 overflow-hidden bg-slate-900"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1920&q=80)',
+          backgroundImage: 'url(https://images.unsplash.com/photo-qahzKHES6OY?auto=format&fit=crop&w=1920&q=80)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
@@ -648,7 +648,7 @@ export default function LandingPage() {
       <section
         className="relative py-32 overflow-hidden bg-slate-900"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1920&q=80)',
+          backgroundImage: 'url(https://images.unsplash.com/photo-62jn7pAeWzQ?auto=format&fit=crop&w=1920&q=80)',
           backgroundSize: 'cover',
           backgroundPosition: 'center 30%',
         }}
@@ -776,7 +776,7 @@ export default function LandingPage() {
       <section
         className="relative py-36 overflow-hidden bg-slate-900"
         style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&w=1920&q=80)',
+          backgroundImage: 'url(https://images.unsplash.com/photo-8FxJi5wuwKc?auto=format&fit=crop&w=1920&q=80)',
           backgroundSize: 'cover',
           backgroundPosition: 'center 40%',
         }}
