@@ -9,10 +9,15 @@ export const useSocket = (namespace: string, tenantId?: string) => {
     if (!tenantId) return;
 
     const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
-    
+    // El gateway deriva el tenant del JWT verificado (handshake.auth.token), no
+    // del query. Sin token válido cierra la conexión (fail-closed), así que hay
+    // que enviarlo. Se incluye polling como fallback si el WebSocket no upgradea.
+    const token = localStorage.getItem('token') ?? '';
+
     socketRef.current = io(`${socketUrl}/${namespace}`, {
-      query: { tenantId },
-      transports: ['websocket'],
+      auth: { token },
+      query: { tenantId, token },
+      transports: ['websocket', 'polling'],
     });
 
     socketRef.current.on('connect', () => {
