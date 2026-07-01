@@ -20,7 +20,7 @@ import { MobileDashboard } from './pages/mobile/MobileDashboard';
 import MobileLogin from './pages/mobile/MobileLogin';
 import ComprasPage from './pages/compras/ComprasPage';
 import { HerramientasPage } from './pages/herramientas/HerramientasPage';
-import { RelevosPage } from './pages/relevos/RelevosPage';
+import { EsquemaTurnosPage } from './pages/turnos/EsquemaTurnosPage';
 import { LiquidacionesPage } from './pages/liquidaciones/LiquidacionesPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
@@ -98,7 +98,7 @@ function AppRoutes() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/compras" element={<ComprasPage />} />
           <Route path="/herramientas" element={<HerramientasPage />} />
-          <Route path="/relevos" element={<RelevosPage />} />
+          <Route path="/relevos" element={<EsquemaTurnosPage />} />
           <Route path="/liquidaciones" element={<LiquidacionesPage />} />
           <Route path="/suscripcion" element={<SuscripcionPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />

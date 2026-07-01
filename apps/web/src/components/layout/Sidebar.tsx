@@ -13,7 +13,7 @@ import {
   Zap,
   Building2,
   Wrench,
-  RefreshCw,
+  CalendarClock,
   CreditCard,
   Calculator,
 } from 'lucide-react';
@@ -65,7 +65,7 @@ const navGroups = [
       { icon: Calculator, label: 'Liquidaciones', path: '/liquidaciones' },
       { icon: ShoppingCart, label: 'Compras', path: '/compras' },
       { icon: Wrench, label: 'Herramientas', path: '/herramientas' },
-      { icon: RefreshCw, label: 'Cambios de turno', path: '/relevos' },
+      { icon: CalendarClock, label: 'Esquema de turnos', path: '/relevos' },
     ],
   },
   {
