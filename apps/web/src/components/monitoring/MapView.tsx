@@ -3,50 +3,47 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect } from 'react';
 
-// Fix for default Leaflet icons in React
-// @ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Marcadores locales (SVG en divIcon) — sin depender de CDNs externos, que el
+// proxy de producción puede bloquear. Cada tipo tiene su color de la paleta.
+const pin = (color: string, glyph: string, pulse = false) =>
+  L.divIcon({
+    className: '',
+    html: `
+      <div style="position:relative;width:30px;height:40px;${pulse ? 'animation:cutosPulse 1.4s ease-in-out infinite;' : ''}">
+        <svg width="30" height="40" viewBox="0 0 30 40" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 0C6.7 0 0 6.7 0 15c0 10 15 25 15 25s15-15 15-25C30 6.7 23.3 0 15 0z" fill="${color}"/>
+          <circle cx="15" cy="15" r="11" fill="#ffffff"/>
+        </svg>
+        <div style="position:absolute;top:5px;left:0;width:30px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;line-height:1;">${glyph}</div>
+      </div>`,
+    iconSize: [30, 40],
+    iconAnchor: [15, 40],
+    popupAnchor: [0, -36],
+  });
 
-const incidentIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+// keyframes para el pulso de incidentes (inyectado una vez)
+if (typeof document !== 'undefined' && !document.getElementById('cutos-map-kf')) {
+  const style = document.createElement('style');
+  style.id = 'cutos-map-kf';
+  style.textContent = '@keyframes cutosPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}';
+  document.head.appendChild(style);
+}
 
-const guardIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
-
-const puestoIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-violet.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const objetivoIcon = pin('#1b57d6', '🏢');
+const puestoIcon = pin('#7c3aed', '🛡️');
+const guardIcon = pin('#0e9f6e', '👮');
+const vehiculoIcon = pin('#e8a33d', '🚓');
+const incidentIcon = pin('#ef4444', '⚠️', true);
 
 interface MapViewProps {
   objectives: any[];
   incidents: any[];
   guards: Record<string, any>;
   puestos?: any[];
+  vehiculos?: any[];
 }
 
-export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards, puestos = [] }) => {
+export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards, puestos = [], vehiculos = [] }) => {
   const center: [number, number] = [-34.6037, -58.3816]; // Buenos Aires default
 
   return (
@@ -64,7 +61,7 @@ export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards,
 
         {/* Objectives */}
         {objectives.filter(o => o.lat && o.lng).map(obj => (
-          <Marker key={obj.id} position={[obj.lat, obj.lng]}>
+          <Marker key={obj.id} position={[obj.lat, obj.lng]} icon={objetivoIcon}>
             <Popup>
               <div className="p-2">
                 <h4 className="font-bold text-navy">{obj.nombre}</h4>
@@ -105,21 +102,35 @@ export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards,
           </Marker>
         ))}
 
-        {/* Guards (Live moving) */}
+        {/* Guards (Live moving) — guardias en funciones con dispositivo móvil */}
         {Object.values(guards).map(guard => (
-           <Marker 
-            key={guard.vigilanteId} 
-            position={[guard.lat, guard.lng]} 
+           <Marker
+            key={guard.vigilanteId}
+            position={[guard.lat, guard.lng]}
             icon={guardIcon}
            >
              <Popup>
               <div className="p-2">
-                <h4 className="font-bold text-emerald italic uppercase">UNIDAD MÓVIL</h4>
-                <p className="text-xs">ID: {guard.vigilanteId.slice(0,8)}</p>
-                <p className="text-[10px] text-muted">Último contacto: {new Date(guard.ts).toLocaleTimeString()}</p>
+                <h4 className="font-bold text-emerald italic uppercase">GUARDIA EN FUNCIONES</h4>
+                <p className="text-xs">{guard.nombre || `ID: ${guard.vigilanteId.slice(0,8)}`}</p>
+                <p className="text-[10px] text-muted">Último contacto: {guard.ts ? new Date(guard.ts).toLocaleTimeString() : '—'}</p>
               </div>
              </Popup>
            </Marker>
+        ))}
+
+        {/* Vehículos con supervisor en funciones */}
+        {vehiculos.filter(v => v.lat && v.lng).map(v => (
+          <Marker key={v.id} position={[Number(v.lat), Number(v.lng)]} icon={vehiculoIcon}>
+            <Popup>
+              <div className="p-2">
+                <h4 className="font-bold text-amber italic uppercase">MÓVIL / SUPERVISOR</h4>
+                <p className="text-xs text-navy">{v.patente || v.dominio || v.nombre}</p>
+                {v.supervisor && <p className="text-[11px] text-muted">Supervisor: {v.supervisor}</p>}
+                {v.marca && <p className="text-[10px] text-muted">{v.marca} {v.modelo}</p>}
+              </div>
+            </Popup>
+          </Marker>
         ))}
 
         <AutoCenter incidents={incidents} />
