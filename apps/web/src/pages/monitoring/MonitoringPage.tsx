@@ -20,11 +20,10 @@ import { VideoPlayer } from './VideoPlayer';
 import { MapView } from '../../components/monitoring/MapView';
 import api from '../../services/api';
 import { puestoService } from '../../services/puesto.service';
-
-// Mock/Context - Replace with real auth context when available
-const TENANT_ID = 'your-tenant-id'; 
+import { useAuth } from '../../context/AuthContext';
 
 export const MonitoringPage = () => {
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [guards, setGuards] = useState<Record<string, any>>({});
@@ -32,7 +31,7 @@ export const MonitoringPage = () => {
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [devices, setDevices] = useState<any[]>([]);
   const [puestos, setPuestos] = useState<any[]>([]);
-  const { isConnected, on } = useSocket('co', TENANT_ID);
+  const { isConnected, on } = useSocket('co', user?.tenantId);
 
   useEffect(() => {
     fetchActiveIncidents();
