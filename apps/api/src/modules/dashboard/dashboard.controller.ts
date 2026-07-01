@@ -12,4 +12,10 @@ export class DashboardController {
   kpis(@Request() req: any) {
     return this.dashboard.kpis(req.user.tenantId);
   }
+
+  /** Progreso de primeros pasos (guía de inicio). */
+  @Get('onboarding')
+  onboarding(@Request() req: any) {
+    return this.dashboard.onboarding(req.user.tenantId);
+  }
 }

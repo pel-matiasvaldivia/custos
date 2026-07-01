@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { dashboardService, DashboardKpis } from '../../services/dashboard.service';
+import { GuiaInicio } from './GuiaInicio';
+import { BienvenidaModal } from './BienvenidaModal';
 
 export const DashboardPage = () => {
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
@@ -16,8 +18,14 @@ export const DashboardPage = () => {
 
   return (
     <div>
+      <BienvenidaModal />
       <h2 className="text-3xl font-display font-bold text-navy mb-2">Bienvenido a CustOS</h2>
       <p className="text-muted text-lg">Resumen de operaciones y alertas rápidas.</p>
+
+      <div className="mt-8">
+        <GuiaInicio />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
         <div className="card">
           <h3 className="text-muted font-medium mb-1 uppercase text-xs tracking-wider">Vigiladores Activos</h3>
