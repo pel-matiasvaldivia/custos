@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { ContratoConfigService } from '../contrato-config/contrato-config.service';
 import { parseBlocks, PDF_STYLES } from '../contrato/html-to-pdf-content.util';
 // @ts-ignore
 import pdfMake = require('pdfmake');
@@ -12,7 +13,25 @@ export class CotizacionPdfService {
   constructor(
     private prisma: PrismaService,
     private storageService: StorageService,
+    private contratoConfigService: ContratoConfigService,
   ) {}
+
+  /**
+   * Corre queries crudas (`$queryRaw`/`$executeRaw`) dentro de una transacción
+   * con `app.current_tenant` seteado. El wrapper de RLS de PrismaService solo
+   * intercepta operaciones de modelo (`$allModels`), NO las crudas, así que sin
+   * esto las escrituras a tablas con FORCE ROW LEVEL SECURITY (cotizacion_documentos,
+   * cotizaciones) violan la política de aislamiento y fallan con 500.
+   */
+  private async conTenant<T>(
+    tenantId: string,
+    fn: (tx: any) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx: any) => {
+      await tx.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`;
+      return fn(tx);
+    });
+  }
 
   private getPrinter() {
     const fonts = {
@@ -27,14 +46,17 @@ export class CotizacionPdfService {
     return pdfMake;
   }
 
-  private async buildLogoBase64(logoKey: string | null | undefined): Promise<string> {
-    if (!logoKey) return '';
+  private async buildImgHtml(
+    key: string | null | undefined,
+    width: number,
+  ): Promise<string> {
+    if (!key) return '';
     try {
-      const { stream, contentType } = await this.storageService.descargar(logoKey);
+      const { stream, contentType } = await this.storageService.descargar(key);
       const chunks: Buffer[] = [];
       for await (const chunk of stream) chunks.push(chunk as Buffer);
       const base64 = Buffer.concat(chunks).toString('base64');
-      return `<img src="data:${contentType};base64,${base64}" width="120" />`;
+      return `<img src="data:${contentType};base64,${base64}" width="${width}" />`;
     } catch {
       return '';
     }
@@ -50,12 +72,12 @@ export class CotizacionPdfService {
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
 
-    // Load logo_key from configuraciones_contrato using $queryRaw (new column)
-    const configRows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
-      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
-    `;
-    const logoKey = configRows[0]?.logo_key ?? null;
-    const logoHtml = await this.buildLogoBase64(logoKey);
+    // Logo y firma del director salen de la config de contrato (ContratoConfigService
+    // usa PrismaAdmin y filtra por tenant explícitamente, evitando el bypass de RLS
+    // que sufren las queries crudas de este servicio).
+    const config = await this.contratoConfigService.findOne(tenantId);
+    const logoHtml = await this.buildImgHtml(config.logo_key, 120);
+    const firmaImgHtml = await this.buildImgHtml(config.firma_key, 140);
 
     const cotId = `COT-${cotizacionId.slice(0, 8).toUpperCase()}`;
     const fechaCreacion = format(cotizacion.created_at, "dd/MM/yyyy", { locale: es });
@@ -98,7 +120,22 @@ export class CotizacionPdfService {
 
     const nota = `<p>Esta cotización tiene validez hasta el ${fechaVencimiento}. Los valores indicados no incluyen IVA salvo aclaración expresa.</p>`;
 
-    return [encabezado, hr, subtitulo, clienteInfo, tablaItems, totalLinea, hr, nota].join('\n');
+    // Pie de firma del director/responsable comercial. Se muestra solo si el
+    // tenant cargó una firma o al menos el nombre del firmante en Configuración.
+    const firmaNombre = config.firma_nombre ?? '';
+    const firmaCargo = config.firma_cargo ?? '';
+    const firma =
+      firmaImgHtml || firmaNombre
+        ? `<table style="border:none">
+  <tr>
+    <td style="border:none">${firmaImgHtml}<p><strong>${firmaNombre}</strong></p><p>${firmaCargo}</p></td>
+  </tr>
+</table>`
+        : '';
+
+    const bloques = [encabezado, hr, subtitulo, clienteInfo, tablaItems, totalLinea, hr, nota];
+    if (firma) bloques.push(firma);
+    return bloques.join('\n');
   }
 
   /** Convierte el HTML (confirmado por el usuario) a PDF, sube a storage y registra versión. */
@@ -129,22 +166,25 @@ export class CotizacionPdfService {
 
     const ahora = new Date();
 
-    const ultimaVersion = await this.prisma.$queryRaw<{ max: number | null }[]>`
-      SELECT MAX(version) as max FROM cotizacion_documentos WHERE cotizacion_id = ${cotizacionId}::uuid
-    `;
-    const nextVersion = (ultimaVersion[0]?.max ?? 0) + 1;
+    // Todo dentro de una misma transacción con el tenant seteado: cotizacion_documentos
+    // y cotizaciones tienen FORCE ROW LEVEL SECURITY, y estas queries crudas no pasan
+    // por el wrapper de RLS de PrismaService (que solo cubre operaciones de modelo).
+    await this.conTenant(tenantId, async (tx) => {
+      const ultimaVersion = await tx.$queryRaw<{ max: number | null }[]>`
+        SELECT MAX(version) as max FROM cotizacion_documentos WHERE cotizacion_id = ${cotizacionId}::uuid
+      `;
+      const nextVersion = (ultimaVersion[0]?.max ?? 0) + 1;
 
-    await this.prisma.$transaction([
-      this.prisma.$executeRaw`
+      await tx.$executeRaw`
         INSERT INTO cotizacion_documentos (id, tenant_id, cotizacion_id, version, documento_key, generado_at)
         VALUES (gen_random_uuid(), ${tenantId}::uuid, ${cotizacionId}::uuid, ${nextVersion}, ${subida.key}, ${ahora})
-      `,
-      this.prisma.$executeRaw`
+      `;
+      await tx.$executeRaw`
         UPDATE cotizaciones
         SET documento_key = ${subida.key}, documento_generado_at = ${ahora}
         WHERE id = ${cotizacionId}::uuid
-      `,
-    ]);
+      `;
+    });
 
     return buffer;
   }
@@ -156,14 +196,16 @@ export class CotizacionPdfService {
     });
     if (!cot) throw new NotFoundException('Cotización no encontrada.');
 
-    return this.prisma.$queryRaw<
-      { id: string; version: number; documento_key: string; generado_at: Date; notas: string | null }[]
-    >`
-      SELECT id, version, documento_key, generado_at, notas
-      FROM cotizacion_documentos
-      WHERE cotizacion_id = ${cotizacionId}::uuid
-      ORDER BY version DESC
-    `;
+    return this.conTenant(tenantId, (tx) =>
+      tx.$queryRaw<
+        { id: string; version: number; documento_key: string; generado_at: Date; notas: string | null }[]
+      >`
+        SELECT id, version, documento_key, generado_at, notas
+        FROM cotizacion_documentos
+        WHERE cotizacion_id = ${cotizacionId}::uuid
+        ORDER BY version DESC
+      `,
+    );
   }
 
   async descargarDocumentoGuardado(documentoKey: string) {
