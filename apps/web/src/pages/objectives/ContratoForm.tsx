@@ -24,7 +24,7 @@ export const ContratoForm = ({ clienteId, clienteNombre, onClose, onCreated }: P
   const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
   const [objetivoId, setObjetivoId] = useState('');
   const [modo, setModo] = useState<'POR_PLANIFICADO' | 'POR_REAL' | 'ABONO_FIJO'>('POR_PLANIFICADO');
-  const [tarifaHora, setTarifaHora] = useState('');
+  const [horasContratadas, setHorasContratadas] = useState('');
   const [abonoMensual, setAbonoMensual] = useState('');
   const [inicio, setInicio] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -44,7 +44,7 @@ export const ContratoForm = ({ clienteId, clienteNombre, onClose, onCreated }: P
         cliente_nombre: clienteNombre,
         objetivo_id: objetivoId || undefined,
         modo,
-        tarifa_hora: tarifaHora ? Number(tarifaHora) : undefined,
+        horas_contratadas: horasContratadas ? Number(horasContratadas) : undefined,
         abono_mensual: abonoMensual ? Number(abonoMensual) : undefined,
         inicio: inicio || undefined,
       });
@@ -94,13 +94,15 @@ export const ContratoForm = ({ clienteId, clienteNombre, onClose, onCreated }: P
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className={labelClase}>Tarifa por hora</label>
+              <label className={labelClase}>Horas a cubrir (mes)</label>
               <input
                 type="number"
+                min="1"
                 className={campoClase}
-                value={tarifaHora}
-                onChange={(e) => setTarifaHora(e.target.value)}
+                value={horasContratadas}
+                onChange={(e) => setHorasContratadas(e.target.value)}
                 disabled={modo === 'ABONO_FIJO'}
+                placeholder="Ej: 720"
               />
             </div>
             <div className="space-y-1">

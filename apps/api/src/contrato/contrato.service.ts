@@ -114,6 +114,7 @@ export class ContratoService {
           create: {
             tenant_id: tenantId,
             modo: dto.modo,
+            horas_contratadas: dto.horas_contratadas,
             tarifa_hora: dto.tarifa_hora,
             abono_mensual: dto.abono_mensual,
             redondeo_min: dto.redondeo_min ?? 0,
@@ -143,6 +144,7 @@ export class ContratoService {
 
     const {
       modo,
+      horas_contratadas,
       tarifa_hora,
       abono_mensual,
       redondeo_min,
@@ -168,6 +170,7 @@ export class ContratoService {
     }
     const facturacionFields = {
       modo,
+      horas_contratadas,
       tarifa_hora,
       abono_mensual,
       redondeo_min,
@@ -196,6 +199,7 @@ export class ContratoService {
                 create: {
                   tenant_id: tenantId,
                   modo: modo!,
+                  horas_contratadas,
                   tarifa_hora,
                   abono_mensual,
                   redondeo_min: redondeo_min ?? 0,

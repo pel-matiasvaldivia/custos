@@ -896,9 +896,10 @@ model ContratoFacturacion {
   id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id      String   @db.Uuid
   contrato_id    String   @unique @db.Uuid
-  modo           String // POR_PLANIFICADO | POR_REAL | ABONO_FIJO
-  tarifa_hora    Decimal? @db.Decimal(14, 2)
-  abono_mensual  Decimal? @db.Decimal(14, 2)
+  modo               String  // POR_PLANIFICADO | POR_REAL | ABONO_FIJO
+  horas_contratadas  Int?
+  tarifa_hora        Decimal? @db.Decimal(14, 2)
+  abono_mensual      Decimal? @db.Decimal(14, 2)
   redondeo_min   Int      @default(0) // minutos
   penaliza_hueco Boolean  @default(false)
   created_at     DateTime @default(now()) @db.Timestamptz

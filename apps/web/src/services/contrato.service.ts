@@ -17,6 +17,7 @@ export interface CreateContratoData {
   inicio?: string;
   fin?: string;
   modo: 'POR_PLANIFICADO' | 'POR_REAL' | 'ABONO_FIJO';
+  horas_contratadas?: number;
   tarifa_hora?: number;
   abono_mensual?: number;
   redondeo_min?: number;
