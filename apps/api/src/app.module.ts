@@ -36,6 +36,7 @@ import { ContratoConfigModule } from './contrato-config/contrato-config.module';
 import { RelevosModule } from './modules/relevos/relevos.module';
 import { VigilanteAuthModule } from './modules/vigilante-auth/vigilante-auth.module';
 import { SuscripcionModule } from './modules/suscripcion/suscripcion.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { SuscripcionModule } from './modules/suscripcion/suscripcion.module';
     RelevosModule,
     VigilanteAuthModule,
     SuscripcionModule,
+    UsuariosModule,
   ],
   controllers: [AppController],
   providers: [
