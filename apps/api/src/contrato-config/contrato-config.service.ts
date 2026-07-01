@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { TenantContextService } from '../common/context/tenant-context.service';
 import { PLANTILLA_CONTRATO_DEFAULT } from './plantilla-contrato.default';
 
 @Injectable()
@@ -8,6 +9,7 @@ export class ContratoConfigService {
   constructor(
     private prisma: PrismaService,
     private storageService: StorageService,
+    private tenantContext: TenantContextService,
   ) {}
 
   async findOne(tenantId: string) {
@@ -24,17 +26,11 @@ export class ContratoConfigService {
       });
     }
 
-    // Use proxy URLs (/api/v1/config/contrato/tenants/:id/...) so the browser
-    // doesn't try to reach the internal MinIO host directly via a presigned URL.
     const firma_url = config.firma_key
       ? `/api/v1/config/contrato/tenants/${tenantId}/firma?v=${config.firma_key.slice(-8)}`
       : null;
 
-    // logo_key is a new column — read via queryRaw to avoid Prisma client type mismatch
-    const logoRows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
-      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
-    `;
-    const logo_key = logoRows[0]?.logo_key ?? null;
+    const logo_key = (config as any).logo_key as string | null ?? null;
     const logo_url = logo_key
       ? `/api/v1/config/contrato/tenants/${tenantId}/logo?v=${logo_key.slice(-8)}`
       : null;
@@ -94,28 +90,31 @@ export class ContratoConfigService {
   }
 
   async servirLogo(tenantId: string) {
-    const rows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
-      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
-    `;
-    const key = rows[0]?.logo_key;
+    const config = await this.tenantContext.run(tenantId, () =>
+      this.prisma.configuracionContrato.findUnique({
+        where: { tenant_id: tenantId },
+      }),
+    );
+    const key = (config as any)?.logo_key as string | null | undefined;
     if (!key) throw new NotFoundException('Sin logo');
     return this.storageService.descargar(key);
   }
 
   async servirFirma(tenantId: string) {
-    const config = await this.prisma.configuracionContrato.findUnique({
-      where: { tenant_id: tenantId },
-    });
+    const config = await this.tenantContext.run(tenantId, () =>
+      this.prisma.configuracionContrato.findUnique({
+        where: { tenant_id: tenantId },
+      }),
+    );
     if (!config?.firma_key) throw new NotFoundException('Sin firma');
     return this.storageService.descargar(config.firma_key);
   }
 
   async actualizarLogo(tenantId: string, file: Express.Multer.File) {
-    // Get existing logo_key via queryRaw (new column)
-    const rows = await this.prisma.$queryRaw<{ logo_key: string | null }[]>`
-      SELECT logo_key FROM configuraciones_contrato WHERE tenant_id = ${tenantId}::uuid LIMIT 1
-    `;
-    const existenteLogo = rows[0]?.logo_key ?? null;
+    const existente = await this.prisma.configuracionContrato.findUnique({
+      where: { tenant_id: tenantId },
+    });
+    const existenteLogo = (existente as any)?.logo_key as string | null ?? null;
 
     const subida = await this.storageService.subir(
       file.buffer,
@@ -124,9 +123,15 @@ export class ContratoConfigService {
       'logos',
     );
 
-    await this.prisma.$executeRaw`
-      UPDATE configuraciones_contrato SET logo_key = ${subida.key} WHERE tenant_id = ${tenantId}::uuid
-    `;
+    await this.prisma.configuracionContrato.upsert({
+      where: { tenant_id: tenantId },
+      update: { logo_key: subida.key } as any,
+      create: {
+        tenant_id: tenantId,
+        plantilla_html: PLANTILLA_CONTRATO_DEFAULT,
+        logo_key: subida.key,
+      } as any,
+    });
 
     if (existenteLogo && existenteLogo !== subida.key) {
       await this.storageService.eliminar(existenteLogo).catch(() => undefined);
