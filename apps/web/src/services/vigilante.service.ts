@@ -69,4 +69,25 @@ export const vigilanteService = {
   setPin: async (id: string, pin: string): Promise<void> => {
     await api.post(`/vigilantes/${id}/pin`, { pin });
   },
+
+  descargarPlantilla: async (): Promise<void> => {
+    const response = await api.get('/vigilantes/plantilla', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plantilla_vigiladores.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
+
+  importarMasivo: async (
+    file: File,
+  ): Promise<{ creados: number; errores: { fila: number; mensaje: string }[] }> => {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await api.post('/vigilantes/importar', form);
+    return response.data;
+  },
 };

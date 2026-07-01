@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { vigilanteService, Vigilador } from '../../services/vigilante.service';
-import { UserPlus, Search, MoreVertical, Pencil } from 'lucide-react';
+import { UserPlus, Search, MoreVertical, Pencil, Upload } from 'lucide-react';
 import { VigiladorWizard } from './VigiladorWizard';
 import { VigiladorEditForm } from './VigiladorEditForm';
+import { ImportarVigiladoresModal } from './ImportarVigiladoresModal';
 import { Link } from 'react-router-dom';
 
 export const PersonnelPage = () => {
   const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
   const [loading, setLoading] = useState(true);
   const [wizardAbierto, setWizardAbierto] = useState(false);
+  const [importarAbierto, setImportarAbierto] = useState(false);
   const [menuAbiertoId, setMenuAbiertoId] = useState<string | null>(null);
   const [vigiladorEditando, setVigiladorEditando] = useState<Vigilador | null>(null);
 
@@ -35,12 +37,20 @@ export const PersonnelPage = () => {
           <h2 className="text-3xl font-display font-bold text-navy">Personal</h2>
           <p className="text-muted">Gestión de vigiladores y credenciales.</p>
         </div>
-        <button
-          onClick={() => setWizardAbierto(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <UserPlus size={18} /> Nuevo Vigilador
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setImportarAbierto(true)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Upload size={16} /> Importar
+          </button>
+          <button
+            onClick={() => setWizardAbierto(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <UserPlus size={18} /> Nuevo Vigilador
+          </button>
+        </div>
       </div>
 
       {wizardAbierto && (
@@ -50,6 +60,13 @@ export const PersonnelPage = () => {
             setWizardAbierto(false);
             fetchVigiladores();
           }}
+        />
+      )}
+
+      {importarAbierto && (
+        <ImportarVigiladoresModal
+          onClose={() => setImportarAbierto(false)}
+          onImportado={fetchVigiladores}
         />
       )}
 
