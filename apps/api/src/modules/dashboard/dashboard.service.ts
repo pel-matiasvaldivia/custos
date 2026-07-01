@@ -47,4 +47,38 @@ export class DashboardService {
       turnos_cubiertos_hoy: cubiertos,
     };
   }
+
+  /**
+   * Estado de los primeros pasos de configuración de un tenant nuevo, para la
+   * guía de inicio del dashboard. Cada flag indica si ese paso ya está hecho.
+   */
+  async onboarding(tenantId: string) {
+    const [
+      personal,
+      clientes,
+      objetivos,
+      puestos,
+      esquemas,
+      asignaciones,
+      cotizaciones,
+    ] = await Promise.all([
+      this.prisma.vigilador.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.cliente.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.objetivo.count({ where: { tenant_id: tenantId } }),
+      this.prisma.puesto.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.esquemaTurno.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.asignacionEsquema.count({ where: { tenant_id: tenantId, vigente_hasta: null } }),
+      this.prisma.cotizacion.count({ where: { tenant_id: tenantId } }),
+    ]);
+
+    return {
+      tiene_personal: personal > 0,
+      tiene_clientes: clientes > 0,
+      tiene_objetivos: objetivos > 0,
+      tiene_puestos: puestos > 0,
+      tiene_esquemas: esquemas > 0,
+      tiene_cuadrante: asignaciones > 0,
+      tiene_cotizaciones: cotizaciones > 0,
+    };
+  }
 }
