@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Plus, Pencil, Building2, FileSignature } from 'lucide-react';
+import { ArrowLeft, FileText, Plus, Pencil, Building2, FileSignature, Settings2 } from 'lucide-react';
 import { clienteService, Cliente } from '../../services/cliente.service';
 import { contratoService } from '../../services/contrato.service';
 import { objetivoService, Contrato, Objetivo } from '../../services/objetivo.service';
 import { ClienteForm } from './ClienteForm';
 import { ContratoForm } from '../objectives/ContratoForm';
 import { ContratoDocumentoModal } from './ContratoDocumentoModal';
+import { ContratoEditForm } from './ContratoEditForm';
 
 export const ClienteDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ export const ClienteDetail = () => {
   const [modalEditar, setModalEditar] = useState(false);
   const [modalContrato, setModalContrato] = useState(false);
   const [contratoDocumento, setContratoDocumento] = useState<Contrato | null>(null);
+  const [contratoEditando, setContratoEditando] = useState<Contrato | null>(null);
 
   const cargar = async () => {
     if (!id) return;
@@ -93,27 +95,44 @@ export const ClienteDetail = () => {
               <div className="space-y-3">
                 {contratos.map((c) => (
                   <div key={c.id} className="p-4 border border-line rounded-lg bg-canvas">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="font-mono font-bold text-sm text-navy">{c.codigo}</p>
-                        <p className="text-xs text-muted mt-0.5">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-mono font-bold text-sm text-navy">{c.codigo}</p>
+                          <span className={`status-badge ${c.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
+                            {c.estado}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted mt-1">
                           {c.objetivo_id ? `Objetivo: ${objetivoNombre(c.objetivo_id) || c.objetivo_id}` : 'Sin objetivo asignado'}
                         </p>
+                        {c.facturacion ? (
+                          <p className="text-xs text-muted mt-0.5">
+                            {c.facturacion.modo === 'ABONO_FIJO'
+                              ? `Abono fijo: $${Number(c.facturacion.abono_mensual ?? 0).toLocaleString()}/mes`
+                              : `${c.facturacion.modo === 'POR_PLANIFICADO' ? 'Por planificado' : 'Por real'}: $${Number(c.facturacion.tarifa_hora ?? 0).toLocaleString()}/h`}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber mt-0.5 font-medium">Sin facturación configurada</p>
+                        )}
                         {c.documento_generado_at && (
                           <p className="text-xs text-emerald mt-0.5">
-                            Documento generado el {new Date(c.documento_generado_at).toLocaleDateString('es-AR')}
+                            Documento: {new Date(c.documento_generado_at).toLocaleDateString('es-AR')}
                           </p>
                         )}
                       </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <span className={`status-badge ${c.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
-                          {c.estado}
-                        </span>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <button
+                          onClick={() => setContratoEditando(c)}
+                          className="text-muted hover:text-navy transition-colors text-xs font-medium flex items-center gap-1"
+                        >
+                          <Settings2 size={13} /> Editar
+                        </button>
                         <button
                           onClick={() => setContratoDocumento(c)}
                           className="text-brand-blue hover:text-brand-deep transition-colors text-xs font-medium flex items-center gap-1"
                         >
-                          <FileSignature size={14} /> {c.documento_key ? 'Ver documento' : 'Generar documento'}
+                          <FileSignature size={13} /> {c.documento_key ? 'Ver doc.' : 'Generar doc.'}
                         </button>
                       </div>
                     </div>
@@ -175,6 +194,17 @@ export const ClienteDetail = () => {
           contrato={contratoDocumento}
           onClose={() => setContratoDocumento(null)}
           onGenerado={() => {
+            cargar();
+          }}
+        />
+      )}
+
+      {contratoEditando && (
+        <ContratoEditForm
+          contrato={contratoEditando}
+          onClose={() => setContratoEditando(null)}
+          onSaved={() => {
+            setContratoEditando(null);
             cargar();
           }}
         />

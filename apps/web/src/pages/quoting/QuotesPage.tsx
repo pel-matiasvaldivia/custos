@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, CheckCircle2, Clock, Send, XCircle, FileText } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { cotizacionService, Cotizacion, EstadoCotizacion } from '../../services/cotizacion.service';
 import { CotizacionDocumentoModal } from './CotizacionDocumentoModal';
+import { ContratoCreatedModal } from './ContratoCreatedModal';
+import { Contrato } from '../../services/objetivo.service';
 
 export const QuotesPage = () => {
-  const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Cotizacion[]>([]);
   const [loading, setLoading] = useState(true);
   const [actuando, setActuando] = useState<string | null>(null);
   const [modalDocumento, setModalDocumento] = useState<Cotizacion | null>(null);
+  const [contratoCreado, setContratoCreado] = useState<Contrato | null>(null);
 
   const cargar = () => {
     cotizacionService
@@ -28,11 +30,7 @@ export const QuotesPage = () => {
       const { contrato } = await cotizacionService.cambiarEstado(id, estado);
       cargar();
       if (estado === 'ACEPTADA' && contrato) {
-        if (contrato.cliente_id) {
-          navigate(`/clients/${contrato.cliente_id}`);
-        } else {
-          alert(`Contrato ${contrato.codigo} creado en BORRADOR. Completá la facturación para activarlo.`);
-        }
+        setContratoCreado(contrato);
       }
     } catch (err) {
       alert(
@@ -168,6 +166,13 @@ export const QuotesPage = () => {
             cargar();
             setModalDocumento(null);
           }}
+        />
+      )}
+
+      {contratoCreado && (
+        <ContratoCreatedModal
+          contrato={contratoCreado}
+          onClose={() => setContratoCreado(null)}
         />
       )}
     </div>

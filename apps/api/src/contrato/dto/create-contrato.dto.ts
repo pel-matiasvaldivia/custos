@@ -8,6 +8,7 @@ import {
   IsInt,
   IsBoolean,
   IsDateString,
+  ValidateIf,
 } from 'class-validator';
 
 export class CreateContratoDto {
@@ -45,11 +46,11 @@ export class CreateContratoDto {
   @IsInt()
   horas_contratadas?: number;
 
-  @IsOptional()
+  @ValidateIf((o) => o.modo !== 'ABONO_FIJO')
   @IsNumber()
   tarifa_hora?: number;
 
-  @IsOptional()
+  @ValidateIf((o) => o.modo === 'ABONO_FIJO')
   @IsNumber()
   abono_mensual?: number;
 
