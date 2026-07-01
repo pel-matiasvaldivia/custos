@@ -21,6 +21,7 @@ import MobileLogin from './pages/mobile/MobileLogin';
 import ComprasPage from './pages/compras/ComprasPage';
 import { HerramientasPage } from './pages/herramientas/HerramientasPage';
 import { RelevosPage } from './pages/relevos/RelevosPage';
+import { LiquidacionesPage } from './pages/liquidaciones/LiquidacionesPage';
 import OnboardingPage from './pages/onboarding/OnboardingPage';
 import LandingPage from './pages/landing/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
@@ -117,6 +118,7 @@ function AppRoutes() {
           <Route path="/compras" element={<ComprasPage />} />
           <Route path="/herramientas" element={<HerramientasPage />} />
           <Route path="/relevos" element={<RelevosPage />} />
+          <Route path="/liquidaciones" element={<LiquidacionesPage />} />
           <Route path="/suscripcion" element={<SuscripcionPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route path="/kiosk" element={<KioskPage />} />
