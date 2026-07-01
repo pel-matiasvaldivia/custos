@@ -12,8 +12,10 @@ import {
   UseInterceptors,
   UploadedFile,
   Request,
+  Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { Response } from 'express';
 import { VigilanteService } from './vigilante.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -39,6 +41,31 @@ export class VigilanteController {
   @Get()
   async findAll(@Request() req: any, @Query() pagination: PaginationDto) {
     return this.vigilanteService.findAll(req.user.tenantId, pagination);
+  }
+
+  @Get('plantilla')
+  async descargarPlantilla(@Res() res: Response) {
+    const buffer = await this.vigilanteService.generarPlantilla();
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition':
+        'attachment; filename="plantilla_vigiladores.xlsx"',
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
+
+  @Post('importar')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'GERENCIA')
+  @UseInterceptors(FileInterceptor('file'))
+  async importarMasivo(
+    @UploadedFile() file: Express.Multer.File,
+    @Request() req: any,
+  ) {
+    if (!file) throw new BadRequestException('No se recibió ningún archivo.');
+    return this.vigilanteService.importarMasivo(req.user.tenantId, file.buffer);
   }
 
   @Get(':id')
