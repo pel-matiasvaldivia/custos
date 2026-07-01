@@ -294,18 +294,23 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* ── HERO — imagen de guardia de seguridad ── */}
-      <section
-        className="relative min-h-screen flex items-center overflow-hidden bg-slate-900"
-        style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-bqmS7urhd3M?auto=format&fit=crop&w=1920&q=80)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center top',
-        }}
-      >
-        {/* Overlays para legibilidad */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-slate-900/30" />
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-slate-900/10" />
+      {/* ── HERO ── */}
+      <section className="relative min-h-screen flex items-center overflow-hidden bg-[#0b1220]">
+        {/* Glow azul desde arriba-izquierda */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_70%_at_-10%_40%,rgba(37,99,235,0.22),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_40%_at_100%_80%,rgba(37,99,235,0.08),transparent)]" />
+        {/* Grilla de puntos sutil */}
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1' fill='%234a7fd4' fill-opacity='0.4'/%3E%3C/svg%3E")` }}
+        />
+        {/* Líneas diagonales muy sutiles */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='80' x2='80' y2='0' stroke='%2360a5fa' stroke-width='0.5'/%3E%3C/svg%3E")` }}
+        />
+        {/* Gradiente de borde inferior para transición suave */}
+        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0b1220] to-transparent" />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-16 w-full">
           <div className="max-w-3xl space-y-8">
@@ -437,25 +442,57 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Imagen de equipo profesional */}
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-200">
-              <img
-                src="https://images.unsplash.com/photo-vhKSJjv-yBM?auto=format&fit=crop&w=800&q=80"
-                alt="Guardia de seguridad en ronda, vista panorámica de la ciudad"
-                className="w-full h-[520px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-navy/70 via-navy/10 to-transparent" />
-              {/* Floating status card */}
-              <div className="absolute bottom-6 left-6 right-6">
-                <div className="bg-white/95 backdrop-blur-md rounded-2xl p-4 flex items-center gap-4 shadow-xl">
-                  <div className="w-10 h-10 bg-emerald/10 rounded-xl flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={20} className="text-emerald" />
+            {/* Panel: Centro de Operaciones en vivo */}
+            <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-700/30 shadow-2xl shadow-slate-200/50 h-[520px]">
+              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='15' cy='15' r='0.8' fill='%234a7fd4' fill-opacity='0.5'/%3E%3C/svg%3E")` }} />
+              <div className="relative z-10 p-6 h-full flex flex-col gap-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-emerald animate-pulse" />
+                    <span className="text-white/40 text-xs font-mono">Centro de Operaciones · En vivo · 03:17 AM</span>
                   </div>
-                  <div>
-                    <p className="text-navy font-bold text-sm">Cobertura verificada · En vivo</p>
-                    <p className="text-slate-400 text-xs mt-0.5">24 vigiladores activos · 0 huecos de cobertura</p>
+                  <Shield size={14} className="text-brand-blue" />
+                </div>
+                {/* KPIs */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { val: '24', label: 'Vigiladores', color: 'text-emerald' },
+                    { val: '100%', label: 'Cobertura', color: 'text-white' },
+                    { val: '0', label: 'Alertas', color: 'text-white' },
+                  ].map(k => (
+                    <div key={k.label} className="bg-white/5 border border-white/8 rounded-xl p-3">
+                      <p className={`text-2xl font-black italic ${k.color}`}>{k.val}</p>
+                      <p className="text-white/30 text-[10px] font-mono uppercase tracking-wider mt-0.5">{k.label}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Puestos activos */}
+                <div className="bg-white/5 border border-white/8 rounded-xl p-4 flex-1 overflow-hidden">
+                  <p className="text-white/30 text-[10px] font-mono uppercase tracking-wider mb-3">Puestos activos</p>
+                  {[
+                    { name: 'Banco Austral — Acceso principal', guards: 2 },
+                    { name: 'Planta Norte — Perímetro exterior', guards: 3 },
+                    { name: 'Edificio Mitre — Control vehicular', guards: 1 },
+                    { name: 'Centro Comercial Belgrano', guards: 2 },
+                    { name: 'Aeropuerto — Terminal B', guards: 4 },
+                  ].map(p => (
+                    <div key={p.name} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
+                      <span className="text-white/60 text-xs truncate flex-1">{p.name}</span>
+                      <div className="flex items-center gap-2 shrink-0 ml-3">
+                        <span className="text-white/30 text-[10px] font-mono">{p.guards}v</span>
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Alerta credencial */}
+                <div className="bg-amber/10 border border-amber/20 rounded-xl p-3 flex items-center gap-3">
+                  <AlertTriangle size={14} className="text-amber shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-amber text-xs font-bold">Credencial por vencer</p>
+                    <p className="text-white/40 text-[10px] truncate">García, M. — Carnet Vigilador · vence en 5 días</p>
                   </div>
-                  <div className="ml-auto w-2 h-2 bg-emerald rounded-full animate-pulse" />
                 </div>
               </div>
             </div>
@@ -565,15 +602,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FACTOR 4.2 — imagen de fondo con overlay claro ── */}
-      <section className="relative py-28 overflow-hidden bg-slate-900"
-        style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-qahzKHES6OY?auto=format&fit=crop&w=1920&q=80)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="absolute inset-0 bg-navy/88" />
+      {/* ── FACTOR 4.2 ── */}
+      <section className="relative py-28 overflow-hidden bg-[#06111e]">
+        {/* Glow derecho */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_100%_50%,rgba(37,99,235,0.18),transparent)]" />
+        {/* Cuadrícula técnica */}
+        <div
+          className="absolute inset-0 opacity-15"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='60' height='60' fill='none' stroke='%232563eb' stroke-width='0.4' stroke-opacity='0.6'/%3E%3C/svg%3E")` }}
+        />
         <div className="relative z-10 max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
@@ -644,16 +681,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── IMAGEN FULL-WIDTH: patrulla de seguridad ── */}
-      <section
-        className="relative py-32 overflow-hidden bg-slate-900"
-        style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-62jn7pAeWzQ?auto=format&fit=crop&w=1920&q=80)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 30%',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-navy/95 via-navy/80 to-navy/60" />
+      {/* ── BANNER: Cada guardia en su puesto ── */}
+      <section className="relative py-32 overflow-hidden bg-[#071018]">
+        {/* Glow central */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,rgba(37,99,235,0.14),transparent)]" />
+        {/* Hexágonos de seguridad SVG */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='56' height='100' viewBox='0 0 56 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zM28 98L0 82V50l28-16 28 16v32L28 98z' fill='none' stroke='%232563eb' stroke-width='0.6'/%3E%3C/svg%3E")` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#071018]/80 via-transparent to-[#071018]/80" />
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-8">
           <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.3em]">Seguridad que no se improvisa</span>
           <h2 className="font-display text-4xl lg:text-6xl font-black text-white italic uppercase tracking-tighter leading-tight">
@@ -772,16 +809,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA FINAL — imagen imponente de seguridad ── */}
-      <section
-        className="relative py-36 overflow-hidden bg-slate-900"
-        style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-8FxJi5wuwKc?auto=format&fit=crop&w=1920&q=80)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 40%',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/98 via-slate-900/85 to-slate-900/60" />
+      {/* ── CTA FINAL ── */}
+      <section className="relative py-36 overflow-hidden bg-[#040d18]">
+        {/* Glow azul doble: arriba-izq y abajo-der */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_0%_0%,rgba(37,99,235,0.20),transparent)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_40%_at_100%_100%,rgba(37,99,235,0.12),transparent)]" />
+        {/* Grilla diagonal */}
+        <div
+          className="absolute inset-0 opacity-12"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='60' x2='60' y2='0' stroke='%232563eb' stroke-width='0.5'/%3E%3C/svg%3E")` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#040d18]/60 via-transparent to-[#040d18]/40" />
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-8">
           <h2 className="font-display text-4xl lg:text-6xl font-black text-white italic uppercase tracking-tighter leading-tight">
             Empezá hoy.<br />Sin excusas.
