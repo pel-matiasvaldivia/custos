@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { vigilanteService, Vigilador, Completitud } from '../../services/vigilante.service';
+import { vigilanteService, Vigilador, Completitud, estadoMeta } from '../../services/vigilante.service';
 import { credencialService, Credencial } from '../../services/credencial.service';
 import { ArrowLeft, Plus, AlertCircle, FileCheck, User, MapPin, Phone, Pencil, KeyRound } from 'lucide-react';
 import { CredencialForm } from './CredencialForm';
@@ -126,8 +126,17 @@ export const VigiladorDetail = () => {
           >
             <Pencil size={14} /> Editar ficha
           </button>
-          <span className={`status-badge ${vigilador.estado === 'ACTIVO' ? 'status-badge-ok' : 'status-badge-alert'}`}>
-            {vigilador.estado}
+          <span
+            className={`status-badge ${
+              estadoMeta(vigilador.estado).badge === 'ok'
+                ? 'status-badge-ok'
+                : estadoMeta(vigilador.estado).badge === 'alert'
+                  ? 'status-badge-alert'
+                  : 'status-badge'
+            }`}
+            title={estadoMeta(vigilador.estado).descripcion}
+          >
+            {estadoMeta(vigilador.estado).label}
           </span>
           <span className={`status-badge ${completitud?.completo ? 'status-badge-ok' : 'status-badge-alert'}`}>
             Ficha {completitud?.completo ? 'completa' : 'incompleta'}

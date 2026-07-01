@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsIn, IsNumber, Min } from 'class-validator';
+import { VIGILADOR_ESTADOS_ACEPTADOS } from '../vigilador-estado';
 
 export class UpdateVigilanteDto {
   @IsOptional()
@@ -28,7 +29,7 @@ export class UpdateVigilanteDto {
   documento?: string;
 
   @IsOptional()
-  @IsIn(['ACTIVO', 'SUSPENDIDO', 'BAJA'])
+  @IsIn(VIGILADOR_ESTADOS_ACEPTADOS)
   estado?: string;
 
   @IsOptional()

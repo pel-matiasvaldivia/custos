@@ -34,6 +34,8 @@ export const PorContratoTab = () => {
   const [hsPorEsquema, setHsPorEsquema] = useState<Map<string, number>>(new Map());
   const [expandido, setExpandido] = useState<string | null>(null);
   const [asignaciones, setAsignaciones] = useState<Map<string, AsignacionEsquema[]>>(new Map());
+  // Horas semanales a cubrir por puesto (según la cobertura configurada). null = sin configurar.
+  const [requeridasPorPuesto, setRequeridasPorPuesto] = useState<Map<string, number | null>>(new Map());
   const [cargandoAsig, setCargandoAsig] = useState<string | null>(null);
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,9 +73,22 @@ export const PorContratoTab = () => {
     setError(null);
     if (!asignaciones.has(objetivoId)) {
       setCargandoAsig(objetivoId);
+      const detalle = detalles.find((d) => d.objetivo.id === objetivoId);
+      const puestos = detalle?.puestos ?? [];
       try {
-        const data = await cuadranteService.listarAsignacionesPorObjetivo(objetivoId);
+        const [data, coberturas] = await Promise.all([
+          cuadranteService.listarAsignacionesPorObjetivo(objetivoId),
+          Promise.all(puestos.map((p) => cuadranteService.obtenerCobertura(p.id).catch(() => null))),
+        ]);
         setAsignaciones((prev) => new Map(prev).set(objetivoId, data));
+        setRequeridasPorPuesto((prev) => {
+          const copia = new Map(prev);
+          puestos.forEach((p, i) => {
+            const cob = coberturas[i];
+            copia.set(p.id, cob ? cob.ventana.horas_dia * cob.ventana.dias.length : null);
+          });
+          return copia;
+        });
       } catch (err) {
         setError(mensajeError(err) || 'No se pudieron cargar las asignaciones.');
       } finally {
@@ -212,15 +227,44 @@ export const PorContratoTab = () => {
                             (acc, a) => acc + (hsPorEsquema.get(a.esquemaId) ?? 0),
                             0,
                           );
+                          const requeridas = requeridasPorPuesto.get(p.id);
+                          const tieneRequeridas = requeridas != null && requeridas > 0;
+                          const pct = tieneRequeridas
+                            ? Math.min(100, Math.round((horasCubiertas / requeridas!) * 100))
+                            : 0;
+                          const completo = tieneRequeridas && horasCubiertas >= requeridas!;
                           return (
                             <div key={p.id} className="rounded-lg border border-line bg-surface p-3 space-y-2">
                               <div className="flex items-center justify-between">
                                 <p className="text-sm font-medium text-navy">{p.nombre}</p>
                                 <span className="text-[11px] text-muted inline-flex items-center gap-1">
-                                  <UserCheck size={12} /> {asigPuesto.length} afectado(s) ·{' '}
-                                  <span className="font-semibold text-navy">{horasCubiertas} hs/sem cubiertas</span>
+                                  <UserCheck size={12} /> {asigPuesto.length} afectado(s)
                                 </span>
                               </div>
+
+                              {/* Progreso cubiertas / requeridas */}
+                              {tieneRequeridas ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between text-[11px]">
+                                    <span className={completo ? 'text-emerald font-medium' : 'text-muted'}>
+                                      {horasCubiertas} / {requeridas} hs/sem cubiertas
+                                    </span>
+                                    <span className={completo ? 'text-emerald' : 'text-amber'}>
+                                      {completo ? 'Completo' : `Faltan ${requeridas! - horasCubiertas} hs`}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full bg-canvas rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full transition-all ${completo ? 'bg-emerald' : 'bg-brand-blue'}`}
+                                      style={{ width: `${pct}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-muted">
+                                  {horasCubiertas} hs/sem cubiertas · sin cobertura configurada (configurala en el objetivo)
+                                </p>
+                              )}
 
                               {asigPuesto.length === 0 ? (
                                 <p className="text-xs text-muted italic">Sin vigiladores afectados.</p>

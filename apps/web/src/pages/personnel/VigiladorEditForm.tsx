@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { vigilanteService, Vigilador } from '../../services/vigilante.service';
+import {
+  vigilanteService,
+  Vigilador,
+  ESTADOS_SELECCIONABLES,
+  estadoMeta,
+} from '../../services/vigilante.service';
 
 const campoClase =
   'w-full px-3 py-2 bg-canvas border border-line rounded-md focus:ring-2 focus:ring-brand-blue/20 outline-none text-sm';
@@ -17,6 +22,7 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
   const [apellido, setApellido] = useState(vigilador.apellido);
   const [documento, setDocumento] = useState(vigilador.documento);
   const [legajoNro, setLegajoNro] = useState(vigilador.legajo_nro);
+  const [estado, setEstado] = useState(vigilador.estado || 'ACTIVO');
   const [telefono, setTelefono] = useState(vigilador.telefono || '');
   const [domicilio, setDomicilio] = useState(vigilador.domicilio || '');
   const [localidad, setLocalidad] = useState(vigilador.localidad || '');
@@ -38,6 +44,7 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
         apellido,
         documento,
         legajo_nro: legajoNro,
+        estado,
         telefono: telefono || undefined,
         domicilio: domicilio || undefined,
         localidad: localidad || undefined,
@@ -85,6 +92,21 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
               <input className={campoClase} value={legajoNro} onChange={(e) => setLegajoNro(e.target.value)} required />
             </div>
           </div>
+          <div className="space-y-1">
+            <label className={labelClase}>Estado / Disponibilidad</label>
+            <select className={campoClase} value={estado} onChange={(e) => setEstado(e.target.value)}>
+              {ESTADOS_SELECCIONABLES.map((e) => (
+                <option key={e} value={e}>
+                  {estadoMeta(e).label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-muted">
+              {estadoMeta(estado).descripcion}
+              {!estadoMeta(estado).disponible && ' No se lo puede afectar a un puesto mientras esté en este estado.'}
+            </p>
+          </div>
+
           <div className="space-y-1">
             <label className={labelClase}>Teléfono</label>
             <input className={campoClase} value={telefono} onChange={(e) => setTelefono(e.target.value)} />
