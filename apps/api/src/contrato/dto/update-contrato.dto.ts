@@ -39,6 +39,10 @@ export class UpdateContratoDto {
   modo?: string;
 
   @IsOptional()
+  @IsInt()
+  horas_contratadas?: number;
+
+  @IsOptional()
   @IsNumber()
   tarifa_hora?: number;
 
