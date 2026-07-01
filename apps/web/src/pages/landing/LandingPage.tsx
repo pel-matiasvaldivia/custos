@@ -3,10 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   Shield, ShieldCheck, Users, FileText, BarChart3, Smartphone,
-  MapPin, AlertTriangle, CheckCircle, CheckCircle2, ChevronRight, ChevronLeft,
+  AlertTriangle, CheckCircle, CheckCircle2, ChevronRight, ChevronLeft,
   ArrowRight, X, Eye, EyeOff, Activity, Building2, User, Check,
   ClipboardList, Truck, Wrench, Bell, Lock, Globe, Star,
   Calendar, CreditCard, UploadCloud, Menu,
+  TrendingUp, QrCode, Fingerprint, DollarSign,
 } from 'lucide-react';
 
 /* ─── ONBOARDING MODAL — usa el mismo endpoint que /registro ─── */
@@ -230,6 +231,39 @@ function DemoModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+/* ─── MOCKUP: marco de navegador (product screenshot look) ─── */
+function BrowserFrame({ url = 'app.custos.com.ar', children }: { url?: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-2xl shadow-slate-300/40 bg-white">
+      <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+        <div className="flex gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-red-300" />
+          <span className="w-3 h-3 rounded-full bg-amber/60" />
+          <span className="w-3 h-3 rounded-full bg-emerald/60" />
+        </div>
+        <div className="flex-1 mx-3">
+          <div className="bg-white border border-slate-200 rounded-md px-3 py-1 text-[10px] font-mono text-slate-400 flex items-center gap-1.5 w-fit">
+            <Lock size={9} className="text-emerald" /> {url}
+          </div>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/* ─── MOCKUP: teléfono (app del vigilador) ─── */
+function PhoneFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mx-auto w-[280px] rounded-[2.5rem] border-[10px] border-navy bg-navy shadow-2xl shadow-navy/30 overflow-hidden">
+      <div className="relative bg-canvas rounded-[1.8rem] overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-navy rounded-b-2xl z-10" />
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /* ─── MAIN LANDING ─── */
 export default function LandingPage() {
   const [showModal, setShowModal] = useState(false);
@@ -250,35 +284,33 @@ export default function LandingPage() {
       {showModal && <DemoModal onClose={() => setShowModal(false)} />}
 
       {/* ── NAV ── */}
-      <nav className={`fixed top-0 w-full z-50 transition-all duration-500 ${
-        scrolled
-          ? 'bg-white/98 backdrop-blur-xl shadow-sm border-b border-slate-100'
-          : 'bg-transparent'
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled ? 'bg-white/98 backdrop-blur-xl shadow-sm border-b border-slate-100' : 'bg-white/80 backdrop-blur-sm'
       }`}>
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center shadow-lg shadow-brand-blue/30">
               <Shield size={17} className="text-white" />
             </div>
-            <span className={`font-display text-xl font-black tracking-tighter uppercase italic transition-colors ${scrolled ? 'text-navy' : 'text-white'}`}>
+            <span className="font-display text-xl font-black tracking-tighter uppercase italic text-navy">
               Cust<span className="text-brand-blue">OS</span>
             </span>
           </div>
 
-          <div className={`hidden md:flex gap-8 text-[10px] font-black font-mono uppercase tracking-[0.2em] transition-colors ${scrolled ? 'text-slate-500' : 'text-white/70'}`}>
-            {[['#problema', 'El Problema'], ['#modulos', 'Módulos'], ['#como-funciona', 'Cómo funciona'], ['#planes', 'Planes']].map(([href, label]) => (
+          <div className="hidden md:flex gap-8 text-[10px] font-black font-mono uppercase tracking-[0.2em] text-slate-500">
+            {[['#plataforma', 'Plataforma'], ['#modulos', 'Módulos'], ['#como-funciona', 'Cómo funciona'], ['#planes', 'Planes']].map(([href, label]) => (
               <a key={href} href={href} className="hover:text-brand-blue transition-colors">{label}</a>
             ))}
           </div>
 
           <div className="flex items-center gap-4">
-            <Link to="/login" className={`hidden md:block text-[10px] font-black font-mono uppercase tracking-widest transition-colors ${scrolled ? 'text-slate-500 hover:text-navy' : 'text-white/70 hover:text-white'}`}>
+            <Link to="/login" className="hidden md:block text-[10px] font-black font-mono uppercase tracking-widest text-slate-500 hover:text-navy transition-colors">
               Ingresar
             </Link>
             <button onClick={openDemo} className="bg-brand-blue text-white px-5 py-2.5 rounded-xl font-black text-[10px] font-mono uppercase tracking-widest shadow-xl shadow-brand-blue/30 hover:bg-brand-deep transition-all active:scale-95">
-              Probá gratis
+              Solicitar demo
             </button>
-            <button onClick={() => setMenuOpen(m => !m)} className={`md:hidden ${scrolled ? 'text-navy' : 'text-white'}`}>
+            <button onClick={() => setMenuOpen(m => !m)} className="md:hidden text-navy">
               <Menu size={22} />
             </button>
           </div>
@@ -286,7 +318,7 @@ export default function LandingPage() {
 
         {menuOpen && (
           <div className="md:hidden bg-white border-t border-slate-100 px-6 py-4 space-y-1 shadow-xl">
-            {[['#problema', 'El Problema'], ['#modulos', 'Módulos'], ['#como-funciona', 'Cómo funciona'], ['#planes', 'Planes']].map(([href, label]) => (
+            {[['#plataforma', 'Plataforma'], ['#modulos', 'Módulos'], ['#como-funciona', 'Cómo funciona'], ['#planes', 'Planes']].map(([href, label]) => (
               <a key={href} href={href} onClick={() => setMenuOpen(false)} className="block text-sm font-bold text-navy py-3 border-b border-slate-50 last:border-b-0">{label}</a>
             ))}
             <Link to="/login" className="block text-sm font-bold text-slate-400 py-3">Ingresar</Link>
@@ -294,298 +326,403 @@ export default function LandingPage() {
         )}
       </nav>
 
-      {/* ── HERO ── */}
-      <section className="relative min-h-screen flex items-center overflow-hidden bg-[#0b1220]">
-        {/* Glow azul desde arriba-izquierda */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_70%_at_-10%_40%,rgba(37,99,235,0.22),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_40%_at_100%_80%,rgba(37,99,235,0.08),transparent)]" />
-        {/* Grilla de puntos sutil */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='20' cy='20' r='1' fill='%234a7fd4' fill-opacity='0.4'/%3E%3C/svg%3E")` }}
-        />
-        {/* Líneas diagonales muy sutiles */}
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='80' x2='80' y2='0' stroke='%2360a5fa' stroke-width='0.5'/%3E%3C/svg%3E")` }}
-        />
-        {/* Gradiente de borde inferior para transición suave */}
-        <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#0b1220] to-transparent" />
-
-        <div className="relative z-10 max-w-7xl mx-auto px-6 pt-24 pb-16 w-full">
-          <div className="max-w-3xl space-y-8">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full">
-              <div className="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse" />
-              <span className="text-[10px] font-black font-mono text-white/80 uppercase tracking-[0.2em]">ERP para seguridad privada · Argentina</span>
-            </div>
-
-            <h1 className="font-display text-5xl lg:text-7xl font-black text-white leading-[0.9] tracking-tighter uppercase italic">
-              Tu empresa de<br />seguridad,<br />
-              <span className="text-brand-blue">bajo control.</span>
-            </h1>
-
-            <p className="text-white/60 text-lg leading-relaxed max-w-xl">
-              CustOS integra la gestión de personal, cuadrantes, contratos, monitoreo electrónico y facturación en una sola plataforma — pensada para el Convenio 507 y la operación real de Argentina.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <button
-                onClick={openDemo}
-                className="bg-brand-blue text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl shadow-brand-blue/40 hover:bg-brand-deep transition-all flex items-center justify-center gap-2 group active:scale-95"
-              >
-                Crear cuenta de prueba gratis
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </button>
-              <Link
-                to="/login"
-                className="border border-white/20 text-white/70 hover:text-white hover:border-white/40 px-8 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2 backdrop-blur-sm"
-              >
-                Ya tengo cuenta
-              </Link>
-            </div>
-
-            <p className="text-white/30 text-xs font-mono">Sin tarjeta de crédito · 30 días gratis · Instancia propia</p>
-          </div>
-        </div>
-
-        {/* Scroll cue */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-30 animate-bounce">
-          <div className="w-px h-8 bg-white" />
-          <ChevronRight size={14} className="text-white rotate-90" />
-        </div>
-      </section>
-
-      {/* ── STATS BAR — fondo claro ── */}
-      <div className="bg-white border-b border-slate-100 py-8 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-slate-100">
-            {[
-              { num: '100%', label: 'Multi-tenant aislado', color: 'text-brand-blue' },
-              { num: 'Convenio 507', label: 'Cumplimiento argentino', color: 'text-navy' },
-              { num: '12+ módulos', label: 'Operación integrada', color: 'text-navy' },
-              { num: '30 días', label: 'Prueba sin costo', color: 'text-emerald' },
-            ].map(s => (
-              <div key={s.label} className="px-4">
-                <p className={`text-xl font-black font-display italic ${s.color}`}>{s.num}</p>
-                <p className="text-slate-400 text-[10px] font-mono uppercase tracking-widest mt-1">{s.label}</p>
+      {/* ── HERO — texto izquierda + dashboard de producto derecha ── */}
+      <section className="relative pt-32 pb-20 overflow-hidden bg-gradient-to-b from-brand-tint/60 via-white to-white">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-blue/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-14 items-center">
+            <div className="space-y-7">
+              <div className="inline-flex items-center gap-2 bg-white border border-slate-200 shadow-sm px-4 py-2 rounded-full">
+                <div className="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse" />
+                <span className="text-[10px] font-black font-mono text-slate-500 uppercase tracking-[0.2em]">Software de gestión de seguridad · Argentina</span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              <h1 className="font-display text-5xl lg:text-6xl font-black text-navy leading-[0.95] tracking-tighter">
+                Toda tu operación<br />de seguridad,<br />
+                <span className="text-brand-blue">en una plataforma.</span>
+              </h1>
+              <p className="text-slate-500 text-lg leading-relaxed max-w-xl">
+                CustOS conecta cuadrantes, personal, monitoreo electrónico, contratos y facturación en un solo flujo. Menos trabajo manual, márgenes protegidos y transparencia total para tus clientes.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={openDemo}
+                  className="bg-brand-blue text-white px-8 py-4 rounded-2xl font-black text-sm shadow-2xl shadow-brand-blue/30 hover:bg-brand-deep transition-all flex items-center justify-center gap-2 group active:scale-95"
+                >
+                  Crear cuenta de prueba gratis
+                  <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+                <Link
+                  to="/login"
+                  className="border border-slate-200 text-navy hover:border-brand-blue hover:text-brand-blue px-8 py-4 rounded-2xl font-black text-sm transition-all flex items-center justify-center gap-2"
+                >
+                  Ya tengo cuenta
+                </Link>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400 font-mono">
+                <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald" /> 30 días gratis</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald" /> Sin tarjeta de crédito</span>
+                <span className="flex items-center gap-1.5"><CheckCircle2 size={13} className="text-emerald" /> Instancia propia</span>
+              </div>
+            </div>
 
-      {/* ── EL PROBLEMA ── */}
-      <section id="problema" className="py-28 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16 space-y-4">
-            <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">El Problema</span>
-            <h2 className="font-display text-4xl lg:text-6xl font-black text-navy italic uppercase tracking-tighter">
-              La operación vive<br /><span className="text-red-500">en pedazos.</span>
-            </h2>
-            <p className="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
-              Toda empresa de seguridad física empieza igual: un Excel para cuadrantes, WhatsApp para relevos, y una hoja de cálculo para la facturación. Cuando escalan, el caos escala con ellos.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              { icon: Calendar, title: 'Cuadrantes sin control', desc: 'Un turno en blanco a las 2 AM lo descubre el cliente, no vos. Los cambios de guardia se coordinan por mensaje y no quedan registrados.' },
-              { icon: Users, title: 'Habilitaciones vencidas', desc: 'El Carnet de Vigilador, el Psicofísico, los antecedentes — todo vence. Sin seguimiento, exponés a la empresa a multas y pérdida de licitaciones.' },
-              { icon: FileText, title: 'Cotizaciones imprecisas', desc: 'Un puesto 24/7 no lo cubre un vigilador, ni dos, ni tres. Sin calcular el factor de cobertura real (4.2), cada contrato puede ser deficitario.' },
-              { icon: BarChart3, title: 'Margen invisible', desc: 'Sabés cuánto cobran pero no cuánto ganás. Los costos de personal, vehículos, herramientas y horas extras diluyen el margen sin que te des cuenta.' },
-              { icon: MapPin, title: 'Monitoreo desconectado', desc: 'El software de alarmas no habla con RRHH, las rondas no aparecen en el tablero, y las alertas SIA llegan sin contexto operativo.' },
-              { icon: AlertTriangle, title: 'Relevos por WhatsApp', desc: 'Cuando un vigilador falta, el supervisor llama hasta encontrar reemplazo. Sin sistema, no hay trazabilidad, aprobación formal ni registro.' },
-            ].map(p => (
-              <div key={p.title} className="p-6 bg-white border border-slate-100 rounded-2xl hover:border-red-100 hover:shadow-lg transition-all group">
-                <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-red-100 transition-colors">
-                  <p.icon size={20} className="text-red-400" />
+            {/* Dashboard mockup */}
+            <div className="relative">
+              <BrowserFrame url="app.custos.com.ar/monitoring">
+                <div className="p-5 bg-canvas space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-navy font-bold text-sm">Centro de Operaciones</p>
+                      <p className="text-slate-400 text-[10px] font-mono">En vivo · 03:17 AM</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 bg-emerald/10 text-emerald px-2.5 py-1 rounded-full text-[10px] font-bold">
+                      <span className="w-1.5 h-1.5 bg-emerald rounded-full animate-pulse" /> Operativo
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { val: '24', label: 'Vigiladores', color: 'text-emerald' },
+                      { val: '100%', label: 'Cobertura', color: 'text-navy' },
+                      { val: '0', label: 'Alertas', color: 'text-navy' },
+                    ].map(k => (
+                      <div key={k.label} className="bg-white rounded-xl p-3 border border-slate-100 shadow-sm">
+                        <p className={`text-2xl font-black italic ${k.color}`}>{k.val}</p>
+                        <p className="text-slate-400 text-[9px] font-mono uppercase tracking-wider mt-0.5">{k.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                    <p className="text-slate-400 text-[9px] font-mono uppercase tracking-wider mb-2.5">Puestos activos</p>
+                    {[
+                      ['Banco Austral — Acceso', 2],
+                      ['Planta Norte — Perímetro', 3],
+                      ['Edificio Mitre — Control vehicular', 1],
+                    ].map(([name, g]) => (
+                      <div key={name as string} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+                        <span className="text-slate-600 text-xs truncate">{name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <span className="text-slate-400 text-[10px] font-mono">{g}v</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <h3 className="font-bold text-navy mb-2">{p.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">{p.desc}</p>
+              </BrowserFrame>
+              {/* tarjeta flotante */}
+              <div className="absolute -bottom-5 -left-5 bg-white rounded-2xl p-3.5 shadow-xl border border-slate-100 flex items-center gap-3">
+                <div className="w-9 h-9 bg-brand-blue/10 rounded-xl flex items-center justify-center">
+                  <TrendingUp size={17} className="text-brand-blue" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black font-mono text-slate-400 uppercase tracking-widest">Dotación calculada</p>
+                  <p className="text-sm font-black text-navy">4.2 vigs / puesto 24×7</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST BAR ── */}
+      <section id="plataforma" className="py-10 bg-white border-y border-slate-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <p className="text-center text-[10px] font-black font-mono text-slate-400 uppercase tracking-[0.25em] mb-6">
+            Construido para la operación real de la seguridad privada argentina
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {[
+              { icon: Shield, label: 'Convenio 507' },
+              { icon: Lock, label: 'Datos aislados por empresa' },
+              { icon: Smartphone, label: 'App para cada vigilador' },
+              { icon: Activity, label: 'Monitoreo SIA en vivo' },
+            ].map(t => (
+              <div key={t.label} className="flex items-center justify-center gap-2.5 text-slate-500">
+                <t.icon size={18} className="text-brand-blue shrink-0" />
+                <span className="text-sm font-bold text-navy">{t.label}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── LA SOLUCIÓN — split con imagen ── */}
+      {/* ── FEATURE 1 — Cuadrante (texto izq · mockup der) ── */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
-              <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">La Solución</span>
-              <h2 className="font-display text-4xl lg:text-5xl font-black text-navy italic uppercase tracking-tighter leading-tight">
-                Un solo sistema.<br /><span className="text-brand-blue">Toda la operación.</span>
+              <span className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">
+                <Calendar size={13} /> Cuadrante inteligente
+              </span>
+              <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter leading-tight">
+                Los turnos se arman<br /><span className="text-brand-blue">solos.</span>
               </h2>
               <p className="text-slate-500 text-base leading-relaxed">
-                CustOS es un ERP diseñado exclusivamente para empresas de seguridad privada argentina. Desde la cotización hasta el cheque de cada vigilador, pasando por el monitoreo electrónico en tiempo real.
+                Definí un esquema de turno (12×12, 24×24) y afectá un vigilador a un puesto. CustOS genera automáticamente los turnos planificados y te avisa dónde falta cobertura — antes de que lo note el cliente.
               </p>
               <ul className="space-y-3">
                 {[
-                  'Cuadrantes generados automáticamente desde esquemas de turno',
-                  'Alertas de credenciales antes de que venzan',
-                  'Cotizaciones con factor de dotación real (4.2)',
-                  'Contratos en PDF con tu logo y firma digital',
-                  'App móvil para cada vigilador — check-in y rondas',
-                ].map(item => (
-                  <li key={item} className="flex items-start gap-3 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-emerald shrink-0 mt-0.5" />
-                    {item}
+                  'Generación automática de turnos desde esquemas cíclicos',
+                  'Detección de huecos de cobertura en tiempo real',
+                  'Cálculo de dotación real por puesto (factor 4.2)',
+                  'Solicitud y aprobación de cambios de turno',
+                ].map(i => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-emerald shrink-0 mt-0.5" /> {i}
                   </li>
                 ))}
               </ul>
-              <button
-                onClick={openDemo}
-                className="bg-brand-blue text-white px-8 py-4 rounded-2xl font-black text-sm hover:bg-brand-deep transition-all shadow-xl shadow-brand-blue/20 inline-flex items-center gap-2 group active:scale-95"
-              >
-                Probá 30 días gratis <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-              </button>
             </div>
-
-            {/* Panel: Centro de Operaciones en vivo */}
-            <div className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-700/30 shadow-2xl shadow-slate-200/50 h-[520px]">
-              <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='15' cy='15' r='0.8' fill='%234a7fd4' fill-opacity='0.5'/%3E%3C/svg%3E")` }} />
-              <div className="relative z-10 p-6 h-full flex flex-col gap-4">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald animate-pulse" />
-                    <span className="text-white/40 text-xs font-mono">Centro de Operaciones · En vivo · 03:17 AM</span>
+            <BrowserFrame url="app.custos.com.ar/quadrant">
+              <div className="p-5 bg-canvas">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-navy font-bold text-sm">Objetivo · Banco Austral</p>
+                  <span className="bg-emerald/10 text-emerald text-[10px] font-bold px-2 py-1 rounded-full">Cobertura OK</span>
+                </div>
+                <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-sm">
+                  <div className="grid grid-cols-8 text-[9px] font-mono text-slate-400 bg-slate-50 border-b border-slate-100">
+                    <div className="p-1.5">Vig.</div>
+                    {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => <div key={i} className="p-1.5 text-center">{d}</div>)}
                   </div>
-                  <Shield size={14} className="text-brand-blue" />
-                </div>
-                {/* KPIs */}
-                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { val: '24', label: 'Vigiladores', color: 'text-emerald' },
-                    { val: '100%', label: 'Cobertura', color: 'text-white' },
-                    { val: '0', label: 'Alertas', color: 'text-white' },
-                  ].map(k => (
-                    <div key={k.label} className="bg-white/5 border border-white/8 rounded-xl p-3">
-                      <p className={`text-2xl font-black italic ${k.color}`}>{k.val}</p>
-                      <p className="text-white/30 text-[10px] font-mono uppercase tracking-wider mt-0.5">{k.label}</p>
+                    ['Pérez, J.', [1, 1, 0, 1, 1, 0, 1]],
+                    ['García, M.', [0, 1, 1, 0, 1, 1, 0]],
+                    ['López, R.', [1, 0, 1, 1, 0, 1, 1]],
+                    ['Díaz, S.', [1, 1, 1, 0, 1, 0, 1]],
+                  ].map(([name, days]) => (
+                    <div key={name as string} className="grid grid-cols-8 items-center border-b border-slate-50 last:border-0">
+                      <div className="p-1.5 text-[10px] text-slate-600 font-medium truncate">{name}</div>
+                      {(days as number[]).map((on, i) => (
+                        <div key={i} className="p-1.5 flex justify-center">
+                          <span className={`w-full h-4 rounded ${on ? 'bg-brand-blue/80' : 'bg-slate-100'}`} />
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>
-                {/* Puestos activos */}
-                <div className="bg-white/5 border border-white/8 rounded-xl p-4 flex-1 overflow-hidden">
-                  <p className="text-white/30 text-[10px] font-mono uppercase tracking-wider mb-3">Puestos activos</p>
+                <div className="mt-3 flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-brand-blue/80" /> Trabaja</span>
+                  <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-slate-100" /> Franco</span>
+                </div>
+              </div>
+            </BrowserFrame>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURE 2 — App vigilador (mockup izq · texto der) ── */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1">
+              <PhoneFrame>
+                <div className="pt-8 pb-5 px-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-brand-blue rounded-lg flex items-center justify-center">
+                      <Shield size={14} className="text-white" />
+                    </div>
+                    <span className="font-display text-sm font-black text-navy uppercase italic">CustOS</span>
+                  </div>
+                  <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                    <p className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">Turno actual</p>
+                    <p className="text-navy font-bold text-sm mt-1">Planta Norte — Perímetro</p>
+                    <p className="text-slate-400 text-xs mt-0.5">Hoy · 06:00 – 18:00</p>
+                    <div className="mt-3 flex items-center gap-2 text-emerald text-xs font-bold">
+                      <CheckCircle2 size={13} /> Entrada registrada 05:58
+                    </div>
+                  </div>
+                  <button className="w-full bg-brand-blue text-white rounded-2xl py-3 text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/30">
+                    <Fingerprint size={16} /> Marcar salida
+                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+                      <QrCode size={18} className="text-brand-blue mx-auto" />
+                      <p className="text-[10px] text-slate-500 mt-1 font-medium">Ronda QR</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
+                      <AlertTriangle size={18} className="text-amber mx-auto" />
+                      <p className="text-[10px] text-slate-500 mt-1 font-medium">Novedad</p>
+                    </div>
+                  </div>
+                </div>
+              </PhoneFrame>
+            </div>
+            <div className="order-1 lg:order-2 space-y-6">
+              <span className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">
+                <Smartphone size={13} /> App Vigilancia Móvil
+              </span>
+              <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter leading-tight">
+                Cada vigilador,<br /><span className="text-brand-blue">conectado.</span>
+              </h2>
+              <p className="text-slate-500 text-base leading-relaxed">
+                Los vigiladores se autentican con su legajo y PIN. Ven su turno, registran entrada y salida con geolocalización, hacen rondas con QR y solicitan cambios de turno — todo desde el celular, sin llamadas ni WhatsApp.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Login por legajo + PIN, sin depender de email',
+                  'Check-in / check-out con validación de ubicación',
+                  'Rondas verificadas con puntos de control QR',
+                  'Botón de pánico y novedades en tiempo real',
+                ].map(i => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-emerald shrink-0 mt-0.5" /> {i}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURE 3 — Cotización y margen (texto izq · mockup der) ── */}
+      <section className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="space-y-6">
+              <span className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">
+                <DollarSign size={13} /> Cotización y facturación
+              </span>
+              <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter leading-tight">
+                Sabé tu margen<br /><span className="text-brand-blue">antes de firmar.</span>
+              </h2>
+              <p className="text-slate-500 text-base leading-relaxed">
+                El cotizador calcula la dotación real, las cargas sociales y el margen de cada contrato. Generá el contrato en PDF con tu logo, configurá la facturación (abono fijo o por horas) y controlá la rentabilidad de punta a punta.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Cotizador con factor de dotación 4.2 y cargas sociales',
+                  'Contratos en PDF con plantilla editable y firma',
+                  'Facturación por abono fijo o por horas reales',
+                  'Rentabilidad visible por contrato y objetivo',
+                ].map(i => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-emerald shrink-0 mt-0.5" /> {i}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <BrowserFrame url="app.custos.com.ar/quotes">
+              <div className="p-5 bg-canvas space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-navy font-bold text-sm">Cotización · Planta Norte</p>
+                  <span className="bg-brand-blue/10 text-brand-blue text-[10px] font-bold px-2 py-1 rounded-full">Margen 28%</span>
+                </div>
+                <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm space-y-2.5">
                   {[
-                    { name: 'Banco Austral — Acceso principal', guards: 2 },
-                    { name: 'Planta Norte — Perímetro exterior', guards: 3 },
-                    { name: 'Edificio Mitre — Control vehicular', guards: 1 },
-                    { name: 'Centro Comercial Belgrano', guards: 2 },
-                    { name: 'Aeropuerto — Terminal B', guards: 4 },
-                  ].map(p => (
-                    <div key={p.name} className="flex items-center justify-between py-2 border-b border-white/5 last:border-0">
-                      <span className="text-white/60 text-xs truncate flex-1">{p.name}</span>
-                      <div className="flex items-center gap-2 shrink-0 ml-3">
-                        <span className="text-white/30 text-[10px] font-mono">{p.guards}v</span>
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald" />
+                    ['Puesto 24×7 · dotación', '4.2 vigs'],
+                    ['Costo laboral + cargas', '$3.180.000'],
+                    ['Vehículo + herramientas', '$420.000'],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between text-xs">
+                      <span className="text-slate-500">{k}</span>
+                      <span className="text-navy font-mono font-bold">{v}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-sm pt-2 border-t border-slate-100">
+                    <span className="text-navy font-bold">Total mensual</span>
+                    <span className="text-brand-blue font-mono font-black">$5.010.000</span>
+                  </div>
+                </div>
+                {/* mini bar chart */}
+                <div className="bg-white rounded-xl p-4 border border-slate-100 shadow-sm">
+                  <p className="text-slate-400 text-[9px] font-mono uppercase tracking-wider mb-3">Facturación · últimos 6 meses</p>
+                  <div className="flex items-end justify-between gap-2 h-20">
+                    {[45, 58, 52, 70, 66, 82].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                        <div className={`w-full rounded-t ${i === 5 ? 'bg-brand-blue' : 'bg-brand-blue/30'}`} style={{ height: `${h}%` }} />
                       </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Alerta credencial */}
-                <div className="bg-amber/10 border border-amber/20 rounded-xl p-3 flex items-center gap-3">
-                  <AlertTriangle size={14} className="text-amber shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-amber text-xs font-bold">Credencial por vencer</p>
-                    <p className="text-white/40 text-[10px] truncate">García, M. — Carnet Vigilador · vence en 5 días</p>
+                    ))}
                   </div>
                 </div>
               </div>
+            </BrowserFrame>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURE 4 — Centro de operaciones (mockup izq · texto der) ── */}
+      <section className="py-24 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1">
+              <BrowserFrame url="app.custos.com.ar/monitoring">
+                <div className="p-5 bg-navy space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-white font-bold text-sm">Mapa operativo · En vivo</p>
+                    <span className="text-white/40 text-[10px] font-mono">SIA DC-09</span>
+                  </div>
+                  {/* mock map */}
+                  <div className="relative h-40 rounded-xl bg-[#0a1830] border border-white/10 overflow-hidden">
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h40M20 0v40' stroke='%234a7fd4' stroke-width='0.4'/%3E%3C/svg%3E\")" }} />
+                    <span className="absolute top-6 left-10 w-3 h-3 rounded-full bg-emerald ring-4 ring-emerald/20" />
+                    <span className="absolute top-20 left-32 w-3 h-3 rounded-full bg-emerald ring-4 ring-emerald/20" />
+                    <span className="absolute top-14 right-14 w-3 h-3 rounded-full bg-amber ring-4 ring-amber/20 animate-pulse" />
+                    <span className="absolute bottom-8 left-20 w-3 h-3 rounded-full bg-emerald ring-4 ring-emerald/20" />
+                  </div>
+                  <div className="bg-amber/10 border border-amber/20 rounded-xl p-3 flex items-center gap-2.5">
+                    <AlertTriangle size={14} className="text-amber shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-amber text-xs font-bold">Alarma · Edificio Mitre</p>
+                      <p className="text-white/40 text-[10px]">Zona 3 — apertura fuera de horario · 03:12</p>
+                    </div>
+                    <span className="text-white/30 text-[10px] font-mono">ETA 4′</span>
+                  </div>
+                </div>
+              </BrowserFrame>
+            </div>
+            <div className="order-1 lg:order-2 space-y-6">
+              <span className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">
+                <Activity size={13} /> Centro de Operaciones
+              </span>
+              <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter leading-tight">
+                Monitoreo y campo,<br /><span className="text-brand-blue">en el mismo tablero.</span>
+              </h2>
+              <p className="text-slate-500 text-base leading-relaxed">
+                Las alarmas SIA DC-09, las rondas de los vigiladores y los eventos de pánico llegan al mismo lugar, vinculados al objetivo y con contexto operativo. El operador ve dónde está cada uno y despacha en segundos.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  'Recepción de eventos de alarma con protocolo SIA DC-09',
+                  'Mapa en vivo con estado de cada puesto',
+                  'Alertas de pánico desde la app del vigilador',
+                  'Trazabilidad completa de cada evento',
+                ].map(i => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
+                    <CheckCircle2 size={16} className="text-emerald shrink-0 mt-0.5" /> {i}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── MÓDULOS ── */}
-      <section id="modulos" ref={featuresRef} className="py-28 bg-slate-50">
+      <section id="modulos" ref={featuresRef} className="py-28 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16 space-y-4">
-            <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Plataforma Completa</span>
-            <h2 className="font-display text-4xl lg:text-6xl font-black text-navy italic uppercase tracking-tighter">
-              Todo lo que necesitás,<br />en un lugar.
+            <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Una sola plataforma</span>
+            <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter">
+              Todo lo que tu operación necesita.
             </h2>
+            <p className="text-slate-500 text-lg max-w-2xl mx-auto">Doce módulos integrados que reemplazan las planillas, los grupos de WhatsApp y los sistemas sueltos.</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              {
-                icon: Users, color: 'bg-brand-blue/10 text-brand-blue', border: 'hover:border-brand-blue/20',
-                title: 'Gestión de Personal',
-                desc: 'Ficha completa: legajo, documentación, credenciales y foto. Alertas automáticas de vencimiento de Carnet, Psicofísico y Antecedentes.',
-                tags: ['Legajos digitales', 'Credenciales', 'Importación Excel'],
-              },
-              {
-                icon: Calendar, color: 'bg-emerald/10 text-emerald', border: 'hover:border-emerald/20',
-                title: 'Cuadrante Inteligente',
-                desc: 'Esquemas cíclicos (12x12, 24x24), afectación automática a puestos y generación de turnos. Detección de huecos en tiempo real.',
-                tags: ['Turnos automáticos', 'Cobertura por puesto', 'Cambios de turno'],
-              },
-              {
-                icon: FileText, color: 'bg-purple-100 text-purple-600', border: 'hover:border-purple-100',
-                title: 'Cotizaciones y Contratos',
-                desc: 'Cotizador con cálculo de dotación real (factor 4.2), margen y cargas sociales. Contratos en PDF con plantilla editable y logo.',
-                tags: ['Factor 4.2 real', 'Contratos PDF', 'Historial'],
-              },
-              {
-                icon: BarChart3, color: 'bg-amber/10 text-amber', border: 'hover:border-amber/20',
-                title: 'Clientes y Objetivos',
-                desc: 'Gestión de clientes con objetivos asociados, puestos por turno y vinculación directa con contratos y cobertura operativa.',
-                tags: ['Multi-objetivo', 'Puestos por turno', 'Activación'],
-              },
-              {
-                icon: Activity, color: 'bg-red-100 text-red-500', border: 'hover:border-red-100',
-                title: 'Centro de Operaciones',
-                desc: 'Monitoreo en tiempo real con protocolo SIA DC-09. Eventos de alarma recibidos, clasificados y vinculados al objetivo.',
-                tags: ['SIA DC-09', 'Mapa en vivo', 'Alertas de pánico'],
-              },
-              {
-                icon: Smartphone, color: 'bg-brand-blue/10 text-brand-blue', border: 'hover:border-brand-blue/20',
-                title: 'App Vigilancia Móvil',
-                desc: 'Login por legajo y PIN. Turno actual, check-in/checkout, rondas con QR y solicitud de cambio de turno desde el celular.',
-                tags: ['Login por PIN', 'Check-in/checkout', 'Rondas QR'],
-              },
-              {
-                icon: Truck, color: 'bg-emerald/10 text-emerald', border: 'hover:border-emerald/20',
-                title: 'Flota y Vehículos',
-                desc: 'Registro de vehículos con VTV, seguro y habilitaciones. Asignación a objetivos y control de costo por hora.',
-                tags: ['VTV y seguro', 'Por objetivo', 'Costo operativo'],
-              },
-              {
-                icon: Wrench, color: 'bg-orange-100 text-orange-500', border: 'hover:border-orange-100',
-                title: 'Herramientas y Equipos',
-                desc: 'Inventario de equipos por vigilador. Trazabilidad de entrega, estado actual e historial de asignaciones.',
-                tags: ['Por vigilador', 'Trazabilidad', 'Estado'],
-              },
-              {
-                icon: ClipboardList, color: 'bg-purple-100 text-purple-600', border: 'hover:border-purple-100',
-                title: 'Novedades y Rondas',
-                desc: 'Registro digital de novedades por turno. Rondas verificadas con puntos de control QR. Historial por objetivo y vigilador.',
-                tags: ['Rondas con QR', 'Novedades digitales', 'Historial'],
-              },
-              {
-                icon: Bell, color: 'bg-amber/10 text-amber', border: 'hover:border-amber/20',
-                title: 'Notificaciones y Alertas',
-                desc: 'Alertas en tiempo real para credenciales por vencer, personal insuficiente, eventos de alarma y pánico desde el campo.',
-                tags: ['Alertas en app', 'Email automático', 'Pánico'],
-              },
-              {
-                icon: CreditCard, color: 'bg-emerald/10 text-emerald', border: 'hover:border-emerald/20',
-                title: 'Facturación y Compras',
-                desc: 'Configuración de facturación por contrato: abono fijo, por horas planificadas o reales. Módulo de compras para gastos operativos.',
-                tags: ['Abono fijo', 'Por horas', 'Proveedores'],
-              },
-              {
-                icon: UploadCloud, color: 'bg-brand-blue/10 text-brand-blue', border: 'hover:border-brand-blue/20',
-                title: 'Configuración y Branding',
-                desc: 'Logo y firma en todos los documentos. Plantillas personalizables. Multi-usuario con roles y permisos granulares.',
-                tags: ['Logo y firma', 'Plantillas', 'Roles'],
-              },
+              { icon: Users, color: 'bg-brand-blue/10 text-brand-blue', title: 'Gestión de Personal', desc: 'Legajos, credenciales y foto. Alertas de vencimiento de Carnet, Psicofísico y Antecedentes.', tags: ['Legajos', 'Credenciales', 'Importación Excel'] },
+              { icon: Calendar, color: 'bg-emerald/10 text-emerald', title: 'Cuadrante Inteligente', desc: 'Esquemas cíclicos, afectación automática a puestos y detección de huecos en tiempo real.', tags: ['Turnos automáticos', 'Cobertura', 'Cambios de turno'] },
+              { icon: FileText, color: 'bg-purple-100 text-purple-600', title: 'Cotizaciones y Contratos', desc: 'Cotizador con dotación real (4.2), margen y cargas. Contratos en PDF con plantilla y logo.', tags: ['Factor 4.2', 'PDF', 'Historial'] },
+              { icon: BarChart3, color: 'bg-amber/10 text-amber', title: 'Clientes y Objetivos', desc: 'Clientes con objetivos asociados, puestos por turno y vínculo directo con contratos.', tags: ['Multi-objetivo', 'Puestos', 'Activación'] },
+              { icon: Activity, color: 'bg-red-100 text-red-500', title: 'Centro de Operaciones', desc: 'Monitoreo en tiempo real con SIA DC-09. Eventos clasificados y vinculados al objetivo.', tags: ['SIA DC-09', 'Mapa en vivo', 'Pánico'] },
+              { icon: Smartphone, color: 'bg-brand-blue/10 text-brand-blue', title: 'App Vigilancia Móvil', desc: 'Login por legajo y PIN, check-in/checkout, rondas con QR y solicitud de cambio de turno.', tags: ['Login PIN', 'Check-in', 'Rondas QR'] },
+              { icon: Truck, color: 'bg-emerald/10 text-emerald', title: 'Flota y Vehículos', desc: 'VTV, seguro y habilitaciones. Asignación a objetivos y control de costo por hora.', tags: ['VTV', 'Por objetivo', 'Costo'] },
+              { icon: Wrench, color: 'bg-orange-100 text-orange-500', title: 'Herramientas y Equipos', desc: 'Inventario por vigilador. Trazabilidad de entrega, estado e historial.', tags: ['Por vigilador', 'Trazabilidad', 'Estado'] },
+              { icon: ClipboardList, color: 'bg-purple-100 text-purple-600', title: 'Novedades y Rondas', desc: 'Novedades digitales por turno. Rondas verificadas con QR e historial por objetivo.', tags: ['Rondas QR', 'Novedades', 'Historial'] },
+              { icon: Bell, color: 'bg-amber/10 text-amber', title: 'Notificaciones y Alertas', desc: 'Alertas en tiempo real de credenciales por vencer, personal insuficiente y pánico.', tags: ['En app', 'Email', 'Pánico'] },
+              { icon: CreditCard, color: 'bg-emerald/10 text-emerald', title: 'Facturación y Compras', desc: 'Facturación por abono fijo o por horas. Módulo de compras para gastos operativos.', tags: ['Abono', 'Por horas', 'Proveedores'] },
+              { icon: UploadCloud, color: 'bg-brand-blue/10 text-brand-blue', title: 'Configuración y Branding', desc: 'Logo y firma en documentos. Plantillas personalizables y roles con permisos.', tags: ['Logo', 'Plantillas', 'Roles'] },
             ].map(m => (
-              <div key={m.title} className={`bg-white p-6 rounded-2xl border border-slate-100 ${m.border} hover:shadow-lg transition-all group`}>
+              <div key={m.title} className="bg-white p-6 rounded-2xl border border-slate-100 hover:shadow-lg hover:border-slate-200 transition-all group">
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${m.color} group-hover:scale-110 transition-transform`}>
                   <m.icon size={22} />
                 </div>
@@ -602,25 +739,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FACTOR 4.2 ── */}
-      <section className="relative py-28 overflow-hidden bg-[#06111e]">
-        {/* Glow derecho */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_100%_50%,rgba(37,99,235,0.18),transparent)]" />
-        {/* Cuadrícula técnica */}
-        <div
-          className="absolute inset-0 opacity-15"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Crect x='0' y='0' width='60' height='60' fill='none' stroke='%232563eb' stroke-width='0.4' stroke-opacity='0.6'/%3E%3C/svg%3E")` }}
-        />
-        <div className="relative z-10 max-w-7xl mx-auto px-6">
+      {/* ── FACTOR 4.2 — banda de datos (navy) ── */}
+      <section className="relative py-24 overflow-hidden bg-navy">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_80%_at_100%_50%,rgba(27,87,214,0.25),transparent)]" />
+        <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-6">
-              <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Diferencial Financiero</span>
-              <h2 className="font-display text-4xl lg:text-6xl font-black text-white italic uppercase tracking-tighter leading-tight">
+              <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Diferencial financiero</span>
+              <h2 className="font-display text-4xl lg:text-5xl font-black text-white tracking-tighter leading-tight">
                 Un puesto 24×7<br />no son 3 vigiladores.<br />
                 <span className="text-brand-blue">Son 4.2.</span>
               </h2>
               <p className="text-white/55 text-base leading-relaxed">
-                Francos, vacaciones, ausentismo, feriados. CustOS calcula automáticamente la dotación real de cada puesto y la refleja en la cotización. Si cotizás con tres, la diferencia la pagás vos.
+                Francos, vacaciones, ausentismo y feriados. CustOS calcula la dotación real de cada puesto y la refleja en la cotización. Si cotizás con tres, la diferencia la pagás vos.
               </p>
               <div className="flex items-center gap-6 pt-2">
                 <div className="text-center">
@@ -642,7 +773,7 @@ export default function LandingPage() {
                 { label: 'Factor real (francos + vacaciones)', value: '× 1.22' },
                 { label: 'Dotación real requerida', value: '≈ 4.2 vigiladores', highlight: true },
               ].map(row => (
-                <div key={row.label} className={`flex justify-between items-center py-4 border-b border-white/8 ${row.highlight ? 'border-brand-blue/30' : ''}`}>
+                <div key={row.label} className={`flex justify-between items-center py-4 border-b ${row.highlight ? 'border-brand-blue/30' : 'border-white/8'}`}>
                   <span className={`text-sm ${row.highlight ? 'font-black text-white' : 'text-white/50'}`}>{row.label}</span>
                   <span className={`font-black font-mono text-sm ${row.highlight ? 'text-brand-blue text-lg' : 'text-white'}`}>{row.value}</span>
                 </div>
@@ -652,21 +783,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CÓMO FUNCIONA — fondo blanco, limpio ── */}
+      {/* ── CÓMO FUNCIONA ── */}
       <section id="como-funciona" className="py-28 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16 space-y-4">
             <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Onboarding</span>
-            <h2 className="font-display text-4xl lg:text-5xl font-black text-navy italic uppercase tracking-tighter">
-              Tres pasos para<br />tener todo bajo control.
+            <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter">
+              Operativo en tres pasos.
             </h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8 relative">
             <div className="hidden md:block absolute top-14 left-[calc(33%-40px)] right-[calc(33%-40px)] h-0.5 bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
             {[
-              { step: '01', icon: Globe, title: 'Creá tu cuenta', desc: 'Registrá tu empresa en minutos. Se genera una instancia aislada con tus datos, tu logo y tu equipo. Sin compartir nada con nadie.' },
-              { step: '02', icon: Users, title: 'Cargá tu operación', desc: 'Importá vigiladores en masa con Excel, cargá clientes y objetivos, definí los puestos de seguridad y comenzá con los cuadrantes.' },
-              { step: '03', icon: CheckCircle2, title: 'Operá en tiempo real', desc: 'Tus vigiladores trabajan desde la app, el COC ve las alarmas en vivo, y vos ves el margen real de cada contrato — todo en un panel.' },
+              { step: '01', icon: Globe, title: 'Creá tu cuenta', desc: 'Registrá tu empresa en minutos. Se genera una instancia aislada con tus datos, tu logo y tu equipo.' },
+              { step: '02', icon: Users, title: 'Cargá tu operación', desc: 'Importá vigiladores con Excel, cargá clientes y objetivos, definí los puestos y armá los cuadrantes.' },
+              { step: '03', icon: CheckCircle2, title: 'Operá en tiempo real', desc: 'Los vigiladores trabajan desde la app, el COC ve las alarmas en vivo y vos ves el margen de cada contrato.' },
             ].map(s => (
               <div key={s.step} className="relative text-center p-8 space-y-5 rounded-2xl border border-slate-100 hover:border-brand-blue/20 hover:shadow-lg transition-all">
                 <div className="absolute -top-2 left-6 text-[90px] font-black text-slate-50 leading-none font-display italic select-none">{s.step}</div>
@@ -681,57 +812,30 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── BANNER: Cada guardia en su puesto ── */}
-      <section className="relative py-32 overflow-hidden bg-[#071018]">
-        {/* Glow central */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_50%_50%,rgba(37,99,235,0.14),transparent)]" />
-        {/* Hexágonos de seguridad SVG */}
-        <div
-          className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='56' height='100' viewBox='0 0 56 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zM28 98L0 82V50l28-16 28 16v32L28 98z' fill='none' stroke='%232563eb' stroke-width='0.6'/%3E%3C/svg%3E")` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#071018]/80 via-transparent to-[#071018]/80" />
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-8">
-          <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.3em]">Seguridad que no se improvisa</span>
-          <h2 className="font-display text-4xl lg:text-6xl font-black text-white italic uppercase tracking-tighter leading-tight">
-            Cada guardia en su puesto.<br /><span className="text-brand-blue">Cada turno, cubierto.</span>
-          </h2>
-          <p className="text-white/55 text-lg max-w-2xl mx-auto leading-relaxed">
-            Tu empresa cuida el patrimonio de sus clientes. CustOS cuida tu operación. Nada queda librado al azar: turnos, cobertura, credenciales y comunicación — todo trazado y auditado.
-          </p>
-          <button
-            onClick={openDemo}
-            className="bg-brand-blue text-white px-10 py-4 rounded-2xl font-black text-sm hover:bg-brand-deep transition-all shadow-2xl shadow-brand-blue/30 inline-flex items-center gap-2 group active:scale-95"
-          >
-            Empezá hoy gratis <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-          </button>
-        </div>
-      </section>
-
-      {/* ── SEGURIDAD Y COMPLIANCE — fondo claro ── */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6">
-              <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Seguridad de datos</span>
-              <h2 className="font-display text-3xl lg:text-5xl font-black text-navy italic uppercase tracking-tighter leading-tight">
-                Tus datos son<br /><span className="text-brand-blue">solo tuyos.</span>
-              </h2>
-              <p className="text-slate-500 text-base leading-relaxed">
-                Cada empresa opera en una instancia lógicamente aislada mediante PostgreSQL Row Level Security. Ningún cliente puede acceder a los datos de otro — ni por error, ni por diseño.
-              </p>
+      {/* ── TESTIMONIAL / SEGURIDAD ── */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 md:p-14 text-center space-y-6">
+            <div className="flex justify-center gap-1">
+              {[...Array(5)].map((_, i) => <Star key={i} size={18} className="text-amber fill-amber" />)}
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <p className="font-display text-2xl lg:text-3xl font-bold text-navy leading-snug tracking-tight">
+              “Pasamos de tres planillas y un grupo de WhatsApp a un solo tablero. Ahora sé la cobertura de cada objetivo y el margen de cada contrato en tiempo real.”
+            </p>
+            <div>
+              <p className="font-bold text-navy">Dirección de Operaciones</p>
+              <p className="text-slate-400 text-sm">Empresa de seguridad privada · Buenos Aires</p>
+            </div>
+            <div className="pt-6 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-6">
               {[
-                { icon: Lock, label: 'PostgreSQL RLS', desc: 'Aislamiento de datos por tenant', bg: 'bg-brand-blue/5 border-brand-blue/10', iconColor: 'text-brand-blue' },
-                { icon: ShieldCheck, label: 'JWT firmado', desc: 'Tokens con validación de tenant', bg: 'bg-emerald/5 border-emerald/10', iconColor: 'text-emerald' },
-                { icon: Star, label: 'Convenio 507', desc: 'Cumplimiento normativo argentino', bg: 'bg-amber/5 border-amber/10', iconColor: 'text-amber' },
-                { icon: Globe, label: 'HTTPS full', desc: 'Cifrado en tránsito y en reposo', bg: 'bg-purple-50 border-purple-100', iconColor: 'text-purple-500' },
+                { icon: Lock, label: 'PostgreSQL RLS' },
+                { icon: ShieldCheck, label: 'JWT firmado' },
+                { icon: Star, label: 'Convenio 507' },
+                { icon: Globe, label: 'HTTPS full' },
               ].map(f => (
-                <div key={f.label} className={`border rounded-2xl p-5 space-y-2 ${f.bg}`}>
-                  <f.icon size={20} className={f.iconColor} />
-                  <p className="text-navy font-bold text-sm">{f.label}</p>
-                  <p className="text-slate-400 text-xs">{f.desc}</p>
+                <div key={f.label} className="flex items-center justify-center gap-2 text-slate-500">
+                  <f.icon size={16} className="text-brand-blue" />
+                  <span className="text-xs font-bold text-navy">{f.label}</span>
                 </div>
               ))}
             </div>
@@ -740,11 +844,11 @@ export default function LandingPage() {
       </section>
 
       {/* ── PLANES ── */}
-      <section id="planes" className="py-28 bg-slate-50">
+      <section id="planes" className="py-28 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16 space-y-4">
             <span className="text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">Planes</span>
-            <h2 className="font-display text-4xl lg:text-6xl font-black text-navy italic uppercase tracking-tighter">
+            <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter">
               Escalá a tu ritmo.
             </h2>
             <p className="text-slate-500 text-base max-w-xl mx-auto">Todos los planes incluyen 30 días de prueba gratuita. Sin tarjeta de crédito.</p>
@@ -752,29 +856,12 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8 items-start">
             {[
-              {
-                name: 'Core', badge: null, featured: false,
-                subtitle: 'Para empresas que arrancan a ordenar la operación.',
-                price: 'Consultar', priceNote: 'por vigilador activo / mes',
-                features: ['Gestión de personal completa', 'Cuadrante inteligente', 'Clientes y objetivos', 'Cotizador con cálculo de dotación', 'Contratos en PDF', 'App Vigilancia Móvil', 'Rondas con QR', 'Novedades digitales'],
-              },
-              {
-                name: 'Pro', badge: 'Más elegido', featured: true,
-                subtitle: 'Control total del margen y la operación.',
-                price: 'Consultar', priceNote: 'por vigilador activo / mes',
-                features: ['Todo en Core', 'Centro de Operaciones (SIA)', 'Monitoreo en tiempo real', 'Gestión de flota y vehículos', 'Herramientas y equipos', 'Módulo de compras', 'Facturación por contrato', 'Análisis de rentabilidad'],
-              },
-              {
-                name: 'Command', badge: null, featured: false,
-                subtitle: 'Para grupos con múltiples empresas o regiones.',
-                price: 'Custom', priceNote: 'según volumen de operación',
-                features: ['Todo en Pro', 'Multi-empresa en un panel', 'API e integraciones', 'VPC dedicado', 'SLA garantizado', 'Soporte prioritario', 'Capacitación y onboarding', 'Configuración a medida'],
-              },
+              { name: 'Core', badge: null, featured: false, subtitle: 'Para empresas que arrancan a ordenar la operación.', price: 'Consultar', priceNote: 'por vigilador activo / mes', features: ['Gestión de personal completa', 'Cuadrante inteligente', 'Clientes y objetivos', 'Cotizador con dotación', 'Contratos en PDF', 'App Vigilancia Móvil', 'Rondas con QR', 'Novedades digitales'] },
+              { name: 'Pro', badge: 'Más elegido', featured: true, subtitle: 'Control total del margen y la operación.', price: 'Consultar', priceNote: 'por vigilador activo / mes', features: ['Todo en Core', 'Centro de Operaciones (SIA)', 'Monitoreo en tiempo real', 'Gestión de flota', 'Herramientas y equipos', 'Módulo de compras', 'Facturación por contrato', 'Análisis de rentabilidad'] },
+              { name: 'Command', badge: null, featured: false, subtitle: 'Para grupos con múltiples empresas o regiones.', price: 'Custom', priceNote: 'según volumen de operación', features: ['Todo en Pro', 'Multi-empresa en un panel', 'API e integraciones', 'VPC dedicado', 'SLA garantizado', 'Soporte prioritario', 'Onboarding asistido', 'Configuración a medida'] },
             ].map(plan => (
               <div key={plan.name} className={`rounded-3xl border p-8 flex flex-col transition-all ${
-                plan.featured
-                  ? 'bg-navy text-white border-brand-blue/30 shadow-2xl shadow-navy/20 scale-105'
-                  : 'bg-white text-navy border-slate-100 hover:shadow-xl hover:border-slate-200'
+                plan.featured ? 'bg-navy text-white border-brand-blue/30 shadow-2xl shadow-navy/20 scale-105' : 'bg-white text-navy border-slate-100 hover:shadow-xl hover:border-slate-200'
               }`}>
                 {plan.badge && (
                   <span className="inline-block bg-brand-blue text-white text-[10px] font-black font-mono px-3 py-1 rounded-full uppercase tracking-widest mb-4 w-fit">{plan.badge}</span>
@@ -796,9 +883,7 @@ export default function LandingPage() {
                 <button
                   onClick={openDemo}
                   className={`w-full py-3 rounded-xl font-black text-xs font-mono uppercase tracking-widest transition-all active:scale-95 ${
-                    plan.featured
-                      ? 'bg-brand-blue text-white hover:bg-brand-deep shadow-xl shadow-brand-blue/30'
-                      : 'bg-slate-50 border border-slate-200 text-navy hover:bg-brand-blue hover:text-white hover:border-brand-blue'
+                    plan.featured ? 'bg-brand-blue text-white hover:bg-brand-deep shadow-xl shadow-brand-blue/30' : 'bg-slate-50 border border-slate-200 text-navy hover:bg-brand-blue hover:text-white hover:border-brand-blue'
                   }`}
                 >
                   Probá gratis 30 días
@@ -810,31 +895,31 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA FINAL ── */}
-      <section className="relative py-36 overflow-hidden bg-[#040d18]">
-        {/* Glow azul doble: arriba-izq y abajo-der */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_0%_0%,rgba(37,99,235,0.20),transparent)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_40%_at_100%_100%,rgba(37,99,235,0.12),transparent)]" />
-        {/* Grilla diagonal */}
-        <div
-          className="absolute inset-0 opacity-12"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='60' x2='60' y2='0' stroke='%232563eb' stroke-width='0.5'/%3E%3C/svg%3E")` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#040d18]/60 via-transparent to-[#040d18]/40" />
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-8">
-          <h2 className="font-display text-4xl lg:text-6xl font-black text-white italic uppercase tracking-tighter leading-tight">
-            Empezá hoy.<br />Sin excusas.
+      <section className="relative py-28 overflow-hidden bg-brand-blue">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_0%_0%,rgba(255,255,255,0.12),transparent)]" />
+        <div className="relative max-w-4xl mx-auto px-6 text-center space-y-8">
+          <h2 className="font-display text-4xl lg:text-6xl font-black text-white tracking-tighter leading-tight">
+            Modernizá tu operación<br />hoy mismo.
           </h2>
-          <p className="text-white/55 text-lg max-w-2xl mx-auto leading-relaxed">
+          <p className="text-white/70 text-lg max-w-2xl mx-auto leading-relaxed">
             30 días gratis, instancia propia, sin tarjeta de crédito. En menos de 5 minutos tenés CustOS configurado con los datos de tu empresa.
           </p>
-          <button
-            onClick={openDemo}
-            className="bg-white text-navy px-12 py-5 rounded-2xl font-black text-base shadow-2xl shadow-black/30 hover:bg-slate-50 transition-all inline-flex items-center gap-3 group active:scale-95"
-          >
-            Crear mi cuenta de prueba
-            <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform text-brand-blue" />
-          </button>
-          <p className="text-white/25 text-xs font-mono">Sin tarjeta · Sin compromiso · Cancelás cuando querés</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={openDemo}
+              className="bg-white text-brand-blue px-10 py-4 rounded-2xl font-black text-base shadow-2xl shadow-black/20 hover:bg-slate-50 transition-all inline-flex items-center justify-center gap-2 group active:scale-95"
+            >
+              Crear mi cuenta de prueba
+              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+            <Link
+              to="/login"
+              className="border border-white/30 text-white hover:bg-white/10 px-10 py-4 rounded-2xl font-black text-base transition-all inline-flex items-center justify-center gap-2"
+            >
+              Ya tengo cuenta
+            </Link>
+          </div>
+          <p className="text-white/40 text-xs font-mono">Sin tarjeta · Sin compromiso · Cancelás cuando querés</p>
         </div>
       </section>
 
@@ -847,7 +932,7 @@ export default function LandingPage() {
                 <div className="w-8 h-8 bg-brand-blue rounded-lg flex items-center justify-center">
                   <Shield size={17} className="text-white" />
                 </div>
-                <span className="font-display text-xl font-black italic uppercase">CustOS</span>
+                <span className="font-display text-xl font-black italic uppercase">Cust<span className="text-brand-blue">OS</span></span>
               </div>
               <p className="text-white/30 text-sm leading-relaxed max-w-xs">
                 El sistema operativo de la seguridad privada en Argentina. Cuadrantes, personal, contratos y monitoreo en un solo lugar.
