@@ -135,7 +135,7 @@ describe('VigilanteService', () => {
         nombre: 'Juan Carlos',
       });
 
-      expect(result.nombre).toBe('Juan Carlos');
+      expect(result?.nombre).toBe('Juan Carlos');
     });
 
     it('should throw NotFoundException when vigilante not in tenant', async () => {
