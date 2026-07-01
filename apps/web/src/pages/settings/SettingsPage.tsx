@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { CostConfigPage } from '../quoting/CostConfigPage';
 import { CatalogosTab } from './CatalogosTab';
 import { ContratoConfigTab } from './ContratoConfigTab';
+import { UsuariosTab } from './UsuariosTab';
 
 const TABS = [
+  { id: 'usuarios', label: 'Usuarios', render: () => <UsuariosTab /> },
   { id: 'costos', label: 'Costos', render: () => <CostConfigPage /> },
   { id: 'catalogos', label: 'Catálogos', render: () => <CatalogosTab /> },
   { id: 'contratos', label: 'Contratos', render: () => <ContratoConfigTab /> },
