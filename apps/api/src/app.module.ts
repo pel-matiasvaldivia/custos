@@ -1,7 +1,9 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
+import { TrialGuard } from './common/guards/trial.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { VigilanteModule } from './vigilante/vigilante.module';
@@ -33,6 +35,7 @@ import { ClienteModule } from './cliente/cliente.module';
 import { ContratoConfigModule } from './contrato-config/contrato-config.module';
 import { RelevosModule } from './modules/relevos/relevos.module';
 import { VigilanteAuthModule } from './modules/vigilante-auth/vigilante-auth.module';
+import { SuscripcionModule } from './modules/suscripcion/suscripcion.module';
 
 @Module({
   imports: [
@@ -67,9 +70,13 @@ import { VigilanteAuthModule } from './modules/vigilante-auth/vigilante-auth.mod
     ContratoConfigModule,
     RelevosModule,
     VigilanteAuthModule,
+    SuscripcionModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: TrialGuard },
+  ],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

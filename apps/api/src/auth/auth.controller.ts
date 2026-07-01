@@ -10,6 +10,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { ImpersonateDto } from './dto/impersonate.dto';
+import { RegistroDto } from './dto/registro.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { Roles } from './roles.decorator';
@@ -25,6 +26,12 @@ export class AuthController {
       throw new UnauthorizedException('Credenciales inválidas');
     }
     return this.authService.login(user);
+  }
+
+  /** Endpoint público: registro self-service de nueva empresa. */
+  @Post('registro')
+  registro(@Body() body: RegistroDto) {
+    return this.authService.registro(body);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

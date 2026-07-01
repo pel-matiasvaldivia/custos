@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -19,9 +19,9 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate('/dashboard', { replace: true });
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'Credenciales incorrectas.';
-      setError(Array.isArray(msg) ? msg[0] : msg);
+    } catch (err) {
+      const msg = (err as { response?: { data?: { message?: string | string[] } } })?.response?.data?.message;
+      setError(Array.isArray(msg) ? msg[0] : (msg ?? 'Credenciales incorrectas.'));
     } finally {
       setIsLoading(false);
     }
@@ -121,8 +121,14 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-white/20 text-xs font-bold uppercase tracking-widest mt-8">
+        <p className="text-center text-white/20 text-xs font-bold uppercase tracking-widest mt-6">
           Acceso restringido · Solo personal autorizado
+        </p>
+        <p className="text-center text-white/30 text-xs mt-3">
+          ¿No tenés cuenta?{' '}
+          <Link to="/registro" className="text-[#1B57D6] hover:text-[#4a7fe8] transition-colors font-semibold">
+            Crear cuenta gratis
+          </Link>
         </p>
       </div>
     </div>
