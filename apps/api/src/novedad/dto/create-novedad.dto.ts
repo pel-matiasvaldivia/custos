@@ -16,7 +16,10 @@ export class CreateNovedadDto {
   @IsUUID()
   vigilador_id?: string;
 
-  @IsIn(['GENERAL', 'ALARMA', 'RELEVAMIENTO', 'EMERGENCIA'])
+  // Tipo tomado del catálogo NOVEDAD_TIPO (configurable por el tenant), por eso
+  // se acepta cualquier código no vacío en vez de un enum fijo.
+  @IsString()
+  @IsNotEmpty()
   tipo: string;
 
   @IsOptional()

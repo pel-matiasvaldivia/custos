@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, MessageSquare, Clock, User, MapPin } from 'lucide-react';
 import api from '../../services/api';
+import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
 
 export const NovedadesPage = () => {
   const [novedades, setNovedades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tiposNovedad, setTiposNovedad] = useState<CatalogoItemOption[]>([]);
   const [formData, setFormData] = useState({ tipo: 'GENERAL', prioridad: 'NORMAL', descripcion: '' });
 
   const fetchData = () => {
@@ -20,6 +22,7 @@ export const NovedadesPage = () => {
 
   useEffect(() => {
     fetchData();
+    catalogoService.getItems('NOVEDAD_TIPO').then(setTiposNovedad).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,10 +66,9 @@ export const NovedadesPage = () => {
                   value={formData.tipo}
                   onChange={e => setFormData({...formData, tipo: e.target.value})}
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="ALARMA">Activación de Alarma</option>
-                  <option value="RELEVAMIENTO">Relevamiento de Puesto</option>
-                  <option value="EMERGENCIA">Emergencia / Siniestro</option>
+                  {tiposNovedad.map(t => (
+                    <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>
+                  ))}
                 </select>
               </div>
               <div>

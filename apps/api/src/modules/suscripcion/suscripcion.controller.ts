@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Param,
   Request,
@@ -21,6 +22,32 @@ export class SuscripcionController {
   @Get('estado')
   getEstado(@Request() req: any) {
     return this.suscripcionService.getEstado(req.user.tenantId);
+  }
+
+  /** Datos de facturación del tenant autenticado. */
+  @UseGuards(JwtAuthGuard)
+  @Get('facturacion')
+  getFacturacion(@Request() req: any) {
+    return this.suscripcionService.getDatosFacturacion(req.user.tenantId);
+  }
+
+  /** Actualiza los datos de facturación del tenant. */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN', 'SUPERADMIN')
+  @Put('facturacion')
+  updateFacturacion(
+    @Request() req: any,
+    @Body()
+    body: {
+      razon_social?: string;
+      cuit?: string;
+      condicion_iva?: string;
+      direccion?: string;
+      email_contacto?: string;
+      telefono_contacto?: string;
+    },
+  ) {
+    return this.suscripcionService.updateDatosFacturacion(req.user.tenantId, body);
   }
 
   /** Inicia checkout MercadoPago para el plan elegido. */

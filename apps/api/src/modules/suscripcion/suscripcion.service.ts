@@ -16,6 +16,57 @@ const PLANES: Record<PlanId, { nombre: string; precio: number; meses: number }> 
 export class SuscripcionService {
   constructor(private readonly prisma: PrismaAdminService) {}
 
+  /** Datos de facturación del tenant (para las facturas de la suscripción). */
+  async getDatosFacturacion(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        nombre: true,
+        razon_social: true,
+        cuit: true,
+        condicion_iva: true,
+        direccion: true,
+        email_contacto: true,
+        telefono_contacto: true,
+      },
+    });
+    if (!tenant) throw new NotFoundException('Tenant no encontrado.');
+    return tenant;
+  }
+
+  async updateDatosFacturacion(
+    tenantId: string,
+    data: {
+      razon_social?: string;
+      cuit?: string;
+      condicion_iva?: string;
+      direccion?: string;
+      email_contacto?: string;
+      telefono_contacto?: string;
+    },
+  ) {
+    return this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        razon_social: data.razon_social ?? undefined,
+        cuit: data.cuit ?? undefined,
+        condicion_iva: data.condicion_iva ?? undefined,
+        direccion: data.direccion ?? undefined,
+        email_contacto: data.email_contacto ?? undefined,
+        telefono_contacto: data.telefono_contacto ?? undefined,
+      },
+      select: {
+        nombre: true,
+        razon_social: true,
+        cuit: true,
+        condicion_iva: true,
+        direccion: true,
+        email_contacto: true,
+        telefono_contacto: true,
+      },
+    });
+  }
+
   async getEstado(tenantId: string) {
     const tenant = await this.prisma.tenant.findUnique({
       where: { id: tenantId },
