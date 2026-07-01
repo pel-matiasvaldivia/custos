@@ -15,6 +15,7 @@ import {
   Wrench,
   RefreshCw,
   CreditCard,
+  Calculator,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -29,6 +30,7 @@ const PATH_ROLES: Record<string, string[]> = {
   '/quadrant':           ['ADMIN', 'GERENCIA', 'SUPERVISOR', 'OPERADOR', 'SUPERADMIN'],
   '/personnel':          ['ADMIN', 'GERENCIA', 'SUPERVISOR', 'SUPERADMIN'],
   '/novedades':          ['ADMIN', 'GERENCIA', 'SUPERVISOR', 'OPERADOR', 'SUPERADMIN'],
+  '/liquidaciones':      ['ADMIN', 'GERENCIA', 'SUPERADMIN'],
   '/compras':            ['ADMIN', 'GERENCIA', 'SUPERADMIN'],
   '/herramientas':       ['ADMIN', 'GERENCIA', 'SUPERVISOR', 'SUPERADMIN'],
   '/relevos':            ['ADMIN', 'GERENCIA', 'SUPERVISOR', 'SUPERADMIN'],
@@ -49,9 +51,9 @@ const navGroups = [
   {
     label: 'Comercial',
     items: [
+      { icon: Shield, label: 'Cotizaciones', path: '/quotes' },
       { icon: Building2, label: 'Clientes', path: '/clients' },
       { icon: Shield, label: 'Objetivos', path: '/objectives' },
-      { icon: Shield, label: 'Cotizaciones', path: '/quotes' },
     ],
   },
   {
@@ -60,6 +62,7 @@ const navGroups = [
       { icon: Calendar, label: 'Cuadrante', path: '/quadrant' },
       { icon: Users, label: 'Personal', path: '/personnel' },
       { icon: AlertCircle, label: 'Novedades', path: '/novedades' },
+      { icon: Calculator, label: 'Liquidaciones', path: '/liquidaciones' },
       { icon: ShoppingCart, label: 'Compras', path: '/compras' },
       { icon: Wrench, label: 'Herramientas', path: '/herramientas' },
       { icon: RefreshCw, label: 'Cambios de turno', path: '/relevos' },
@@ -78,7 +81,6 @@ const navGroups = [
     label: 'Sistema',
     items: [
       { icon: CreditCard, label: 'Suscripción', path: '/suscripcion' },
-      { icon: Settings, label: 'Onboarding', path: '/onboarding' },
       { icon: Settings, label: 'Configuración', path: '/settings' },
     ],
   },

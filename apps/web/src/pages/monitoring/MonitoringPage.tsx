@@ -20,11 +20,12 @@ import { VideoPlayer } from './VideoPlayer';
 import { MapView } from '../../components/monitoring/MapView';
 import api from '../../services/api';
 import { puestoService } from '../../services/puesto.service';
-
-// Mock/Context - Replace with real auth context when available
-const TENANT_ID = 'your-tenant-id'; 
+import { objetivoService } from '../../services/objetivo.service';
+import { vehiculoService } from '../../services/vehiculo.service';
+import { useAuth } from '../../context/AuthContext';
 
 export const MonitoringPage = () => {
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [guards, setGuards] = useState<Record<string, any>>({});
@@ -32,12 +33,16 @@ export const MonitoringPage = () => {
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
   const [devices, setDevices] = useState<any[]>([]);
   const [puestos, setPuestos] = useState<any[]>([]);
-  const { isConnected, on } = useSocket('co', TENANT_ID);
+  const [objetivos, setObjetivos] = useState<any[]>([]);
+  const [vehiculos, setVehiculos] = useState<any[]>([]);
+  const { isConnected, on } = useSocket('co', user?.tenantId);
 
   useEffect(() => {
     fetchActiveIncidents();
     fetchDevices();
     fetchPuestos();
+    objetivoService.getAll(1, 200).then(setObjetivos).catch(() => {});
+    vehiculoService.getAll(1, 200).then(setVehiculos).catch(() => {});
   }, []);
 
   const fetchDevices = async () => {
@@ -191,8 +196,9 @@ export const MonitoringPage = () => {
           ) : (
             <div className="h-[calc(100vh-250px)] w-full">
               <MapView
-                objectives={devices.map(d => d.objetivo).filter((v, i, a) => v && a.findIndex(t => t?.id === v.id) === i)}
+                objectives={objetivos.length ? objetivos : devices.map(d => d.objetivo).filter((v, i, a) => v && a.findIndex(t => t?.id === v.id) === i)}
                 puestos={puestos}
+                vehiculos={vehiculos}
                 incidents={incidents}
                 guards={guards}
               />

@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, MessageSquare, Clock, User, MapPin } from 'lucide-react';
 import api from '../../services/api';
+import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
 
 export const NovedadesPage = () => {
   const [novedades, setNovedades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tiposNovedad, setTiposNovedad] = useState<CatalogoItemOption[]>([]);
   const [formData, setFormData] = useState({ tipo: 'GENERAL', prioridad: 'NORMAL', descripcion: '' });
+  const [adelantoMonto, setAdelantoMonto] = useState('');
+  const [adelantoCuotas, setAdelantoCuotas] = useState(1);
+
+  const esAdelanto = formData.tipo === 'ADELANTO_SUELDO';
 
   const fetchData = () => {
     setLoading(true);
@@ -20,13 +26,26 @@ export const NovedadesPage = () => {
 
   useEffect(() => {
     fetchData();
+    catalogoService.getItems('NOVEDAD_TIPO').then(setTiposNovedad).catch(() => {});
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await api.post('/novedades', formData);
+    let payload = { ...formData };
+    if (esAdelanto) {
+      const monto = Number(adelantoMonto);
+      if (!monto || monto <= 0) return;
+      // Se codifica el monto y las cuotas para que Liquidaciones lo descuente.
+      payload = {
+        ...payload,
+        descripcion: `[ADELANTO monto=${monto} cuotas=${adelantoCuotas}] ${formData.descripcion}`.trim(),
+      };
+    }
+    await api.post('/novedades', payload);
     setIsModalOpen(false);
     setFormData({ tipo: 'GENERAL', prioridad: 'NORMAL', descripcion: '' });
+    setAdelantoMonto('');
+    setAdelantoCuotas(1);
     fetchData();
   };
 
@@ -63,10 +82,9 @@ export const NovedadesPage = () => {
                   value={formData.tipo}
                   onChange={e => setFormData({...formData, tipo: e.target.value})}
                 >
-                  <option value="GENERAL">General</option>
-                  <option value="ALARMA">Activación de Alarma</option>
-                  <option value="RELEVAMIENTO">Relevamiento de Puesto</option>
-                  <option value="EMERGENCIA">Emergencia / Siniestro</option>
+                  {tiposNovedad.map(t => (
+                    <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -88,6 +106,32 @@ export const NovedadesPage = () => {
                   ))}
                 </div>
               </div>
+              {esAdelanto && (
+                <div className="grid grid-cols-2 gap-3 p-3 bg-brand-tint/50 border border-brand-blue/20 rounded-xl">
+                  <div>
+                    <label className="label text-xs uppercase font-black">Monto del adelanto</label>
+                    <input
+                      type="number"
+                      className="input"
+                      placeholder="50000"
+                      value={adelantoMonto}
+                      onChange={e => setAdelantoMonto(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label text-xs uppercase font-black">Devolución en cuotas</label>
+                    <select className="input" value={adelantoCuotas} onChange={e => setAdelantoCuotas(Number(e.target.value))}>
+                      {[1, 2, 3, 4, 5, 6].map(n => (
+                        <option key={n} value={n}>{n} {n === 1 ? 'cuota' : 'cuotas'}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="col-span-2 text-[11px] text-muted">
+                    Se descuenta en la liquidación. Ante baja del empleado, el saldo se descuenta en la liquidación final.
+                  </p>
+                </div>
+              )}
               <div>
                 <label className="label text-xs uppercase font-black">Descripción Detallada</label>
                 <textarea
@@ -95,7 +139,7 @@ export const NovedadesPage = () => {
                   placeholder="Describa lo sucedido..."
                   value={formData.descripcion}
                   onChange={e => setFormData({...formData, descripcion: e.target.value})}
-                  required
+                  required={!esAdelanto}
                 />
               </div>
               <div className="flex gap-4 pt-4">

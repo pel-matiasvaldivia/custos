@@ -11,6 +11,19 @@ export const CATALOGO_DEFAULTS: Record<
     { codigo: 'ANMAC', etiqueta: 'Credencial ANMAC' },
     { codigo: 'CAPACITACION', etiqueta: 'Capacitación' },
   ],
+  // Tipos de novedad usados en el módulo de Operaciones. El tenant puede
+  // sumar los suyos (ej. "Adelanto de sueldo", "Ausente con aviso", etc.).
+  NOVEDAD_TIPO: [
+    { codigo: 'GENERAL', etiqueta: 'General' },
+    { codigo: 'ALARMA', etiqueta: 'Alarma' },
+    { codigo: 'RELEVAMIENTO', etiqueta: 'Relevamiento' },
+    { codigo: 'EMERGENCIA', etiqueta: 'Emergencia' },
+    { codigo: 'ADELANTO_SUELDO', etiqueta: 'Adelanto de sueldo' },
+    { codigo: 'AUSENTE_CON_AVISO', etiqueta: 'Ausente con aviso' },
+    { codigo: 'AUSENTE_SIN_AVISO', etiqueta: 'Ausente sin aviso' },
+    { codigo: 'LLEGADA_TARDE', etiqueta: 'Llegada tarde' },
+    { codigo: 'SUSPENSION', etiqueta: 'Suspensión' },
+  ],
 };
 
 export function slugifyCodigo(etiqueta: string): string {

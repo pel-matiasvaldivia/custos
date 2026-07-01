@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2, ListChecks } from 'lucide-react';
 import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
 
-const LISTAS = [{ categoria: 'CREDENCIAL_TIPO', titulo: 'Tipos de Credencial' }];
+const LISTAS = [
+  { categoria: 'CREDENCIAL_TIPO', titulo: 'Tipos de Credencial' },
+  { categoria: 'NOVEDAD_TIPO', titulo: 'Novedades' },
+];
 
 const ListaCatalogo = ({ categoria, titulo }: { categoria: string; titulo: string }) => {
   const [items, setItems] = useState<CatalogoItemOption[]>([]);

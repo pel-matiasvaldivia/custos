@@ -7,8 +7,138 @@ import {
   Calendar,
   AlertCircle,
   Loader2,
+  Receipt,
+  X,
 } from 'lucide-react';
-import { getEstado, crearCheckoutMP, EstadoSuscripcion } from '../../services/suscripcion.service';
+import {
+  getEstado,
+  crearCheckoutMP,
+  EstadoSuscripcion,
+  getDatosFacturacion,
+  updateDatosFacturacion,
+  DatosFacturacion,
+} from '../../services/suscripcion.service';
+
+const IVA_OPTS = [
+  { value: 'RESPONSABLE_INSCRIPTO', label: 'Responsable Inscripto' },
+  { value: 'MONOTRIBUTO', label: 'Monotributo' },
+  { value: 'EXENTO', label: 'Exento' },
+  { value: 'CONSUMIDOR_FINAL', label: 'Consumidor Final' },
+];
+
+/* ─── Modal de datos de facturación ─── */
+function FacturacionModal({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [form, setForm] = useState<Partial<DatosFacturacion>>({});
+
+  useEffect(() => {
+    getDatosFacturacion()
+      .then((d) => setForm(d))
+      .catch(() => setError('No se pudieron cargar los datos.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const set = (k: keyof DatosFacturacion) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      if (form.cuit && !/^\d{2}-\d{7,8}-\d$/.test(form.cuit)) {
+        setError('CUIT inválido. Formato: XX-XXXXXXXX-X');
+        setSaving(false);
+        return;
+      }
+      await updateDatosFacturacion({
+        razon_social: form.razon_social ?? undefined,
+        cuit: form.cuit ?? undefined,
+        condicion_iva: form.condicion_iva ?? undefined,
+        direccion: form.direccion ?? undefined,
+        email_contacto: form.email_contacto ?? undefined,
+        telefono_contacto: form.telefono_contacto ?? undefined,
+      });
+      onClose();
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'No se pudieron guardar los datos.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-navy/60 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line">
+          <h3 className="text-lg font-bold text-navy flex items-center gap-2">
+            <Receipt size={18} className="text-brand-blue" /> Datos de facturación
+          </h3>
+          <button onClick={onClose} className="text-muted hover:text-navy transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        {loading ? (
+          <div className="p-8 flex items-center justify-center text-muted">
+            <Loader2 className="w-5 h-5 animate-spin" />
+          </div>
+        ) : (
+          <form onSubmit={submit} className="px-6 py-5 space-y-4">
+            {error && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg px-3 py-2 text-sm">
+                <AlertCircle size={14} className="shrink-0" /> {error}
+              </div>
+            )}
+            <div>
+              <label className="label text-xs uppercase font-black">Razón social</label>
+              <input className="input" value={form.razon_social ?? ''} onChange={set('razon_social')} placeholder="Austral S.A." />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label text-xs uppercase font-black">CUIT</label>
+                <input className="input" value={form.cuit ?? ''} onChange={set('cuit')} placeholder="30-12345678-9" />
+              </div>
+              <div>
+                <label className="label text-xs uppercase font-black">Condición IVA</label>
+                <select className="input" value={form.condicion_iva ?? ''} onChange={set('condicion_iva')}>
+                  <option value="">Seleccionar...</option>
+                  {IVA_OPTS.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="label text-xs uppercase font-black">Domicilio fiscal</label>
+              <input className="input" value={form.direccion ?? ''} onChange={set('direccion')} placeholder="Av. Corrientes 1234, CABA" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label text-xs uppercase font-black">Email de facturación</label>
+                <input className="input" type="email" value={form.email_contacto ?? ''} onChange={set('email_contacto')} placeholder="facturacion@empresa.com" />
+              </div>
+              <div>
+                <label className="label text-xs uppercase font-black">Teléfono</label>
+                <input className="input" value={form.telefono_contacto ?? ''} onChange={set('telefono_contacto')} placeholder="+54 11 1234-5678" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-line">
+              <button type="button" onClick={onClose} className="btn-secondary">Cancelar</button>
+              <button type="submit" disabled={saving} className="btn-primary flex items-center gap-2 min-w-[120px] justify-center disabled:opacity-50">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CheckCircle size={15} /> Guardar</>}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const PLANES = [
   {
@@ -47,6 +177,7 @@ export default function SuscripcionPage() {
   const [loadingEstado, setLoadingEstado] = useState(true);
   const [procesando, setProcesando] = useState<string | null>(null);
   const [demoMsg, setDemoMsg] = useState('');
+  const [facturacionAbierta, setFacturacionAbierta] = useState(false);
 
   useEffect(() => {
     getEstado()
@@ -76,9 +207,19 @@ export default function SuscripcionPage() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-display font-bold text-navy">Suscripción</h1>
-        <p className="text-muted mt-1">Elegí el plan que mejor se adapta a tu empresa.</p>
+      {facturacionAbierta && <FacturacionModal onClose={() => setFacturacionAbierta(false)} />}
+
+      <div className="mb-8 flex justify-between items-start gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-navy">Suscripción</h1>
+          <p className="text-muted mt-1">Elegí el plan que mejor se adapta a tu empresa.</p>
+        </div>
+        <button
+          onClick={() => setFacturacionAbierta(true)}
+          className="btn-secondary flex items-center gap-2 shrink-0"
+        >
+          <Receipt size={16} /> Datos de facturación
+        </button>
       </div>
 
       {/* MP result banners */}
