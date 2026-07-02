@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, Polygon } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect } from 'react';
@@ -34,6 +34,10 @@ const puestoIcon = pin('#7c3aed', '🛡️');
 const guardIcon = pin('#0e9f6e', '👮');
 const vehiculoIcon = pin('#e8a33d', '🚓');
 const incidentIcon = pin('#ef4444', '⚠️', true);
+// Puntos de control: verde si el guardia lo cubrió en la ronda en curso,
+// gris si todavía está pendiente.
+const checkpointOkIcon = pin('#0e9f6e', '✓');
+const checkpointPendIcon = pin('#94a3b8', '•');
 
 interface MapViewProps {
   objectives: any[];
@@ -41,10 +45,20 @@ interface MapViewProps {
   guards: Record<string, any>;
   puestos?: any[];
   vehiculos?: any[];
+  // Puntos de control con marcas — para pintar verde los ya cubiertos
+  // durante una ronda en curso.
+  checkpoints?: Array<{ id: string; nombre: string; lat: number; lng: number; puesto_nombre?: string; marcado?: boolean }>;
+  // Centro por defecto del mapa. Si no viene, el SOC cae en un default histórico
+  // (Buenos Aires) — pero MonitoringPage siempre pasa la geo del tenant.
+  defaultCenter?: [number, number] | null;
+  // Objetivo a "volar" cuando el usuario lo elige desde el buscador.
+  focus?: { lat: number; lng: number } | null;
 }
 
-export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards, puestos = [], vehiculos = [] }) => {
-  const center: [number, number] = [-34.6037, -58.3816]; // Buenos Aires default
+export const MapView: React.FC<MapViewProps> = ({
+  objectives, incidents, guards, puestos = [], vehiculos = [], checkpoints = [], defaultCenter, focus,
+}) => {
+  const center: [number, number] = defaultCenter ?? [-34.6037, -58.3816];
 
   return (
     <div className="h-full w-full rounded-[2rem] overflow-hidden border border-slate-200 shadow-inner relative">
@@ -59,6 +73,15 @@ export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards,
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        {/* Áreas de cobertura configuradas por cada objetivo */}
+        {objectives.filter(o => Array.isArray(o.area_cobertura) && o.area_cobertura.length >= 3).map(obj => (
+          <Polygon
+            key={`area-${obj.id}`}
+            positions={obj.area_cobertura.map((v: { lat: number; lng: number }) => [v.lat, v.lng] as [number, number])}
+            pathOptions={{ color: '#1b57d6', fillColor: '#1b57d6', fillOpacity: 0.1, weight: 2 }}
+          />
+        ))}
+
         {/* Objectives */}
         {objectives.filter(o => o.lat && o.lng).map(obj => (
           <Marker key={obj.id} position={[obj.lat, obj.lng]} icon={objetivoIcon}>
@@ -67,6 +90,21 @@ export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards,
                 <h4 className="font-bold text-navy">{obj.nombre}</h4>
                 <p className="text-xs text-muted">{obj.direccion}</p>
                 <div className="mt-2 text-[10px] font-black uppercase text-brand-blue tracking-widest">OBJETIVO</div>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+
+        {/* Puntos de control con estado de la ronda en curso */}
+        {checkpoints.filter(c => c.lat && c.lng).map(c => (
+          <Marker key={c.id} position={[c.lat, c.lng]} icon={c.marcado ? checkpointOkIcon : checkpointPendIcon}>
+            <Popup>
+              <div className="p-2">
+                <h4 className="font-bold text-navy">{c.nombre}</h4>
+                {c.puesto_nombre && <p className="text-xs text-muted">{c.puesto_nombre}</p>}
+                <div className={`mt-2 text-[10px] font-black uppercase tracking-widest ${c.marcado ? 'text-emerald' : 'text-slate-400'}`}>
+                  {c.marcado ? 'Punto cubierto' : 'Punto pendiente'}
+                </div>
               </div>
             </Popup>
           </Marker>
@@ -134,6 +172,7 @@ export const MapView: React.FC<MapViewProps> = ({ objectives, incidents, guards,
         ))}
 
         <AutoCenter incidents={incidents} />
+        <FocusOn target={focus} />
       </MapContainer>
     </div>
   );
@@ -148,5 +187,16 @@ function AutoCenter({ incidents }: { incidents: any[] }) {
             map.setView([critical.objetivo.lat, critical.objetivo.lng], 16);
         }
     }, [incidents, map]);
+    return null;
+}
+
+// Vuela el mapa a un objetivo elegido desde el buscador.
+function FocusOn({ target }: { target?: { lat: number; lng: number } | null }) {
+    const map = useMap();
+    useEffect(() => {
+        if (target?.lat != null && target?.lng != null) {
+            map.setView([target.lat, target.lng], 17);
+        }
+    }, [target?.lat, target?.lng, map]);
     return null;
 }

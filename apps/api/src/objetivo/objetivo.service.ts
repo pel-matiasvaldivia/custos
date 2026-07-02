@@ -229,7 +229,10 @@ export class ObjetivoService {
   }
 
   async create(
-    data: Omit<Prisma.ObjetivoUncheckedCreateInput, 'cliente_nombre' | 'codigo'> & {
+    data: Omit<
+      Prisma.ObjetivoUncheckedCreateInput,
+      'cliente_nombre' | 'codigo'
+    > & {
       cliente_nombre?: string;
     },
   ) {
@@ -258,7 +261,12 @@ export class ObjetivoService {
 
     if (data.estado === 'ACTIVO') {
       const contratoActivo = await this.prisma.contrato.findFirst({
-        where: { objetivo_id: id, tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
+        where: {
+          objetivo_id: id,
+          tenant_id: tenantId,
+          estado: 'ACTIVO',
+          deleted_at: null,
+        },
         select: { id: true },
       });
       if (!contratoActivo) {
@@ -277,6 +285,34 @@ export class ObjetivoService {
       data = { ...data, cliente_nombre: clienteNombre };
     }
     return this.prisma.objetivo.update({ where: { id }, data });
+  }
+
+  /** Setea coordenadas y polígono de cobertura del objetivo. */
+  async setGeo(
+    id: string,
+    tenantId: string,
+    body: {
+      lat?: number | null;
+      lng?: number | null;
+      area_cobertura?: Array<{ lat: number; lng: number }> | null;
+    },
+  ) {
+    await this.findOne(id, tenantId);
+    const data: Prisma.ObjetivoUncheckedUpdateInput = {};
+    if (body.lat !== undefined) data.lat = body.lat;
+    if (body.lng !== undefined) data.lng = body.lng;
+    if (body.area_cobertura !== undefined) {
+      // El polígono se guarda como JSON (lista de vértices). null lo limpia.
+      data.area_cobertura =
+        body.area_cobertura === null
+          ? Prisma.JsonNull
+          : (body.area_cobertura as unknown as Prisma.InputJsonValue);
+    }
+    return this.prisma.objetivo.update({
+      where: { id },
+      data,
+      select: { id: true, lat: true, lng: true, area_cobertura: true },
+    });
   }
 
   /** Estado de las credenciales del dispositivo compartido (sin exponer el hash). */

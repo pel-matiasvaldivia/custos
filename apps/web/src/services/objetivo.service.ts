@@ -10,6 +10,7 @@ export interface Objetivo {
   estado: 'ACTIVO' | 'INACTIVO';
   lat?: number | null;
   lng?: number | null;
+  area_cobertura?: Array<{ lat: number; lng: number }> | null;
   created_at: string;
   _count?: { puestos: number };
 }
@@ -145,6 +146,18 @@ export const objetivoService = {
       `/objetivos/${objetivoId}/notificar-personal-insuficiente`,
     );
     return response.data;
+  },
+
+  setGeo: async (
+    objetivoId: string,
+    body: {
+      lat?: number | null;
+      lng?: number | null;
+      area_cobertura?: Array<{ lat: number; lng: number }> | null;
+    },
+  ): Promise<{ id: string; lat: number | null; lng: number | null; area_cobertura: Array<{ lat: number; lng: number }> | null }> => {
+    const { data } = await api.put(`/objetivos/${objetivoId}/geo`, body);
+    return data;
   },
 
   // Credenciales del dispositivo compartido (modo "un celular por objetivo").

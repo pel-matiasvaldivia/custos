@@ -18,6 +18,9 @@ model Tenant {
   cuit              String? @unique
   condicion_iva     String? // RESPONSABLE_INSCRIPTO | MONOTRIBUTO | EXENTO | CONSUMIDOR_FINAL
   direccion         String?
+  // Coordenadas del domicilio de la empresa; el mapa del SOC arranca centrado ahí.
+  lat               Float?
+  lng               Float?
   logo_url          String?
   email_contacto    String?
   telefono_contacto String?
@@ -225,6 +228,9 @@ model Objetivo {
   updated_at     DateTime @default(now()) @db.Timestamptz
   lat            Float?
   lng            Float?
+  // Polígono del área que cubre el objetivo: [{lat, lng}, ...]. El operador lo
+  // ve dibujado en el mapa del Centro de Operaciones.
+  area_cobertura Json?
   // Modo "un celular por objetivo": credenciales del dispositivo compartido.
   dispositivo_pin String? // hash bcrypt del PIN de objetivo
   nfc_tag_id      String? @unique // TAG NFC/RFID pegado en el objetivo

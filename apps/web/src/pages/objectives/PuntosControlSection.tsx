@@ -19,6 +19,7 @@ export const PuntosControlSection = ({ objetivoNombre, puestos }: Props) => {
   const [creando, setCreando] = useState(false);
   const [nuevoPuestoId, setNuevoPuestoId] = useState('');
   const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevaCoord, setNuevaCoord] = useState(''); // "lat, lng"
   const [error, setError] = useState<string | null>(null);
   const [qrPreview, setQrPreview] = useState<{ punto: PuntoConPuesto; dataUrl: string } | null>(null);
 
@@ -50,16 +51,35 @@ export const PuntosControlSection = ({ objetivoNombre, puestos }: Props) => {
       setError('Elegí un puesto y escribí un nombre para el punto.');
       return;
     }
+    let lat: number | undefined;
+    let lng: number | undefined;
+    if (nuevaCoord.trim()) {
+      const partes = nuevaCoord.split(',').map((p) => parseFloat(p.trim()));
+      if (partes.length !== 2 || partes.some(Number.isNaN)) {
+        setError('Coordenadas inválidas. Formato: latitud, longitud.');
+        return;
+      }
+      [lat, lng] = partes;
+    }
     setError(null);
     try {
-      await puntoControlService.crear({ puesto_id: nuevoPuestoId, nombre: nuevoNombre.trim() });
+      await puntoControlService.crear({ puesto_id: nuevoPuestoId, nombre: nuevoNombre.trim(), lat, lng });
       setNuevoNombre('');
       setNuevoPuestoId('');
+      setNuevaCoord('');
       setCreando(false);
       cargar();
     } catch {
       setError('No se pudo crear el punto de control.');
     }
+  };
+
+  const usarMiUbicacion = () => {
+    if (!('geolocation' in navigator)) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setNuevaCoord(`${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`),
+      () => setError('No se pudo obtener la ubicación del navegador.'),
+    );
   };
 
   const generarQr = async (punto: PuntoConPuesto) => {
@@ -171,6 +191,28 @@ export const PuntosControlSection = ({ objetivoNombre, puestos }: Props) => {
               placeholder="Ej: Acceso principal, Depósito Este..."
               className="w-full mt-1 border border-line rounded-lg p-2 text-sm"
             />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted uppercase tracking-wider">Coordenadas (opcional)</label>
+            <div className="flex gap-2 mt-1">
+              <input
+                value={nuevaCoord}
+                onChange={(e) => setNuevaCoord(e.target.value)}
+                placeholder="-32.928311, -68.815628"
+                className="flex-1 border border-line rounded-lg p-2 text-sm font-mono"
+              />
+              <button
+                type="button"
+                onClick={usarMiUbicacion}
+                className="text-xs px-3 border border-line rounded-lg text-brand-blue hover:bg-brand-blue/5 flex items-center gap-1"
+                title="Usar la ubicación actual del navegador"
+              >
+                <MapPin size={12} /> Aquí
+              </button>
+            </div>
+            <p className="text-[11px] text-muted mt-0.5">
+              Con coordenadas, el punto se marca verde en el mapa del SOC cuando el guardia lo escanea.
+            </p>
           </div>
           {error && <p className="text-xs text-amber">{error}</p>}
           <div className="flex gap-2 justify-end">

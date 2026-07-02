@@ -4,11 +4,13 @@ import { CatalogosTab } from './CatalogosTab';
 import { ContratoConfigTab } from './ContratoConfigTab';
 import { UsuariosTab } from './UsuariosTab';
 import { CalculadoraHHTab } from './CalculadoraHHTab';
+import { TenantGeoTab } from './TenantGeoTab';
 
 const TABS = [
   { id: 'usuarios', label: 'Usuarios', render: () => <UsuariosTab /> },
   { id: 'costos', label: 'Costos', render: () => <CostConfigPage /> },
   { id: 'calculadora', label: 'Calculadora HH', render: () => <CalculadoraHHTab /> },
+  { id: 'ubicacion', label: 'Ubicación', render: () => <TenantGeoTab /> },
   { id: 'catalogos', label: 'Catálogos', render: () => <CatalogosTab /> },
   { id: 'contratos', label: 'Contratos', render: () => <ContratoConfigTab /> },
 ];

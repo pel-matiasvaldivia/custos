@@ -23,6 +23,7 @@ import api from '../../services/api';
 import { puestoService } from '../../services/puesto.service';
 import { objetivoService } from '../../services/objetivo.service';
 import { vehiculoService } from '../../services/vehiculo.service';
+import { tenantConfigService } from '../../services/tenantConfig.service';
 import { useAuth } from '../../context/AuthContext';
 
 export const MonitoringPage = () => {
@@ -37,6 +38,11 @@ export const MonitoringPage = () => {
   const [puestos, setPuestos] = useState<any[]>([]);
   const [objetivos, setObjetivos] = useState<any[]>([]);
   const [vehiculos, setVehiculos] = useState<any[]>([]);
+  // Centro por defecto del mapa: domicilio del tenant (o el default de MapView).
+  const [defaultCenter, setDefaultCenter] = useState<[number, number] | null>(null);
+  // Búsqueda de objetivo y objetivo enfocado (para "volar" en el mapa).
+  const [busqueda, setBusqueda] = useState('');
+  const [focus, setFocus] = useState<{ lat: number; lng: number } | null>(null);
   const { isConnected, on } = useSocket('co', user?.tenantId);
 
   useEffect(() => {
@@ -45,6 +51,9 @@ export const MonitoringPage = () => {
     fetchPuestos();
     objetivoService.getAll(1, 200).then(setObjetivos).catch(() => {});
     vehiculoService.getAll(1, 200).then(setVehiculos).catch(() => {});
+    tenantConfigService.get()
+      .then((t) => { if (t.lat != null && t.lng != null) setDefaultCenter([t.lat, t.lng]); })
+      .catch(() => {});
   }, []);
 
   const fetchDevices = async () => {
@@ -157,11 +166,57 @@ export const MonitoringPage = () => {
         <div className="flex gap-3">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={16} />
-            <input 
-              type="text" 
-              placeholder="Buscar objetivo o abonado..." 
-              className="bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-blue/10 w-64 transition-all"
+            <input
+              type="text"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar objetivo por nombre, código o dirección..."
+              className="bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-blue/10 w-72 transition-all"
             />
+            {busqueda.trim() && (
+              <div className="absolute top-full left-0 mt-1 w-72 max-h-64 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg z-30">
+                {objetivos
+                  .filter((o) => {
+                    const q = busqueda.toLowerCase();
+                    return (
+                      (o.nombre || '').toLowerCase().includes(q) ||
+                      (o.codigo || '').toLowerCase().includes(q) ||
+                      (o.direccion || '').toLowerCase().includes(q)
+                    );
+                  })
+                  .slice(0, 15)
+                  .map((o) => (
+                    <button
+                      key={o.id}
+                      onClick={() => {
+                        setBusqueda('');
+                        if (o.lat != null && o.lng != null) {
+                          setViewMode('map');
+                          setFocus({ lat: o.lat, lng: o.lng });
+                        }
+                      }}
+                      disabled={o.lat == null || o.lng == null}
+                      className="w-full text-left px-3 py-2 hover:bg-canvas border-b border-slate-100 last:border-0 disabled:opacity-50"
+                    >
+                      <p className="text-sm font-medium text-navy">{o.nombre}</p>
+                      <p className="text-xs text-muted">
+                        {o.codigo}{o.direccion ? ` · ${o.direccion}` : ''}
+                        {o.lat == null && <span className="text-amber"> · sin geo</span>}
+                      </p>
+                    </button>
+                  ))}
+                {objetivos.filter((o) => {
+                  const q = busqueda.toLowerCase();
+                  return (
+                    (o.nombre || '').toLowerCase().includes(q) ||
+                    (o.codigo || '').toLowerCase().includes(q) ||
+                    (o.direccion || '').toLowerCase().includes(q)
+                  );
+                }).length === 0 && (
+                  <p className="text-xs text-muted px-3 py-3">Sin coincidencias.</p>
+                )}
+              </div>
+            )}
           </div>
           <button className="bg-slate-900 text-white p-2.5 rounded-xl hover:bg-black transition-all">
             <MoreVertical size={20} />
@@ -221,6 +276,8 @@ export const MonitoringPage = () => {
                 vehiculos={vehiculos}
                 incidents={incidents}
                 guards={guards}
+                defaultCenter={defaultCenter}
+                focus={focus}
               />
             </div>
           )}

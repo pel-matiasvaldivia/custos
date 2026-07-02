@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Param,
   Patch,
@@ -36,6 +37,15 @@ export class RondaController {
     @Query('objetivoId') objetivoId: string,
   ) {
     return this.rondaService.listarPlantillas(req.user.tenantId, objetivoId);
+  }
+
+  @Put('plantillas/:id')
+  actualizarPlantilla(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
+    return this.rondaService.actualizarPlantilla(req.user.tenantId, id, data);
   }
 
   @Delete('plantillas/:id')
