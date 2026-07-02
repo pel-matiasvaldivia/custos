@@ -21,6 +21,7 @@ import { ObjetivoForm } from './ObjetivoForm';
 import { PuestoForm } from './PuestoForm';
 import { VehiculoAsignarForm } from './VehiculoAsignarForm';
 import { EsquemaCuadranteObjetivo } from './EsquemaCuadranteObjetivo';
+import { PuntosControlSection } from './PuntosControlSection';
 import { VincularContratoModal } from './VincularContratoModal';
 
 const ETIQUETAS_MODO: Record<string, string> = {
@@ -279,6 +280,8 @@ export const ObjetivoDetail = () => {
               </div>
             )}
           </div>
+
+          <PuntosControlSection objetivoNombre={objetivo.nombre} puestos={puestos} />
 
           <div className="card">
             <h3 className="text-lg font-display font-bold text-navy mb-4 flex items-center gap-2">

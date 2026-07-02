@@ -17,6 +17,7 @@ import { vigilanciaMovilService, TurnoActual, Location } from '../../services/vi
 import { AsistenciaCard } from './AsistenciaCard';
 import { SolicitarRelevoModal } from './SolicitarRelevoModal';
 import { NovedadMovilModal } from './NovedadMovilModal';
+import { EscanerQRModal } from './EscanerQRModal';
 import { useOnline } from '../../hooks/useOnline';
 import { usePendingSync } from '../../hooks/usePendingSync';
 import { initOutbox } from '../../offline/outbox';
@@ -24,13 +25,14 @@ import { initOutbox } from '../../offline/outbox';
 export const MobileDashboard = () => {
   const online = useOnline();
   const pendientes = usePendingSync();
-  const [scanning, setScanning] = useState(false);
   const [isPanicActive, setIsPanicActive] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [turno, setTurno] = useState<TurnoActual | null>(null);
   const [procesandoAsistencia, setProcesandoAsistencia] = useState(false);
   const [modalRelevo, setModalRelevo] = useState(false);
   const [modalNovedad, setModalNovedad] = useState(false);
+  const [modalEscaner, setModalEscaner] = useState(false);
+  const [scanMensaje, setScanMensaje] = useState<string | null>(null);
 
   const cargarTurno = useCallback(async () => {
     try {
@@ -65,13 +67,12 @@ export const MobileDashboard = () => {
     setTimeout(() => setIsPanicActive(false), 3000);
   };
 
-  const handleScan = async () => {
-    setScanning(true);
-    // Simula la lectura de QR; el scan se encola (offline-safe).
-    setTimeout(async () => {
-      await vigilanciaMovilService.checkpoint('8092023a-f4ef-4b41-b847-1925b3991202', location ?? undefined);
-      setScanning(false);
-    }, 1500);
+  const handleQRDetectado = async (codigo: string) => {
+    setModalEscaner(false);
+    // El scan se encola y se envía apenas hay señal (offline-safe).
+    await vigilanciaMovilService.checkpoint(codigo, location ?? undefined);
+    setScanMensaje('Punto de control registrado');
+    setTimeout(() => setScanMensaje(null), 2500);
   };
 
   const handleCheckin = async () => {
@@ -157,13 +158,12 @@ export const MobileDashboard = () => {
         {/* Big Actions */}
         <div className="grid grid-cols-2 gap-4">
             <button
-                onClick={handleScan}
-                disabled={scanning}
+                onClick={() => setModalEscaner(true)}
                 className="bg-brand-blue aspect-square rounded-[3rem] shadow-2xl shadow-brand-blue/20 flex flex-col items-center justify-center gap-3 active:scale-95 transition-all text-white relative overflow-hidden"
             >
                 <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl -mr-4 -mt-4" />
-                <Scan size={32} className={scanning ? 'animate-spin' : ''} />
-                <span className="font-black uppercase text-xs tracking-widest">{scanning ? 'Leyendo...' : 'Escanear QR'}</span>
+                <Scan size={32} />
+                <span className="font-black uppercase text-xs tracking-widest">Escanear QR</span>
             </button>
 
             <button
@@ -248,6 +248,16 @@ export const MobileDashboard = () => {
 
       {modalNovedad && (
         <NovedadMovilModal onClose={() => setModalNovedad(false)} onCreada={() => setModalNovedad(false)} />
+      )}
+
+      {modalEscaner && (
+        <EscanerQRModal onDetectado={handleQRDetectado} onClose={() => setModalEscaner(false)} />
+      )}
+
+      {scanMensaje && (
+        <div className="fixed top-24 left-6 right-6 z-[96] bg-emerald text-slate-950 rounded-2xl px-5 py-3 text-center text-xs font-black uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-top duration-300">
+          {scanMensaje}
+        </div>
       )}
     </div>
   );

@@ -148,8 +148,16 @@ export class VigilanciaMovilService {
       return { duplicated: true };
     }
 
-    const checkpoint = await this.prisma.puntoControl.findUnique({
-      where: { id: checkpointId },
+    // El QR puede codificar el codigo_qr del punto o directamente su id.
+    // Solo comparamos contra id si tiene forma de UUID (la columna es uuid).
+    const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      checkpointId ?? '',
+    );
+    const checkpoint = await this.prisma.puntoControl.findFirst({
+      where: {
+        tenant_id: tenantId,
+        OR: [{ codigo_qr: checkpointId }, ...(esUuid ? [{ id: checkpointId }] : [])],
+      },
       include: { puesto: true },
     });
 
@@ -158,7 +166,7 @@ export class VigilanciaMovilService {
     const cuando = this.cuando(ts);
     const payload = {
       vigilante_id: vigiladorId,
-      punto_control_id: checkpointId,
+      punto_control_id: checkpoint.id,
       puesto_id: checkpoint.puesto_id,
       location,
       ts: cuando,
