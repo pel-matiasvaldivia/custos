@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { COGateway } from '../centro-operaciones/gateways/co.gateway';
+import { CatalogoService } from '../../catalogo/catalogo.service';
+import { StorageService } from '../../storage/storage.service';
 
 @Injectable()
 export class VigilanciaMovilService {
@@ -15,7 +17,72 @@ export class VigilanciaMovilService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly coGateway: COGateway,
+    private readonly catalogo: CatalogoService,
+    private readonly storage: StorageService,
   ) {}
+
+  /** Tipos de novedad predefinidos (catálogo NOVEDAD_TIPO del tenant). */
+  async listarNovedadTipos(tenantId: string) {
+    return this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO');
+  }
+
+  /** Crea una novedad desde el móvil, con adjuntos (foto/audio) opcionales. */
+  async crearNovedad(
+    tenantId: string,
+    vigiladorId: string,
+    data: {
+      tipo: string;
+      descripcion: string;
+      prioridad?: string;
+      clientEventId?: string;
+      ts?: string;
+    },
+    archivos: Array<{ buffer: Buffer; originalname: string; mimetype: string }> = [],
+  ) {
+    if (await this.yaProcesado(tenantId, data.clientEventId)) {
+      return { duplicated: true };
+    }
+
+    // Puesto del turno en curso (si lo hay), para ubicar la novedad.
+    const turno = await this.turnoActual(tenantId, vigiladorId);
+    const puestoId = turno?.enCurso ? turno.puesto_id : undefined;
+
+    const adjuntos: string[] = [];
+    for (const a of archivos) {
+      const subida = await this.storage.subir(
+        a.buffer,
+        a.originalname || 'adjunto',
+        a.mimetype || 'application/octet-stream',
+        'novedades',
+      );
+      adjuntos.push(subida.key);
+    }
+
+    const cuando = this.cuando(data.ts);
+    const novedad = await this.prisma.novedad.create({
+      data: {
+        tenant_id: tenantId,
+        vigilador_id: vigiladorId,
+        puesto_id: puestoId,
+        tipo: data.tipo,
+        prioridad: data.prioridad ?? 'NORMAL',
+        descripcion: data.descripcion,
+        adjuntos,
+        created_at: cuando,
+      },
+    });
+
+    this.coGateway.emitToTenant(tenantId, 'novedad.new', {
+      id: novedad.id,
+      tipo: novedad.tipo,
+      vigiladorId,
+      puestoId,
+      ts: cuando,
+    });
+
+    await this.registrarEvento(tenantId, vigiladorId, data.clientEventId, 'novedad', cuando);
+    return novedad;
+  }
 
   /**
    * Idempotencia para acciones encoladas offline: devuelve true si el

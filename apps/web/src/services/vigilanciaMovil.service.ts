@@ -1,5 +1,12 @@
 import mobileApi from './mobileApi';
-import { enqueue } from '../offline/outbox';
+import { enqueue, OutboxFile } from '../offline/outbox';
+
+export interface NovedadTipo {
+  id: string | null;
+  codigo: string;
+  etiqueta: string;
+  esDefault: boolean;
+}
 
 export interface TurnoActual {
   id: string;
@@ -40,6 +47,25 @@ export const vigilanciaMovilService = {
 
   checkpoint: async (checkpointId: string, location?: Location) => {
     return enqueue('checkpoint', '/mobile/checkpoint', { checkpointId, location });
+  },
+
+  novedadTipos: async (): Promise<NovedadTipo[]> => {
+    const response = await mobileApi.get<NovedadTipo[]>('/mobile/novedad-tipos');
+    return response.data;
+  },
+
+  crearNovedad: async (
+    tipo: string,
+    descripcion: string,
+    prioridad: string,
+    adjuntos: { blob: Blob; filename: string }[],
+  ) => {
+    const files: OutboxFile[] = adjuntos.map((a) => ({
+      field: 'media',
+      filename: a.filename,
+      blob: a.blob,
+    }));
+    return enqueue('novedad', '/mobile/novedades', { tipo, descripcion, prioridad }, files);
   },
 
   solicitarRelevo: async (turnoOriginalId: string, motivo?: string) => {

@@ -5,7 +5,10 @@ import {
   Body,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFiles,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { VigilanciaMovilService } from './vigilancia-movil.service';
 import { VigiladorJwtGuard } from '../vigilante-auth/vigilador-jwt.guard';
 import { RelevosService } from '../relevos/relevos.service';
@@ -113,6 +116,33 @@ export class VigilanciaMovilController {
       data.turnoId,
       data.metodo,
       data.location,
+    );
+  }
+
+  @Get('novedad-tipos')
+  async novedadTipos(@Request() req: any) {
+    return this.mobileService.listarNovedadTipos(req.user.tenantId);
+  }
+
+  @Post('novedades')
+  @UseInterceptors(FilesInterceptor('media', 3))
+  async crearNovedad(
+    @UploadedFiles() media: Array<{ buffer: Buffer; originalname: string; mimetype: string }> = [],
+    @Body()
+    data: {
+      tipo: string;
+      descripcion: string;
+      prioridad?: string;
+      clientEventId?: string;
+      ts?: string;
+    },
+    @Request() req: any,
+  ) {
+    return this.mobileService.crearNovedad(
+      req.user.tenantId,
+      req.user.vigiladorId,
+      data,
+      media ?? [],
     );
   }
 

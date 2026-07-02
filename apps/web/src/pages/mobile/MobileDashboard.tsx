@@ -16,6 +16,7 @@ import mobileApi from '../../services/mobileApi';
 import { vigilanciaMovilService, TurnoActual, Location } from '../../services/vigilanciaMovil.service';
 import { AsistenciaCard } from './AsistenciaCard';
 import { SolicitarRelevoModal } from './SolicitarRelevoModal';
+import { NovedadMovilModal } from './NovedadMovilModal';
 import { useOnline } from '../../hooks/useOnline';
 import { usePendingSync } from '../../hooks/usePendingSync';
 import { initOutbox } from '../../offline/outbox';
@@ -29,6 +30,7 @@ export const MobileDashboard = () => {
   const [turno, setTurno] = useState<TurnoActual | null>(null);
   const [procesandoAsistencia, setProcesandoAsistencia] = useState(false);
   const [modalRelevo, setModalRelevo] = useState(false);
+  const [modalNovedad, setModalNovedad] = useState(false);
 
   const cargarTurno = useCallback(async () => {
     try {
@@ -165,6 +167,7 @@ export const MobileDashboard = () => {
             </button>
 
             <button
+                onClick={() => setModalNovedad(true)}
                 className="bg-white/5 border border-white/10 aspect-square rounded-[3rem] flex flex-col items-center justify-center gap-3 active:scale-95 transition-all text-white/80"
             >
                 <Camera size={32} />
@@ -241,6 +244,10 @@ export const MobileDashboard = () => {
             cargarTurno();
           }}
         />
+      )}
+
+      {modalNovedad && (
+        <NovedadMovilModal onClose={() => setModalNovedad(false)} onCreada={() => setModalNovedad(false)} />
       )}
     </div>
   );

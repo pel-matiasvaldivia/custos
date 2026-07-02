@@ -10,13 +10,20 @@ import mobileApi from '../services/mobileApi';
  * client_event_id, así que reintentar es seguro.
  */
 
-export type OutboxTipo = 'checkin' | 'checkout' | 'panic' | 'checkpoint';
+export type OutboxTipo = 'checkin' | 'checkout' | 'panic' | 'checkpoint' | 'novedad';
+
+export interface OutboxFile {
+  field: string;
+  filename: string;
+  blob: Blob;
+}
 
 export interface OutboxItem {
   id: string; // client_event_id (UUID)
   tipo: OutboxTipo;
   url: string; // endpoint relativo, ej '/mobile/asistencia/checkin'
   body: Record<string, unknown>;
+  files?: OutboxFile[]; // adjuntos (foto/audio) → se envían como multipart
   ts: string; // ISO, timestamp del dispositivo al crear la acción
   createdAt: number;
   intentos: number;
@@ -92,12 +99,14 @@ export async function enqueue(
   tipo: OutboxTipo,
   url: string,
   body: Record<string, unknown>,
+  files?: OutboxFile[],
 ): Promise<OutboxItem> {
   const item: OutboxItem = {
     id: uuid(),
     tipo,
     url,
     body,
+    files,
     ts: new Date().toISOString(),
     createdAt: Date.now(),
     intentos: 0,
@@ -119,11 +128,24 @@ export async function flush(): Promise<void> {
     const items = await getAll();
     for (const item of items) {
       try {
-        await mobileApi.post(item.url, {
-          ...item.body,
-          clientEventId: item.id,
-          ts: item.ts,
-        });
+        if (item.files && item.files.length > 0) {
+          // Adjuntos → multipart. Los valores no-string se serializan a JSON.
+          const fd = new FormData();
+          for (const [k, v] of Object.entries(item.body)) {
+            if (v === undefined || v === null) continue;
+            fd.append(k, typeof v === 'string' ? v : JSON.stringify(v));
+          }
+          fd.append('clientEventId', item.id);
+          fd.append('ts', item.ts);
+          for (const f of item.files) fd.append(f.field, f.blob, f.filename);
+          await mobileApi.post(item.url, fd);
+        } else {
+          await mobileApi.post(item.url, {
+            ...item.body,
+            clientEventId: item.id,
+            ts: item.ts,
+          });
+        }
         await tx('readwrite', (s) => s.delete(item.id));
         await notify();
       } catch (err) {
