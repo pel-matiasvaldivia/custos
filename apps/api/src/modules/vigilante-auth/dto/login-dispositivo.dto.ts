@@ -11,6 +11,12 @@ export class LoginDispositivoDto {
   @IsString()
   nfc_tag?: string;
 
+  // Código del objetivo (lo que el guardia puede tipear); el PIN desambigua
+  // entre tenants, igual que el login por legajo.
+  @IsOptional()
+  @IsString()
+  objetivo_codigo?: string;
+
   @IsOptional()
   @IsUUID()
   objetivo_id?: string;

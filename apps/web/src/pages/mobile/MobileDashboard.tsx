@@ -17,6 +17,7 @@ import {
   TurnoActual,
   Location,
   RondaMovil,
+  VigiladorObjetivo,
 } from '../../services/vigilanciaMovil.service';
 import { AsistenciaCard } from './AsistenciaCard';
 import { SolicitarRelevoModal } from './SolicitarRelevoModal';
@@ -26,11 +27,14 @@ import { useOnline } from '../../hooks/useOnline';
 import { usePendingSync } from '../../hooks/usePendingSync';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { initOutbox } from '../../offline/outbox';
-import { mobileAuthService } from '../../services/mobileAuth.service';
+import { mobileAuthService, VigiladorActivo } from '../../services/mobileAuth.service';
+import { Users, LogOut, ChevronDown } from 'lucide-react';
 
 export const MobileDashboard = () => {
   const online = useOnline();
   const pendientes = usePendingSync();
+  const modoDispositivo = mobileAuthService.getModo() === 'DISPOSITIVO';
+  const objetivo = mobileAuthService.getObjetivo();
   const sesion = mobileAuthService.getSesion();
   // Mantiene la pantalla encendida mientras la app está en primer plano, para
   // que el guardia no pierda el turno en curso por el bloqueo del celular.
@@ -46,26 +50,65 @@ export const MobileDashboard = () => {
 
   const [rondas, setRondas] = useState<RondaMovil[]>([]);
 
+  // Modo dispositivo: quién opera ahora + lista de guardias del objetivo.
+  const [activo, setActivo] = useState<VigiladorActivo | null>(
+    mobileAuthService.getVigiladorActivo(),
+  );
+  const [vigiladores, setVigiladores] = useState<VigiladorObjetivo[]>([]);
+  // En modo personal ya hay identidad; en dispositivo, hasta elegir "¿Quién sos?".
+  const identificado = !modoDispositivo || !!activo;
+
   const cargarTurno = useCallback(async () => {
+    if (!identificado) return;
     try {
       const data = await vigilanciaMovilService.turnoActual();
       setTurno(data);
     } catch {
       setTurno(null);
     }
-  }, []);
+  }, [identificado]);
 
   const cargarRondas = useCallback(async () => {
+    if (!identificado) return;
     try {
       const data = await vigilanciaMovilService.rondas();
       setRondas(data);
     } catch {
       // sin señal: conservamos el estado local (marcas optimistas)
     }
-  }, []);
+  }, [identificado]);
+
+  const cargarVigiladores = useCallback(async () => {
+    if (!modoDispositivo) return;
+    try {
+      setVigiladores(await vigilanciaMovilService.vigiladoresDelObjetivo());
+    } catch {
+      setVigiladores([]);
+    }
+  }, [modoDispositivo]);
+
+  const elegirVigilador = (v: VigiladorObjetivo) => {
+    const va: VigiladorActivo = {
+      id: v.id, nombre: v.nombre, apellido: v.apellido, legajo_nro: v.legajo_nro,
+    };
+    mobileAuthService.setVigiladorActivo(va);
+    setActivo(va);
+  };
+
+  const cambiarVigilador = () => {
+    mobileAuthService.setVigiladorActivo(null);
+    setActivo(null);
+    setTurno(null);
+    setRondas([]);
+    cargarVigiladores();
+  };
 
   useEffect(() => {
     initOutbox(); // arranca la sincronización de la cola offline
+    cargarVigiladores();
+  }, [cargarVigiladores]);
+
+  useEffect(() => {
     cargarTurno();
     cargarRondas();
   }, [cargarTurno, cargarRondas]);
@@ -169,19 +212,92 @@ export const MobileDashboard = () => {
             <span className="font-black italic uppercase tracking-tighter text-lg">CustOS <span className="text-brand-blue">GO</span></span>
         </div>
         <div className="flex items-center gap-3">
-            {sesion && (
-              <div className="text-right leading-tight">
-                <p className="text-[11px] font-bold text-white truncate max-w-[130px]">
-                  {sesion.apellido}, {sesion.nombre}
-                </p>
-                <p className="text-[9px] font-mono uppercase tracking-widest text-white/40">
-                  {sesion.legajo_nro ? `Legajo ${sesion.legajo_nro}` : 'Vigilador'}
-                </p>
-              </div>
+            {modoDispositivo ? (
+              activo && (
+                <button onClick={cambiarVigilador} className="text-right leading-tight flex items-center gap-1.5">
+                  <div>
+                    <p className="text-[11px] font-bold text-white truncate max-w-[120px]">
+                      {activo.apellido}, {activo.nombre}
+                    </p>
+                    <p className="text-[9px] font-mono uppercase tracking-widest text-emerald">
+                      Cambiar guardia
+                    </p>
+                  </div>
+                  <ChevronDown size={14} className="text-white/40" />
+                </button>
+              )
+            ) : (
+              sesion && (
+                <div className="text-right leading-tight">
+                  <p className="text-[11px] font-bold text-white truncate max-w-[130px]">
+                    {sesion.apellido}, {sesion.nombre}
+                  </p>
+                  <p className="text-[9px] font-mono uppercase tracking-widest text-white/40">
+                    {sesion.legajo_nro ? `Legajo ${sesion.legajo_nro}` : 'Vigilador'}
+                  </p>
+                </div>
+              )
             )}
             <div className={`w-2 h-2 rounded-full ${location ? 'bg-emerald animate-pulse' : 'bg-red-500'}`} title="GPS" />
         </div>
       </div>
+
+      {/* Modo dispositivo: barra del objetivo al que pertenece el celular */}
+      {modoDispositivo && objetivo && (
+        <div className="px-6 py-2 bg-brand-blue/10 border-b border-brand-blue/20 flex items-center gap-2 text-brand-blue">
+          <MapPin size={14} />
+          <span className="text-[11px] font-black uppercase tracking-widest truncate">{objetivo.nombre}</span>
+        </div>
+      )}
+
+      {/* Selector "¿Quién sos?" — bloquea el tablero hasta identificarse */}
+      {modoDispositivo && !activo && (
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="text-center mb-6">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+              <Users size={26} className="text-brand-blue" />
+            </div>
+            <h2 className="text-xl font-black italic uppercase tracking-tighter">¿Quién sos?</h2>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">
+              Elegí tu nombre para operar
+            </p>
+          </div>
+          {vigiladores.length === 0 ? (
+            <p className="text-center text-white/40 text-sm py-8">
+              No hay vigiladores asignados a este objetivo todavía.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {vigiladores.map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => elegirVigilador(v)}
+                  className="w-full flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/10 active:scale-95 transition-all text-left"
+                >
+                  <div>
+                    <p className="font-bold text-sm">{v.apellido}, {v.nombre}</p>
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-white/40">
+                      {v.legajo_nro ? `Legajo ${v.legajo_nro}` : 'Sin legajo'}
+                    </p>
+                  </div>
+                  <span className={`text-[9px] font-black uppercase tracking-widest ${
+                    v.estado_turno === 'EN_TURNO' ? 'text-emerald' : v.estado_turno === 'PROXIMO' ? 'text-amber' : 'text-white/30'
+                  }`}>
+                    {v.estado_turno === 'EN_TURNO' ? 'En turno' : v.estado_turno === 'PROXIMO' ? 'Próximo' : 'Sin turno'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => { mobileAuthService.cerrarSesion(); window.location.href = '/mobile/login'; }}
+            className="w-full mt-6 py-3 rounded-2xl border border-white/10 text-white/40 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
+          >
+            <LogOut size={13} /> Salir del objetivo
+          </button>
+        </div>
+      )}
+
 
       {/* Estado de conexión + GPS bajo la barra, para no competir con la identidad */}
       <div className="px-6 py-1.5 bg-slate-900/30 flex items-center justify-end gap-2 border-b border-white/5">
@@ -208,6 +324,7 @@ export const MobileDashboard = () => {
         </div>
       )}
 
+      {identificado && (
       <main className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide pb-32">
 
         {/* Asistencia / Estado de Guardia */}
@@ -349,8 +466,10 @@ export const MobileDashboard = () => {
             <ChevronRight size={20} className="text-white/20" />
         </div>
       </main>
+      )}
 
-      {/* Panic Zone - ALWAYS VISIBLE AT BOTTOM */}
+      {/* Panic Zone - visible una vez identificado */}
+      {identificado && (
       <div className="absolute bottom-0 left-0 right-0 p-6 pb-12 bg-gradient-to-t from-slate-950 via-slate-950 to-transparent">
         <button
             onContextMenu={(e) => e.preventDefault()}
@@ -363,6 +482,7 @@ export const MobileDashboard = () => {
             <span className="text-xl font-black italic uppercase tracking-tighter relative z-10">PÁNICO / SOS</span>
         </button>
       </div>
+      )}
 
       {isPanicActive && (
         <div className="fixed inset-0 z-[100] bg-red-600 flex items-center justify-center animate-in fade-in zoom-in duration-300">

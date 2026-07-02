@@ -89,9 +89,13 @@ export class VigilanteAuthService {
       if (!objetivo) {
         throw new UnauthorizedException('TAG no reconocido.');
       }
-    } else if (body.objetivo_id && body.pin) {
-      objetivo = await this.prismaAdmin.objetivo.findFirst({
-        where: { id: body.objetivo_id, estado: 'ACTIVO' },
+    } else if ((body.objetivo_codigo || body.objetivo_id) && body.pin) {
+      // Código: puede repetirse entre tenants, así que se comparan todos los
+      // candidatos por PIN (como el login por legajo). ID: es único global.
+      const candidatos = await this.prismaAdmin.objetivo.findMany({
+        where: body.objetivo_id
+          ? { id: body.objetivo_id, estado: 'ACTIVO' }
+          : { codigo: body.objetivo_codigo, estado: 'ACTIVO' },
         select: {
           id: true,
           tenant_id: true,
@@ -102,11 +106,15 @@ export class VigilanteAuthService {
           dispositivo_pin: true,
         },
       });
-      if (!objetivo || !objetivo.dispositivo_pin) {
+      for (const c of candidatos) {
+        if (c.dispositivo_pin && (await bcrypt.compare(body.pin, c.dispositivo_pin))) {
+          objetivo = c;
+          break;
+        }
+      }
+      if (!objetivo) {
         throw new UnauthorizedException('Objetivo o PIN inválidos.');
       }
-      const ok = await bcrypt.compare(body.pin, objetivo.dispositivo_pin);
-      if (!ok) throw new UnauthorizedException('Objetivo o PIN inválidos.');
     } else {
       throw new BadRequestException(
         'Escaneá el TAG del objetivo o ingresá ID de objetivo y PIN.',
