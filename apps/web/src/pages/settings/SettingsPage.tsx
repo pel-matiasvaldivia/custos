@@ -3,10 +3,12 @@ import { CostConfigPage } from '../quoting/CostConfigPage';
 import { CatalogosTab } from './CatalogosTab';
 import { ContratoConfigTab } from './ContratoConfigTab';
 import { UsuariosTab } from './UsuariosTab';
+import { CalculadoraHHTab } from './CalculadoraHHTab';
 
 const TABS = [
   { id: 'usuarios', label: 'Usuarios', render: () => <UsuariosTab /> },
   { id: 'costos', label: 'Costos', render: () => <CostConfigPage /> },
+  { id: 'calculadora', label: 'Calculadora HH', render: () => <CalculadoraHHTab /> },
   { id: 'catalogos', label: 'Catálogos', render: () => <CatalogosTab /> },
   { id: 'contratos', label: 'Contratos', render: () => <ContratoConfigTab /> },
 ];

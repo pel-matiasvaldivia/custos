@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Trash2, ArrowLeft, Save, Calculator, Users } from 'lucide-react';
 import api from '../../services/api';
 import { ClientePicker } from '../../components/clients/ClientePicker';
@@ -23,6 +23,11 @@ interface ItemState {
 
 export const QuoteWizard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Precarga desde la Calculadora HH (Configuración → Calculadora HH → "Aplicar
+  // al cotizador"): arranca la cotización con el puesto y la HH ya calculados.
+  const prefill = (location.state as { prefill?: Partial<ItemState> } | null)?.prefill;
+
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState<any>(null);
   const [error, setError] = useState('');
@@ -32,8 +37,14 @@ export const QuoteWizard = () => {
     cliente_nombre: '',
     vencimiento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     items: [
-      { puesto_nombre: 'Puesto de Seguridad 24hs', tipo: 'HORAS_HOMBRE' as TipoHora, horas_mensuales: 720, costo_hora: 0, margen: 0.25 }
-    ]
+      {
+        puesto_nombre: prefill?.puesto_nombre ?? 'Puesto de Seguridad 24hs',
+        tipo: (prefill?.tipo ?? 'HORAS_HOMBRE') as TipoHora,
+        horas_mensuales: prefill?.horas_mensuales ?? 720,
+        costo_hora: prefill?.costo_hora ?? 0,
+        margen: prefill?.margen ?? 0.25,
+      },
+    ],
   });
 
   useEffect(() => {
@@ -45,6 +56,8 @@ export const QuoteWizard = () => {
           ...prev,
           items: prev.items.map(item => ({
             ...item,
+            // Si vino un costo_hora precargado (calculadora) se respeta; si no,
+            // se usa el costo base de la configuración de costos.
             costo_hora: item.costo_hora || Number(cfg.costo_hora_base),
           })),
         }));

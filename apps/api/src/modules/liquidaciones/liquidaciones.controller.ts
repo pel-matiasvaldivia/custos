@@ -6,8 +6,10 @@ import {
   Param,
   Query,
   Request,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { LiquidacionesService } from './liquidaciones.service';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { RolesGuard } from '../../auth/roles.guard';
@@ -57,6 +59,31 @@ export class LiquidacionesController {
   @Roles('ADMIN', 'GERENCIA', 'SUPERADMIN')
   historial(@Request() req: any) {
     return this.liquidaciones.historial(req.user.tenantId);
+  }
+
+  /** Reporte PDF del cómputo del período (mismos parámetros que el preview). */
+  @Get('reporte/pdf')
+  @Roles('ADMIN', 'GERENCIA', 'SUPERADMIN')
+  async reportePdf(
+    @Request() req: any,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+    @Query('valor_hora_default') valorHoraDefault: string,
+    @Res() res: Response,
+  ) {
+    const doc = await this.liquidaciones.generarReportePdf(
+      req.user.tenantId,
+      desde,
+      hasta,
+      valorHoraDefault ? Number(valorHoraDefault) : 0,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=liquidacion-${desde}_${hasta}.pdf`,
+    );
+    doc.pipe(res);
+    doc.end();
   }
 
   /** Detalle de una liquidación cerrada. */

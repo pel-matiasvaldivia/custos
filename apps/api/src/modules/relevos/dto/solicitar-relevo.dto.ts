@@ -7,4 +7,9 @@ export class SolicitarRelevoDto {
   @IsOptional()
   @IsString()
   motivo?: string;
+
+  // Modo dispositivo: el vigilador que solicita se identifica por acción.
+  @IsOptional()
+  @IsUUID()
+  vigiladorId?: string;
 }

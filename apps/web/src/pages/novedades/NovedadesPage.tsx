@@ -1,8 +1,26 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, MessageSquare, Clock, User, MapPin } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, Download, MessageSquare, Clock, User, MapPin, X } from 'lucide-react';
 import api from '../../services/api';
 import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
+import { objetivoService, Objetivo, Puesto } from '../../services/objetivo.service';
+import { puestoService } from '../../services/puesto.service';
+import { vigilanteService, Vigilador } from '../../services/vigilante.service';
 import { PageHint } from '../../components/common/PageHint';
+
+interface Filtros {
+  objetivoId: string;
+  puestoId: string;
+  vigiladorId: string;
+  tipo: string;
+  prioridad: string;
+  desde: string;
+  hasta: string;
+  q: string;
+}
+
+const FILTROS_VACIOS: Filtros = {
+  objetivoId: '', puestoId: '', vigiladorId: '', tipo: '', prioridad: '', desde: '', hasta: '', q: '',
+};
 
 export const NovedadesPage = () => {
   const [novedades, setNovedades] = useState<any[]>([]);
@@ -13,22 +31,74 @@ export const NovedadesPage = () => {
   const [adelantoMonto, setAdelantoMonto] = useState('');
   const [adelantoCuotas, setAdelantoCuotas] = useState(1);
 
+  const [filtros, setFiltros] = useState<Filtros>(FILTROS_VACIOS);
+  const [objetivos, setObjetivos] = useState<Objetivo[]>([]);
+  const [puestos, setPuestos] = useState<Puesto[]>([]);
+  const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
+  const [descargando, setDescargando] = useState(false);
+
   const esAdelanto = formData.tipo === 'ADELANTO_SUELDO';
 
-  const fetchData = () => {
+  // Query string común al listado y al reporte PDF.
+  const queryParams = useCallback(() => {
+    const p = new URLSearchParams();
+    (Object.keys(filtros) as (keyof Filtros)[]).forEach((k) => {
+      if (filtros[k]) p.set(k, filtros[k]);
+    });
+    return p;
+  }, [filtros]);
+
+  const fetchData = useCallback(() => {
     setLoading(true);
-    api.get<{ data: any[] }>('/novedades')
+    api.get<{ data: any[] }>(`/novedades?${queryParams().toString()}`)
       .then(res => {
         setNovedades(res.data.data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  };
+  }, [queryParams]);
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
     catalogoService.getItems('NOVEDAD_TIPO').then(setTiposNovedad).catch(() => {});
+    objetivoService.getAll(1, 200).then(setObjetivos).catch(() => {});
+    puestoService.findAll().then(setPuestos).catch(() => {});
+    vigilanteService.getAll(1, 200).then(setVigiladores).catch(() => {});
   }, []);
+
+  const puestosFiltrados = filtros.objetivoId
+    ? puestos.filter((p) => p.objetivo_id === filtros.objetivoId)
+    : puestos;
+
+  const hayFiltros = Object.values(filtros).some(Boolean);
+
+  const setF = (k: keyof Filtros, val: string) =>
+    setFiltros((prev) => ({
+      ...prev,
+      [k]: val,
+      // Si cambia el objetivo, se limpia el puesto que ya no aplica.
+      ...(k === 'objetivoId' ? { puestoId: '' } : {}),
+    }));
+
+  const descargarPdf = async () => {
+    setDescargando(true);
+    try {
+      const res = await api.get(`/novedades/reporte/pdf?${queryParams().toString()}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `reporte-novedades-${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } finally {
+      setDescargando(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,14 +234,74 @@ export const NovedadesPage = () => {
         </div>
       )}
 
-      <div className="flex gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
-          <input type="text" placeholder="Buscar por puestos o descripción..." className="input pl-10" />
+      <div className="card space-y-4">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="relative flex-1 min-w-[200px]">
+            <label className="label text-[10px] uppercase font-black">Buscar</label>
+            <Search className="absolute left-3 top-[34px] text-muted" size={16} />
+            <input
+              type="text"
+              placeholder="Texto en la descripción..."
+              className="input pl-9"
+              value={filtros.q}
+              onChange={(e) => setF('q', e.target.value)}
+            />
+          </div>
+          <div className="min-w-[160px]">
+            <label className="label text-[10px] uppercase font-black">Objetivo</label>
+            <select className="input" value={filtros.objetivoId} onChange={(e) => setF('objetivoId', e.target.value)}>
+              <option value="">Todos</option>
+              {objetivos.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+            </select>
+          </div>
+          <div className="min-w-[150px]">
+            <label className="label text-[10px] uppercase font-black">Puesto</label>
+            <select className="input" value={filtros.puestoId} onChange={(e) => setF('puestoId', e.target.value)}>
+              <option value="">Todos</option>
+              {puestosFiltrados.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+          <div className="min-w-[160px]">
+            <label className="label text-[10px] uppercase font-black">Vigilador</label>
+            <select className="input" value={filtros.vigiladorId} onChange={(e) => setF('vigiladorId', e.target.value)}>
+              <option value="">Todos</option>
+              {vigiladores.map((v) => <option key={v.id} value={v.id}>{v.apellido}, {v.nombre}</option>)}
+            </select>
+          </div>
         </div>
-        <button className="btn btn-secondary flex items-center gap-2">
-          <Filter size={18} /> Filtrar
-        </button>
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="min-w-[130px]">
+            <label className="label text-[10px] uppercase font-black">Tipo</label>
+            <select className="input" value={filtros.tipo} onChange={(e) => setF('tipo', e.target.value)}>
+              <option value="">Todos</option>
+              {tiposNovedad.map((t) => <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>)}
+            </select>
+          </div>
+          <div className="min-w-[130px]">
+            <label className="label text-[10px] uppercase font-black">Prioridad</label>
+            <select className="input" value={filtros.prioridad} onChange={(e) => setF('prioridad', e.target.value)}>
+              <option value="">Todas</option>
+              {['NORMAL', 'ALTA', 'CRITICA'].map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label text-[10px] uppercase font-black">Desde</label>
+            <input type="date" className="input" value={filtros.desde} onChange={(e) => setF('desde', e.target.value)} />
+          </div>
+          <div>
+            <label className="label text-[10px] uppercase font-black">Hasta</label>
+            <input type="date" className="input" value={filtros.hasta} onChange={(e) => setF('hasta', e.target.value)} />
+          </div>
+          <div className="flex-1" />
+          {hayFiltros && (
+            <button onClick={() => setFiltros(FILTROS_VACIOS)} className="btn btn-secondary flex items-center gap-2">
+              <X size={16} /> Limpiar
+            </button>
+          )}
+          <button onClick={descargarPdf} disabled={descargando} className="btn btn-primary flex items-center gap-2">
+            <Download size={16} /> {descargando ? 'Generando...' : 'Descargar reporte'}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">

@@ -1,11 +1,33 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateNovedadDto } from './dto/create-novedad.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { FiltrarNovedadesDto } from './dto/filtrar-novedades.dto';
+// @ts-ignore - pdfmake no trae tipos; se usa el runtime directamente.
+import printer = require('pdfmake');
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 @Injectable()
 export class NovedadService {
   constructor(private prisma: PrismaService) {}
+
+  /** Arma el filtro Prisma común al listado y al reporte PDF. */
+  private buildWhere(tenantId: string, f: FiltrarNovedadesDto) {
+    const where: any = { tenant_id: tenantId };
+    if (f.puestoId) where.puesto_id = f.puestoId;
+    if (f.objetivoId) where.puesto = { objetivo_id: f.objetivoId };
+    if (f.vigiladorId) where.vigilador_id = f.vigiladorId;
+    if (f.tipo) where.tipo = f.tipo;
+    if (f.prioridad) where.prioridad = f.prioridad;
+    if (f.desde || f.hasta) {
+      where.created_at = {
+        gte: f.desde ? new Date(f.desde) : undefined,
+        lte: f.hasta ? new Date(`${f.hasta}T23:59:59`) : undefined,
+      };
+    }
+    if (f.q) where.descripcion = { contains: f.q, mode: 'insensitive' };
+    return where;
+  }
 
   async create(tenantId: string, data: CreateNovedadDto) {
     const novedad = await this.prisma.novedad.create({
@@ -47,22 +69,91 @@ export class NovedadService {
     return novedad;
   }
 
-  async findAll(tenantId: string, pagination?: PaginationDto) {
-    const skip = pagination?.skip ?? 0;
-    const take = pagination?.limit ?? 50;
+  async findAll(tenantId: string, filtros?: FiltrarNovedadesDto) {
+    const f = filtros ?? ({} as FiltrarNovedadesDto);
+    const skip = f.skip ?? 0;
+    const take = f.limit ?? 50;
+    const where = this.buildWhere(tenantId, f);
 
     const [data, total] = await Promise.all([
       this.prisma.novedad.findMany({
-        where: { tenant_id: tenantId },
+        where,
         include: { puesto: true, vigilador: true },
         orderBy: { created_at: 'desc' },
         skip,
         take,
       }),
-      this.prisma.novedad.count({ where: { tenant_id: tenantId } }),
+      this.prisma.novedad.count({ where }),
     ]);
 
-    return { data, total, page: pagination?.page ?? 1, limit: take };
+    return { data, total, page: f.page ?? 1, limit: take };
+  }
+
+  /** Reporte PDF de novedades aplicando los mismos filtros del listado. */
+  async generarReportePdf(tenantId: string, filtros: FiltrarNovedadesDto) {
+    const where = this.buildWhere(tenantId, filtros);
+    const novedades = await this.prisma.novedad.findMany({
+      where,
+      include: { puesto: { include: { objetivo: true } }, vigilador: true },
+      orderBy: { created_at: 'desc' },
+      take: 1000,
+    });
+
+    const fonts = {
+      Roboto: {
+        normal: 'Helvetica',
+        bold: 'Helvetica-Bold',
+        italics: 'Helvetica-Oblique',
+        bolditalics: 'Helvetica-BoldOblique',
+      },
+    };
+    // @ts-ignore
+    const pdf = new printer(fonts);
+
+    const docDefinition: any = {
+      pageMargins: [32, 40, 32, 40],
+      content: [
+        { text: 'CustOS · Reporte de Novedades', style: 'header' },
+        {
+          text: `Generado el ${format(new Date(), "dd 'de' MMMM yyyy, HH:mm", { locale: es })} · ${novedades.length} novedad(es)`,
+          style: 'subheader',
+        },
+        { text: '\n' },
+        {
+          table: {
+            headerRows: 1,
+            widths: ['auto', 'auto', '*', 'auto', '*'],
+            body: [
+              [
+                { text: 'FECHA', style: 'th' },
+                { text: 'PRIORIDAD', style: 'th' },
+                { text: 'OBJETIVO / PUESTO', style: 'th' },
+                { text: 'VIGILADOR', style: 'th' },
+                { text: 'TIPO / DESCRIPCIÓN', style: 'th' },
+              ],
+              ...novedades.map((n) => [
+                format(n.created_at, 'dd/MM/yy HH:mm'),
+                n.prioridad,
+                `${n.puesto?.objetivo?.nombre ?? 'S/D'}\n${n.puesto?.nombre ?? 'General'}`,
+                n.vigilador ? `${n.vigilador.apellido}, ${n.vigilador.nombre}` : 'S/D',
+                `${n.tipo}\n${n.descripcion ?? ''}`,
+              ]),
+            ],
+          },
+          layout: {
+            fillColor: (rowIndex: number) => (rowIndex === 0 ? '#0e1f3a' : rowIndex % 2 === 0 ? '#f4f6fb' : null),
+          },
+        },
+      ],
+      styles: {
+        header: { fontSize: 20, bold: true, color: '#0e1f3a' },
+        subheader: { fontSize: 9, italics: true, color: '#5c6b86' },
+        th: { fontSize: 9, bold: true, color: '#ffffff', margin: [0, 4, 0, 4] },
+      },
+      defaultStyle: { fontSize: 8, color: '#0e1f3a' },
+    };
+
+    return pdf.createPdfKitDocument(docDefinition);
   }
 
   async findByPuesto(tenantId: string, puestoId: string) {

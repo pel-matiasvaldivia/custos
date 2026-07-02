@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Search, Clock, AlertTriangle, Lock, CheckCircle2 } from 'lucide-react';
+import { Calculator, Search, Clock, AlertTriangle, Lock, CheckCircle2, Download } from 'lucide-react';
 import { liquidacionService, LiquidacionItem } from '../../services/liquidacion.service';
 import { PageHint } from '../../components/common/PageHint';
 
@@ -19,6 +19,7 @@ export const LiquidacionesPage = () => {
   const [conMontos, setConMontos] = useState(true);
   const [loading, setLoading] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [descargando, setDescargando] = useState(false);
   const [buscado, setBuscado] = useState(false);
   const [msg, setMsg] = useState('');
   const [modoConfig, setModoConfig] = useState('VALOR_HORA_MANUAL');
@@ -59,6 +60,18 @@ export const LiquidacionesPage = () => {
       setMsg(e?.response?.data?.message || 'No se pudo cerrar la liquidación.');
     } finally {
       setCerrando(false);
+    }
+  };
+
+  const descargarReporte = async () => {
+    setDescargando(true);
+    setMsg('');
+    try {
+      await liquidacionService.descargarPdf(desde, hasta, valorHora);
+    } catch {
+      setMsg('No se pudo generar el reporte PDF.');
+    } finally {
+      setDescargando(false);
     }
   };
 
@@ -145,7 +158,10 @@ export const LiquidacionesPage = () => {
               <p className="text-3xl font-black text-emerald">{money(totalNeto)}</p>
             </div>
           )}
-          <div className="card flex items-center justify-center">
+          <div className="card flex flex-col justify-center gap-2">
+            <button onClick={descargarReporte} disabled={descargando || items.length === 0} className="btn btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">
+              <Download size={15} /> {descargando ? 'Generando...' : 'Descargar reporte'}
+            </button>
             <button onClick={cerrar} disabled={cerrando || items.length === 0} className="btn btn-secondary w-full flex items-center justify-center gap-2 disabled:opacity-50">
               <Lock size={15} /> {cerrando ? 'Cerrando...' : 'Cerrar liquidación'}
             </button>

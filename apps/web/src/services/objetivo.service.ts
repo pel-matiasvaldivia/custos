@@ -146,4 +146,20 @@ export const objetivoService = {
     );
     return response.data;
   },
+
+  // Credenciales del dispositivo compartido (modo "un celular por objetivo").
+  getDispositivo: async (
+    objetivoId: string,
+  ): Promise<{ tiene_pin: boolean; nfc_tag_id: string | null }> => {
+    const response = await api.get(`/objetivos/${objetivoId}/dispositivo`);
+    return response.data;
+  },
+
+  configurarDispositivo: async (
+    objetivoId: string,
+    body: { pin?: string; nfc_tag_id?: string },
+  ): Promise<{ tiene_pin: boolean; nfc_tag_id: string | null }> => {
+    const response = await api.post(`/objetivos/${objetivoId}/dispositivo`, body);
+    return response.data;
+  },
 };

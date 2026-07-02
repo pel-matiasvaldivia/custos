@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Body,
+  Query,
   UseGuards,
   Request,
   UseInterceptors,
@@ -14,6 +15,13 @@ import { VigiladorJwtGuard } from '../vigilante-auth/vigilador-jwt.guard';
 import { RelevosService } from '../relevos/relevos.service';
 import { SolicitarRelevoDto } from '../relevos/dto/solicitar-relevo.dto';
 
+/**
+ * Endpoints de la app del guardia. Funciona en dos modos según el token:
+ *  - VIGILADOR: login personal (legajo+PIN); el vigilador sale del token.
+ *  - DISPOSITIVO: un celular por objetivo; el vigilador se identifica por acción
+ *    y viaja en el payload (data.vigiladorId / query vigiladorId), validado
+ *    contra el objetivo del dispositivo en resolverVigilador().
+ */
 @Controller('mobile')
 @UseGuards(VigiladorJwtGuard)
 export class VigilanciaMovilController {
@@ -21,6 +29,15 @@ export class VigilanciaMovilController {
     private readonly mobileService: VigilanciaMovilService,
     private readonly relevosService: RelevosService,
   ) {}
+
+  /** Vigiladores asignados al objetivo del dispositivo (selector "¿Quién sos?"). */
+  @Get('objetivo/vigiladores')
+  async vigiladoresDelObjetivo(@Request() req: any) {
+    return this.mobileService.vigiladoresDelObjetivo(
+      req.user.tenantId,
+      req.user.objetivoId,
+    );
+  }
 
   @Post('checkpoint')
   async scanCheckpoint(
@@ -30,12 +47,17 @@ export class VigilanciaMovilController {
       location?: any;
       clientEventId?: string;
       ts?: string;
+      vigiladorId?: string;
     },
     @Request() req: any,
   ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      data.vigiladorId,
+    );
     return this.mobileService.registrarPuntoControl(
       req.user.tenantId,
-      req.user.vigiladorId,
+      vigiladorId,
       data.checkpointId,
       data.location,
       data.clientEventId,
@@ -50,54 +72,71 @@ export class VigilanciaMovilController {
       location: { lat: number; lng: number };
       clientEventId?: string;
       ts?: string;
+      vigiladorId?: string;
     },
     @Request() req: any,
   ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      data.vigiladorId,
+    );
     return this.mobileService.dispararPanico(
-      req.user.vigiladorId,
+      vigiladorId,
       req.user.tenantId,
       data.location,
       data.clientEventId,
       data.ts,
+      req.user.objetivoId,
     );
   }
 
   @Post('tracking')
   async updateLocation(
-    @Body() data: { location: { lat: number; lng: number } },
+    @Body() data: { location: { lat: number; lng: number }; vigiladorId?: string },
     @Request() req: any,
   ) {
+    // El tracking no exige identificación: si no hay vigilador (dispositivo sin
+    // seleccionar), se reporta el objetivo igual para el mapa en vivo.
+    const vigiladorId =
+      req.user.tipo === 'VIGILADOR' ? req.user.vigiladorId : data.vigiladorId;
     return this.mobileService.updateLocation(
-      req.user.vigiladorId,
+      vigiladorId,
       req.user.tenantId,
       data.location,
+      req.user.objetivoId,
     );
   }
 
   @Get('turno-actual')
-  async turnoActual(@Request() req: any) {
-    return this.mobileService.turnoActual(
-      req.user.tenantId,
-      req.user.vigiladorId,
-    );
+  async turnoActual(@Request() req: any, @Query('vigiladorId') vigiladorId?: string) {
+    const actor = await this.mobileService.resolverVigilador(req.user, vigiladorId);
+    return this.mobileService.turnoActual(req.user.tenantId, actor);
   }
 
   @Get('rondas')
-  async rondas(@Request() req: any) {
-    return this.mobileService.rondasDelTurno(
-      req.user.tenantId,
-      req.user.vigiladorId,
-    );
+  async rondas(@Request() req: any, @Query('vigiladorId') vigiladorId?: string) {
+    const actor = await this.mobileService.resolverVigilador(req.user, vigiladorId);
+    return this.mobileService.rondasDelTurno(req.user.tenantId, actor);
   }
 
   @Post('rondas/iniciar')
   async iniciarRonda(
-    @Body() data: { plantillaId: string; clientEventId?: string; ts?: string },
+    @Body()
+    data: {
+      plantillaId: string;
+      clientEventId?: string;
+      ts?: string;
+      vigiladorId?: string;
+    },
     @Request() req: any,
   ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      data.vigiladorId,
+    );
     return this.mobileService.iniciarRonda(
       req.user.tenantId,
-      req.user.vigiladorId,
+      vigiladorId,
       data.plantillaId,
       data.clientEventId,
       data.ts,
@@ -113,12 +152,17 @@ export class VigilanciaMovilController {
       location?: { lat: number; lng: number };
       clientEventId?: string;
       ts?: string;
+      vigiladorId?: string;
     },
     @Request() req: any,
   ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      data.vigiladorId,
+    );
     return this.mobileService.checkin(
       req.user.tenantId,
-      req.user.vigiladorId,
+      vigiladorId,
       data.turnoId,
       data.metodo,
       data.location,
@@ -134,15 +178,24 @@ export class VigilanciaMovilController {
       turnoId: string;
       metodo: string;
       location?: { lat: number; lng: number };
+      clientEventId?: string;
+      ts?: string;
+      vigiladorId?: string;
     },
     @Request() req: any,
   ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      data.vigiladorId,
+    );
     return this.mobileService.checkout(
       req.user.tenantId,
-      req.user.vigiladorId,
+      vigiladorId,
       data.turnoId,
       data.metodo,
       data.location,
+      data.clientEventId,
+      data.ts,
     );
   }
 
@@ -167,23 +220,31 @@ export class VigilanciaMovilController {
       prioridad?: string;
       clientEventId?: string;
       ts?: string;
+      vigiladorId?: string;
     },
     @Request() req: any,
   ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      data.vigiladorId,
+    );
     return this.mobileService.crearNovedad(
       req.user.tenantId,
-      req.user.vigiladorId,
+      vigiladorId,
       data,
       media ?? [],
     );
   }
 
   @Post('relevos')
-  async solicitarRelevo(@Body() dto: SolicitarRelevoDto, @Request() req: any) {
-    return this.relevosService.solicitar(
-      req.user.tenantId,
-      req.user.vigiladorId,
-      dto,
+  async solicitarRelevo(
+    @Body() dto: SolicitarRelevoDto & { vigiladorId?: string },
+    @Request() req: any,
+  ) {
+    const vigiladorId = await this.mobileService.resolverVigilador(
+      req.user,
+      dto.vigiladorId,
     );
+    return this.relevosService.solicitar(req.user.tenantId, vigiladorId, dto);
   }
 }

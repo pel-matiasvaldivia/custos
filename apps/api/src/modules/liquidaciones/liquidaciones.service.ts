@@ -1,5 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+// @ts-ignore - pdfmake no trae tipos; se usa el runtime directamente.
+import pdfPrinter = require('pdfmake');
 
 /**
  * Liquidaciones — calcula las horas exactas a pagar por vigilador en un período,
@@ -274,6 +276,117 @@ export class LiquidacionesService {
     });
     if (!liq) throw new NotFoundException('Liquidación no encontrada.');
     return liq;
+  }
+
+  /** Reporte PDF del cómputo del período (mismo cálculo que el preview). */
+  async generarReportePdf(
+    tenantId: string,
+    desde: string,
+    hasta: string,
+    valorHoraDefault: number,
+  ) {
+    const computo = await this.computar(tenantId, desde, hasta, valorHoraDefault);
+    const conMontos = computo.con_montos;
+
+    const money = (n: number) =>
+      '$' + Math.round(n).toLocaleString('es-AR');
+    const totalHoras = computo.items.reduce((s, i) => s + i.hh_trabajadas, 0);
+    const totalNeto = computo.items.reduce((s, i) => s + i.neto, 0);
+
+    const fonts = {
+      Roboto: {
+        normal: 'Helvetica',
+        bold: 'Helvetica-Bold',
+        italics: 'Helvetica-Oblique',
+        bolditalics: 'Helvetica-BoldOblique',
+      },
+    };
+    // @ts-ignore
+    const pdf = new pdfPrinter(fonts);
+
+    const header = [
+      { text: 'LEGAJO', style: 'th' },
+      { text: 'VIGILADOR', style: 'th' },
+      { text: 'HH TRAB.', style: 'th', alignment: 'right' },
+      { text: 'HH NOCT.', style: 'th', alignment: 'right' },
+      { text: 'HH EXTRA', style: 'th', alignment: 'right' },
+      { text: 'AUSENTES', style: 'th', alignment: 'right' },
+      ...(conMontos
+        ? [
+            { text: 'BRUTO', style: 'th', alignment: 'right' },
+            { text: 'DESC.', style: 'th', alignment: 'right' },
+            { text: 'NETO', style: 'th', alignment: 'right' },
+          ]
+        : []),
+    ];
+
+    const body = computo.items.map((i) => [
+      i.legajo ?? 'S/D',
+      `${i.apellido}, ${i.nombre}`,
+      { text: i.hh_trabajadas.toFixed(1), alignment: 'right' },
+      { text: i.hh_nocturnas.toFixed(1), alignment: 'right' },
+      { text: i.hh_extra.toFixed(1), alignment: 'right' },
+      { text: i.hh_ausentes.toFixed(1), alignment: 'right' },
+      ...(conMontos
+        ? [
+            { text: money(i.bruto), alignment: 'right' },
+            { text: money(i.descuentos + i.adelanto_desc), alignment: 'right' },
+            { text: money(i.neto), alignment: 'right', bold: true },
+          ]
+        : []),
+    ]);
+
+    const docDefinition: any = {
+      pageOrientation: conMontos ? 'landscape' : 'portrait',
+      pageMargins: [28, 36, 28, 36],
+      content: [
+        { text: 'CustOS · Liquidación de horas', style: 'header' },
+        {
+          text: `Período ${desde} a ${hasta} · Modo: ${computo.modo} · ${computo.items.length} vigilador(es)`,
+          style: 'subheader',
+        },
+        { text: '\n' },
+        {
+          table: {
+            headerRows: 1,
+            widths: conMontos
+              ? ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto']
+              : ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
+            body: [header, ...body],
+          },
+          layout: {
+            fillColor: (rowIndex: number) =>
+              rowIndex === 0 ? '#0e1f3a' : rowIndex % 2 === 0 ? '#f4f6fb' : null,
+          },
+        },
+        { text: '\n' },
+        {
+          columns: [
+            { text: '', width: '*' },
+            {
+              width: 'auto',
+              table: {
+                body: [
+                  ['Total horas trabajadas', { text: `${totalHoras.toFixed(1)} h`, alignment: 'right', bold: true }],
+                  ...(conMontos
+                    ? [['Total neto a pagar', { text: money(totalNeto), alignment: 'right', bold: true }]]
+                    : []),
+                ],
+              },
+              layout: 'lightHorizontalLines',
+            },
+          ],
+        },
+      ],
+      styles: {
+        header: { fontSize: 18, bold: true, color: '#0e1f3a' },
+        subheader: { fontSize: 9, italics: true, color: '#5c6b86' },
+        th: { fontSize: 8, bold: true, color: '#ffffff', margin: [0, 3, 0, 3] },
+      },
+      defaultStyle: { fontSize: 8, color: '#0e1f3a' },
+    };
+
+    return pdf.createPdfKitDocument(docDefinition);
   }
 
   // ── helpers ──
