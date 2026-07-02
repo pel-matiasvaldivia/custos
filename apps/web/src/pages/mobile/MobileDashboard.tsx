@@ -191,6 +191,12 @@ export const MobileDashboard = () => {
 
   const handleCheckout = async () => {
     if (!turno) return;
+    // No se puede finalizar el turno antes del horario de fin: si el guardia
+    // necesita salir antes, se lo deriva a solicitar un cambio de turno.
+    if (new Date() < new Date(turno.fin_plan)) {
+      setModalRelevo(true);
+      return;
+    }
     setProcesandoAsistencia(true);
     try {
       await vigilanciaMovilService.checkout(turno.id, 'APP', location ?? undefined);

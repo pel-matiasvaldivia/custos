@@ -1,11 +1,25 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
+const esCelularOTablet = () =>
+  typeof navigator !== 'undefined' &&
+  /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
+
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+
+  // El login de oficina en un cel/tablet casi siempre es un guardia: se lo lleva
+  // a la app móvil. 'force=1' (link "administración") evita el redirect.
+  useEffect(() => {
+    const forzar = new URLSearchParams(window.location.search).get('force') === '1';
+    if (!forzar && esCelularOTablet()) {
+      navigate('/mobile/login', { replace: true });
+    }
+  }, [navigate]);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

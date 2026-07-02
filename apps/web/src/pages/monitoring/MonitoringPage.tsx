@@ -18,6 +18,7 @@ import {
 import { useSocket } from '../../hooks/useSocket';
 import { VideoPlayer } from './VideoPlayer';
 import { MapView } from '../../components/monitoring/MapView';
+import { ProtocoloIncidenteModal } from './ProtocoloIncidenteModal';
 import api from '../../services/api';
 import { puestoService } from '../../services/puesto.service';
 import { objetivoService } from '../../services/objetivo.service';
@@ -31,6 +32,7 @@ export const MonitoringPage = () => {
   const [guards, setGuards] = useState<Record<string, any>>({});
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [activeVideo, setActiveVideo] = useState<any | null>(null);
+  const [protocoloId, setProtocoloId] = useState<string | null>(null);
   const [devices, setDevices] = useState<any[]>([]);
   const [puestos, setPuestos] = useState<any[]>([]);
   const [objetivos, setObjetivos] = useState<any[]>([]);
@@ -127,13 +129,8 @@ export const MonitoringPage = () => {
     }));
   });
 
-  const handleTake = async (id: string) => {
-    try {
-      await api.post(`/centro-operaciones/incidentes/${id}/tomar`);
-    } catch (err) {
-      alert('Error al tomar incidente');
-    }
-  };
+  // Abrir el protocolo guiado del incidente (tomar → verificar → despachar → cerrar).
+  const abrirProtocolo = (id: string) => setProtocoloId(id);
 
   return (
     <div className="space-y-8 font-display bg-canvas min-h-screen">
@@ -212,7 +209,7 @@ export const MonitoringPage = () => {
                     <p className="text-slate-400 font-bold uppercase tracking-widest">No hay incidentes activos</p>
                   </div>
                 ) : incidents.map(inc => (
-                  <IncidentCard key={inc.id} incident={inc} onTake={() => handleTake(inc.id)} />
+                  <IncidentCard key={inc.id} incident={inc} onTake={() => abrirProtocolo(inc.id)} />
                 ))}
               </div>
             </div>
@@ -269,6 +266,15 @@ export const MonitoringPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Protocolo guiado del incidente */}
+      {protocoloId && (
+        <ProtocoloIncidenteModal
+          incidenteId={protocoloId}
+          onClose={() => setProtocoloId(null)}
+          onCambio={fetchActiveIncidents}
+        />
+      )}
 
       {/* Video Verification Modal */}
       {activeVideo && (
@@ -373,14 +379,14 @@ function IncidentCard({ incident, onTake }: { incident: any, onTake: () => void 
             ) : (
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-slate-400 uppercase leading-none">Operador</p>
-                  <p className="text-xs font-bold text-navy">Asignado</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase leading-none">Estado</p>
+                  <p className="text-xs font-bold text-navy">{incident.estado?.replace('_', ' ')}</p>
                 </div>
                 <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 ring-4 ring-emerald-50">
                   <UserCheck size={20} />
                 </div>
-                <button className="bg-brand-blue text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-blue-dark transition-all flex items-center gap-2">
-                  Gestión <Eye size={14} />
+                <button onClick={onTake} className="bg-brand-blue text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-deep transition-all flex items-center gap-2">
+                  Procesar <Eye size={14} />
                 </button>
               </div>
             )}
