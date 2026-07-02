@@ -10,13 +10,16 @@ import {
   Zap,
   User,
   RefreshCw,
+  WifiOff,
 } from 'lucide-react';
 import mobileApi from '../../services/mobileApi';
 import { vigilanciaMovilService, TurnoActual, Location } from '../../services/vigilanciaMovil.service';
 import { AsistenciaCard } from './AsistenciaCard';
 import { SolicitarRelevoModal } from './SolicitarRelevoModal';
+import { useOnline } from '../../hooks/useOnline';
 
 export const MobileDashboard = () => {
+  const online = useOnline();
   const [scanning, setScanning] = useState(false);
   const [isPanicActive, setIsPanicActive] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
@@ -117,10 +120,23 @@ export const MobileDashboard = () => {
             <span className="font-black italic uppercase tracking-tighter text-lg">CustOS <span className="text-brand-blue">GO</span></span>
         </div>
         <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full ${location ? 'bg-emerald animate-pulse' : 'bg-red-500'}`} />
+            <span className={`text-[9px] font-black uppercase tracking-widest ${online ? 'text-emerald' : 'text-amber'}`}>
+              {online ? 'En línea' : 'Sin conexión'}
+            </span>
+            <div className={`w-2 h-2 rounded-full ${location ? 'bg-emerald animate-pulse' : 'bg-red-500'}`} title="GPS" />
             <User size={20} className="text-white/40" />
         </div>
       </div>
+
+      {/* Aviso offline: la app sigue operando; las acciones se sincronizan al volver la señal */}
+      {!online && (
+        <div className="bg-amber/15 border-b border-amber/30 px-6 py-2.5 flex items-center gap-2 text-amber">
+          <WifiOff size={15} />
+          <span className="text-[11px] font-bold uppercase tracking-wider">
+            Sin conexión · seguí trabajando, se sincroniza al recuperar señal
+          </span>
+        </div>
+      )}
 
       <main className="flex-1 overflow-y-auto p-6 space-y-8 scrollbar-hide pb-32">
 
