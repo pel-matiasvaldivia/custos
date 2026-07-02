@@ -151,9 +151,134 @@ export class CentroOperacionesService {
     return incident;
   }
 
+  /** Paso 2 del protocolo: verificación (llamar al guardia, ver cámara, etc.). */
+  async verifyIncident(
+    incidentId: string,
+    operatorId: string,
+    data: { metodo: string; nota?: string },
+  ) {
+    const incident = await this.prisma.incidente.update({
+      where: { id: incidentId },
+      data: { estado: 'VERIFICANDO', operador_id: operatorId },
+    });
+    await this.prisma.incidenteBitacora.create({
+      data: {
+        tenant_id: incident.tenant_id,
+        incidente_id: incident.id,
+        actor_id: operatorId,
+        accion: 'VERIFICACION',
+        detalle: { metodo: data.metodo, nota: data.nota ?? '' },
+      },
+    });
+    this.coGateway.emitToTenant(
+      incident.tenant_id,
+      'incident.updated',
+      incident,
+    );
+    return incident;
+  }
+
+  /** Paso 3 del protocolo: despacho de la respuesta (policía, móvil, supervisor…). */
+  async dispatchIncident(
+    incidentId: string,
+    operatorId: string,
+    data: { destino: string; nota?: string },
+  ) {
+    const incident = await this.prisma.incidente.update({
+      where: { id: incidentId },
+      data: {
+        estado: 'DESPACHADO',
+        operador_id: operatorId,
+        despachado_el: new Date(),
+      },
+    });
+    await this.prisma.incidenteBitacora.create({
+      data: {
+        tenant_id: incident.tenant_id,
+        incidente_id: incident.id,
+        actor_id: operatorId,
+        accion: 'DESPACHO',
+        detalle: { destino: data.destino, nota: data.nota ?? '' },
+      },
+    });
+    this.coGateway.emitToTenant(
+      incident.tenant_id,
+      'incident.updated',
+      incident,
+    );
+    return incident;
+  }
+
+  /** Nota libre en la bitácora (no cambia de estado). */
+  async addNote(incidentId: string, operatorId: string, nota: string) {
+    const incident = await this.prisma.incidente.findUniqueOrThrow({
+      where: { id: incidentId },
+      select: { id: true, tenant_id: true },
+    });
+    const entry = await this.prisma.incidenteBitacora.create({
+      data: {
+        tenant_id: incident.tenant_id,
+        incidente_id: incident.id,
+        actor_id: operatorId,
+        accion: 'NOTA',
+        detalle: { nota },
+      },
+    });
+    this.coGateway.emitToTenant(incident.tenant_id, 'incident.updated', {
+      id: incident.id,
+    });
+    return entry;
+  }
+
+  /** Detalle del incidente con su bitácora (timeline) y nombres de operadores. */
+  async getIncident(incidentId: string, tenantId: string) {
+    const incident = await this.prisma.incidente.findFirst({
+      where: { id: incidentId, tenant_id: tenantId },
+      include: {
+        objetivo: true,
+        eventos: { orderBy: { ts_evento: 'desc' }, take: 10 },
+        bitacora: { orderBy: { ts: 'asc' } },
+      },
+    });
+    if (!incident) return null;
+
+    const actorIds = [
+      ...new Set(
+        incident.bitacora
+          .map((b: { actor_id: string | null }) => b.actor_id)
+          .filter((x): x is string => !!x),
+      ),
+    ];
+    const actores = actorIds.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: actorIds } },
+          select: { id: true, nombre: true, email: true },
+        })
+      : [];
+    const nombrePorId = new Map(
+      actores.map((a: { id: string; nombre: string | null; email: string }) => [
+        a.id,
+        a.nombre || a.email,
+      ]),
+    );
+
+    return {
+      ...incident,
+      bitacora: incident.bitacora.map(
+        (b: { actor_id: string | null; [k: string]: unknown }) => ({
+          ...b,
+          actor_nombre: b.actor_id
+            ? (nombrePorId.get(b.actor_id) ?? null)
+            : null,
+        }),
+      ),
+    };
+  }
+
   async resolveIncident(
     incidentId: string,
     data: { disposicion: string; resumen: string },
+    operatorId?: string,
   ) {
     const incident = await this.prisma.incidente.update({
       where: { id: incidentId },
@@ -169,6 +294,7 @@ export class CentroOperacionesService {
       data: {
         tenant_id: incident.tenant_id,
         incidente_id: incident.id,
+        actor_id: operatorId ?? null,
         accion: 'CIERRE',
         detalle: { disposicion: data.disposicion, resumen: data.resumen },
       },
