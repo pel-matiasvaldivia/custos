@@ -327,7 +327,7 @@ function MobileShowcase({ onDemo }: { onDemo: () => void }) {
         {/* Composición de teléfonos */}
         <div className="relative flex items-end justify-center gap-6 lg:gap-10 mb-20">
           {/* Teléfono izq — Novedad */}
-          <div className="hidden lg:block -rotate-6 translate-y-6 opacity-90 scale-90 origin-bottom">
+          <div className="hidden lg:block co-float-l opacity-90 scale-90 origin-bottom">
             <PhoneFrame>
               <div className="bg-slate-950 text-white pt-9 pb-5 px-4 space-y-3 min-h-[380px]">
                 <p className="text-xs font-black italic uppercase tracking-tighter">Nueva novedad</p>
@@ -414,7 +414,7 @@ function MobileShowcase({ onDemo }: { onDemo: () => void }) {
           </div>
 
           {/* Teléfono der — Pánico enviado */}
-          <div className="hidden lg:block rotate-6 translate-y-6 opacity-90 scale-90 origin-bottom">
+          <div className="hidden lg:block co-float-r opacity-90 scale-90 origin-bottom">
             <PhoneFrame>
               <div className="bg-red-600 text-white pt-9 pb-5 px-4 flex flex-col items-center justify-center text-center min-h-[380px]">
                 <Zap size={44} className="mb-4 animate-pulse" />
@@ -498,6 +498,14 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white font-sans overflow-x-hidden">
+      <style>{`
+        @keyframes co-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @keyframes co-float-rot-l { 0%, 100% { transform: rotate(-6deg) translateY(24px); } 50% { transform: rotate(-6deg) translateY(12px); } }
+        @keyframes co-float-rot-r { 0%, 100% { transform: rotate(6deg) translateY(24px); } 50% { transform: rotate(6deg) translateY(12px); } }
+        .co-float { animation: co-float 5s ease-in-out infinite; }
+        .co-float-l { animation: co-float-rot-l 6s ease-in-out infinite; }
+        .co-float-r { animation: co-float-rot-r 7s ease-in-out infinite; }
+      `}</style>
       {showModal && <DemoModal onClose={() => setShowModal(false)} />}
 
       {/* ── NAV ── */}
@@ -626,7 +634,7 @@ export default function LandingPage() {
                 </div>
               </BrowserFrame>
               {/* tarjeta flotante */}
-              <div className="absolute -bottom-5 -left-5 bg-white rounded-2xl p-3.5 shadow-xl border border-slate-100 flex items-center gap-3">
+              <div className="co-float absolute -bottom-5 -left-5 bg-white rounded-2xl p-3.5 shadow-xl border border-slate-100 flex items-center gap-3">
                 <div className="w-9 h-9 bg-brand-blue/10 rounded-xl flex items-center justify-center">
                   <TrendingUp size={17} className="text-brand-blue" />
                 </div>
@@ -662,6 +670,26 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── RESULTADOS — números de impacto ── */}
+      <section className="py-16 bg-gradient-to-b from-white to-brand-tint/40">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {[
+              { val: '10 min', label: 'Armar el cuadrante del mes', sub: 'antes: una tarde de planillas' },
+              { val: '100%', label: 'Rondas con evidencia', sub: 'GPS + hora + autor de cada marca' },
+              { val: '4.2', label: 'Dotación real por puesto 24×7', sub: 'el margen no se pierde al cotizar' },
+              { val: '0', label: 'Planillas y grupos de WhatsApp', sub: 'todo queda en el sistema' },
+            ].map((s) => (
+              <div key={s.label} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center hover:shadow-lg hover:-translate-y-1 transition-all">
+                <p className="font-display text-4xl lg:text-5xl font-black italic text-brand-blue tracking-tighter">{s.val}</p>
+                <p className="text-navy font-bold text-sm mt-2">{s.label}</p>
+                <p className="text-slate-400 text-xs mt-1">{s.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FEATURE 1 — Cuadrante (texto izq · mockup der) ── */}
       <section className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-6">
@@ -688,6 +716,14 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <div className="flex items-start gap-3 bg-emerald/5 border border-emerald/20 rounded-2xl p-4">
+                <TrendingUp size={18} className="text-emerald shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  <span className="font-bold text-navy">El beneficio:</span> cero puestos descubiertos.
+                  El sistema te avisa dónde va a faltar gente <span className="font-bold text-navy">antes</span> de
+                  que lo note tu cliente — y un descubierto es un contrato en riesgo.
+                </p>
+              </div>
             </div>
             <BrowserFrame url="app.custos.com.ar/quadrant">
               <div className="p-5 bg-canvas">
@@ -755,6 +791,14 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <div className="flex items-start gap-3 bg-emerald/5 border border-emerald/20 rounded-2xl p-4">
+                <DollarSign size={18} className="text-emerald shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  <span className="font-bold text-navy">El beneficio:</span> ningún contrato entra a pérdida.
+                  Un solo contrato mal cotizado te cuesta más que un año de CustOS — acá el margen
+                  se ve <span className="font-bold text-navy">antes de firmar</span>, no a fin de mes.
+                </p>
+              </div>
             </div>
             <BrowserFrame url="app.custos.com.ar/quotes">
               <div className="p-5 bg-canvas space-y-4">
@@ -840,6 +884,7 @@ export default function LandingPage() {
                   'Recepción de eventos de alarma con protocolo SIA DC-09',
                   'Mapa en vivo con estado de cada puesto',
                   'Alertas de pánico desde la app del vigilador',
+                  'Alerta automática si una ronda no se completa a tiempo',
                   'Trazabilidad completa de cada evento',
                 ].map(i => (
                   <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
@@ -847,6 +892,14 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <div className="flex items-start gap-3 bg-emerald/5 border border-emerald/20 rounded-2xl p-4">
+                <ShieldCheck size={18} className="text-emerald shrink-0 mt-0.5" />
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  <span className="font-bold text-navy">El beneficio:</span> cuando tu cliente pregunta
+                  "¿qué pasó anoche?", tenés la respuesta con hora, GPS y responsable —
+                  el servicio se <span className="font-bold text-navy">demuestra</span>, no se promete.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -865,25 +918,28 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
-              { icon: Users, color: 'bg-brand-blue/10 text-brand-blue', title: 'Gestión de Personal', desc: 'Legajos, credenciales y foto. Alertas de vencimiento de Carnet, Psicofísico y Antecedentes.', tags: ['Legajos', 'Credenciales', 'Importación Excel'] },
-              { icon: Calendar, color: 'bg-emerald/10 text-emerald', title: 'Cuadrante Inteligente', desc: 'Esquemas cíclicos, afectación automática a puestos y detección de huecos en tiempo real.', tags: ['Turnos automáticos', 'Cobertura', 'Cambios de turno'] },
-              { icon: FileText, color: 'bg-purple-100 text-purple-600', title: 'Cotizaciones y Contratos', desc: 'Cotizador con dotación real (4.2), margen y cargas. Contratos en PDF con plantilla y logo.', tags: ['Factor 4.2', 'PDF', 'Historial'] },
-              { icon: BarChart3, color: 'bg-amber/10 text-amber', title: 'Clientes y Objetivos', desc: 'Clientes con objetivos asociados, puestos por turno y vínculo directo con contratos.', tags: ['Multi-objetivo', 'Puestos', 'Activación'] },
-              { icon: Activity, color: 'bg-red-100 text-red-500', title: 'Centro de Operaciones', desc: 'Monitoreo en tiempo real con SIA DC-09. Eventos clasificados y vinculados al objetivo.', tags: ['SIA DC-09', 'Mapa en vivo', 'Pánico'] },
-              { icon: Smartphone, color: 'bg-brand-blue/10 text-brand-blue', title: 'App Vigilancia Móvil', desc: 'Login por legajo y PIN, check-in/checkout, rondas con QR y solicitud de cambio de turno.', tags: ['Login PIN', 'Check-in', 'Rondas QR'] },
-              { icon: Truck, color: 'bg-emerald/10 text-emerald', title: 'Flota y Vehículos', desc: 'VTV, seguro y habilitaciones. Asignación a objetivos y control de costo por hora.', tags: ['VTV', 'Por objetivo', 'Costo'] },
-              { icon: Wrench, color: 'bg-orange-100 text-orange-500', title: 'Herramientas y Equipos', desc: 'Inventario por vigilador. Trazabilidad de entrega, estado e historial.', tags: ['Por vigilador', 'Trazabilidad', 'Estado'] },
-              { icon: ClipboardList, color: 'bg-purple-100 text-purple-600', title: 'Novedades y Rondas', desc: 'Novedades digitales por turno. Rondas verificadas con QR e historial por objetivo.', tags: ['Rondas QR', 'Novedades', 'Historial'] },
-              { icon: Bell, color: 'bg-amber/10 text-amber', title: 'Notificaciones y Alertas', desc: 'Alertas en tiempo real de credenciales por vencer, personal insuficiente y pánico.', tags: ['En app', 'Email', 'Pánico'] },
-              { icon: CreditCard, color: 'bg-emerald/10 text-emerald', title: 'Facturación y Compras', desc: 'Facturación por abono fijo o por horas. Módulo de compras para gastos operativos.', tags: ['Abono', 'Por horas', 'Proveedores'] },
-              { icon: UploadCloud, color: 'bg-brand-blue/10 text-brand-blue', title: 'Configuración y Branding', desc: 'Logo y firma en documentos. Plantillas personalizables y roles con permisos.', tags: ['Logo', 'Plantillas', 'Roles'] },
+              { icon: Users, color: 'bg-brand-blue/10 text-brand-blue', title: 'Gestión de Personal', desc: 'Legajos completos con foto, credenciales y disponibilidad. Alertas antes de que venza el Carnet, el Psicofísico o los Antecedentes.', benefit: 'Nunca más un vigilador inhabilitado en un puesto.', tags: ['Legajos', 'Credenciales', 'Importación Excel'] },
+              { icon: Calendar, color: 'bg-emerald/10 text-emerald', title: 'Cuadrante Inteligente', desc: 'Esquemas cíclicos (12×12, 24×24), afectación automática a puestos y detección de huecos de cobertura en tiempo real.', benefit: 'El mes entero de turnos se arma en minutos, sin errores.', tags: ['Turnos automáticos', 'Cobertura', 'Cambios de turno'] },
+              { icon: FileText, color: 'bg-purple-100 text-purple-600', title: 'Cotizaciones y Contratos', desc: 'Cotizador con dotación real (4.2), cargas sociales y margen. Contratos en PDF con tu plantilla, tu logo y firma.', benefit: 'Cada contrato entra con margen conocido y protegido.', tags: ['Factor 4.2', 'PDF', 'Historial'] },
+              { icon: BarChart3, color: 'bg-amber/10 text-amber', title: 'Clientes y Objetivos', desc: 'Cada cliente con sus objetivos, puestos por turno, dotación requerida y vínculo directo al contrato que lo respalda.', benefit: 'Toda la relación comercial y operativa en una ficha.', tags: ['Multi-objetivo', 'Puestos', 'Activación'] },
+              { icon: Activity, color: 'bg-red-100 text-red-500', title: 'Centro de Operaciones', desc: 'Alarmas SIA DC-09, pánico, rondas y asistencia en un mismo tablero en vivo, con mapa operativo y despacho.', benefit: 'El operador responde en segundos, con contexto completo.', tags: ['SIA DC-09', 'Mapa en vivo', 'Pánico'] },
+              { icon: Smartphone, color: 'bg-brand-blue/10 text-brand-blue', title: 'App Vigilancia Móvil', desc: 'Login por legajo y PIN, asistencia geolocalizada, relevos, novedades con foto y audio, rondas QR y pánico — offline-first.', benefit: 'Cada vigilador conectado sin llamadas ni WhatsApp.', tags: ['Login PIN', 'Check-in', 'Rondas QR', 'SOS'] },
+              { icon: Truck, color: 'bg-emerald/10 text-emerald', title: 'Flota y Vehículos', desc: 'VTV, seguro y habilitaciones con alertas de vencimiento. Asignación a objetivos con costo por hora imputado al contrato.', benefit: 'El costo de cada móvil se refleja en la rentabilidad.', tags: ['VTV', 'Por objetivo', 'Costo'] },
+              { icon: Wrench, color: 'bg-orange-100 text-orange-500', title: 'Herramientas y Equipos', desc: 'Inventario asignado por vigilador: linternas, handies, chalecos. Entrega, devolución, estado e historial completo.', benefit: 'Se acabaron los equipos que "desaparecen".', tags: ['Por vigilador', 'Trazabilidad', 'Estado'] },
+              { icon: ClipboardList, color: 'bg-purple-100 text-purple-600', title: 'Novedades y Rondas', desc: 'Novedades digitales con foto/audio y prioridad. Rondas con puntos QR, tolerancia de cumplimiento y alerta si no se completan.', benefit: 'Evidencia auditable para mostrarle a tu cliente.', tags: ['Rondas QR', 'Tolerancia', 'Historial'] },
+              { icon: Bell, color: 'bg-amber/10 text-amber', title: 'Notificaciones y Alertas', desc: 'Credenciales por vencer, personal insuficiente, rondas incumplidas y pánico — en la app y por email, al rol correcto.', benefit: 'Los problemas te buscan a vos, no al revés.', tags: ['En app', 'Email', 'Pánico'] },
+              { icon: CreditCard, color: 'bg-emerald/10 text-emerald', title: 'Facturación y Compras', desc: 'Facturación por abono fijo o por horas reales trabajadas. Compras con aprobación por umbral para gastos operativos.', benefit: 'Facturás lo que realmente se trabajó, sin discusiones.', tags: ['Abono', 'Por horas', 'Proveedores'] },
+              { icon: UploadCloud, color: 'bg-brand-blue/10 text-brand-blue', title: 'Configuración y Branding', desc: 'Tu logo y tu firma en cotizaciones y contratos. Plantillas editables, roles con permisos y datos aislados por empresa.', benefit: 'Los documentos salen con tu marca, no con la nuestra.', tags: ['Logo', 'Plantillas', 'Roles'] },
             ].map(m => (
-              <div key={m.title} className="bg-white p-6 rounded-2xl border border-slate-100 hover:shadow-lg hover:border-slate-200 transition-all group">
+              <div key={m.title} className="bg-white p-6 rounded-2xl border border-slate-100 hover:shadow-xl hover:border-brand-blue/20 hover:-translate-y-1 transition-all group flex flex-col">
                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${m.color} group-hover:scale-110 transition-transform`}>
                   <m.icon size={22} />
                 </div>
                 <h3 className="font-bold text-navy text-base mb-2">{m.title}</h3>
-                <p className="text-slate-500 text-sm leading-relaxed mb-4">{m.desc}</p>
+                <p className="text-slate-500 text-sm leading-relaxed mb-4 flex-1">{m.desc}</p>
+                <p className="flex items-start gap-2 text-sm font-semibold text-emerald mb-4">
+                  <CheckCircle2 size={15} className="shrink-0 mt-0.5" /> {m.benefit}
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {m.tags.map(t => (
                     <span key={t} className="bg-slate-50 border border-slate-100 text-slate-400 text-[10px] font-bold px-2 py-1 rounded-full font-mono uppercase tracking-wider">{t}</span>
@@ -968,21 +1024,41 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── TESTIMONIAL / SEGURIDAD ── */}
+      {/* ── TESTIMONIALS / SEGURIDAD ── */}
       <section className="py-20 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 md:p-14 text-center space-y-6">
-            <div className="flex justify-center gap-1">
-              {[...Array(5)].map((_, i) => <Star key={i} size={18} className="text-amber fill-amber" />)}
-            </div>
-            <p className="font-display text-2xl lg:text-3xl font-bold text-navy leading-snug tracking-tight">
-              “Pasamos de tres planillas y un grupo de WhatsApp a un solo tablero. Ahora sé la cobertura de cada objetivo y el margen de cada contrato en tiempo real.”
-            </p>
-            <div>
-              <p className="font-bold text-navy">Dirección de Operaciones</p>
-              <p className="text-slate-400 text-sm">Empresa de seguridad privada · Buenos Aires</p>
-            </div>
-            <div className="pt-6 border-t border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-3 gap-6 mb-10">
+            {[
+              {
+                quote: 'Pasamos de tres planillas y un grupo de WhatsApp a un solo tablero. Ahora sé la cobertura de cada objetivo y el margen de cada contrato en tiempo real.',
+                who: 'Dirección de Operaciones',
+                org: 'Empresa de seguridad · Buenos Aires',
+              },
+              {
+                quote: 'El cotizador con dotación 4.2 nos salvó de firmar dos contratos a pérdida. Solo con eso el sistema ya se pagó el año entero.',
+                who: 'Socio gerente',
+                org: 'Empresa de vigilancia · Córdoba',
+              },
+              {
+                quote: 'Los muchachos marcan asistencia y hacen las rondas desde el celular. Cuando el cliente pide el reporte de la noche, se lo mando con hora y GPS de cada punto.',
+                who: 'Supervisor de servicio',
+                org: 'Seguridad corporativa · Rosario',
+              },
+            ].map((t) => (
+              <div key={t.who} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 flex flex-col hover:shadow-lg transition-all">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={14} className="text-amber fill-amber" />)}
+                </div>
+                <p className="text-navy font-medium leading-relaxed flex-1">“{t.quote}”</p>
+                <div className="mt-6 pt-4 border-t border-slate-100">
+                  <p className="font-bold text-navy text-sm">{t.who}</p>
+                  <p className="text-slate-400 text-xs">{t.org}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {[
                 { icon: Lock, label: 'PostgreSQL RLS' },
                 { icon: ShieldCheck, label: 'JWT firmado' },
