@@ -5,13 +5,15 @@ import {
   Body,
   Param,
   Query,
+  Res,
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { NovedadService } from './novedad.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateNovedadDto } from './dto/create-novedad.dto';
-import { PaginationDto } from '../common/dto/pagination.dto';
+import { FiltrarNovedadesDto } from './dto/filtrar-novedades.dto';
 
 @Controller('novedades')
 @UseGuards(JwtAuthGuard)
@@ -24,8 +26,27 @@ export class NovedadController {
   }
 
   @Get()
-  findAll(@Request() req: any, @Query() pagination: PaginationDto) {
-    return this.novedadService.findAll(req.user.tenantId, pagination);
+  findAll(@Request() req: any, @Query() filtros: FiltrarNovedadesDto) {
+    return this.novedadService.findAll(req.user.tenantId, filtros);
+  }
+
+  @Get('reporte/pdf')
+  async reportePdf(
+    @Request() req: any,
+    @Query() filtros: FiltrarNovedadesDto,
+    @Res() res: Response,
+  ) {
+    const doc = await this.novedadService.generarReportePdf(
+      req.user.tenantId,
+      filtros,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=reporte-novedades.pdf',
+    );
+    doc.pipe(res);
+    doc.end();
   }
 
   @Get('puesto/:id')
