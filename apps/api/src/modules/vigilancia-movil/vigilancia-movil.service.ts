@@ -37,7 +37,11 @@ export class VigilanciaMovilService {
       clientEventId?: string;
       ts?: string;
     },
-    archivos: Array<{ buffer: Buffer; originalname: string; mimetype: string }> = [],
+    archivos: Array<{
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+    }> = [],
   ) {
     if (await this.yaProcesado(tenantId, data.clientEventId)) {
       return { duplicated: true };
@@ -80,7 +84,13 @@ export class VigilanciaMovilService {
       ts: cuando,
     });
 
-    await this.registrarEvento(tenantId, vigiladorId, data.clientEventId, 'novedad', cuando);
+    await this.registrarEvento(
+      tenantId,
+      vigiladorId,
+      data.clientEventId,
+      'novedad',
+      cuando,
+    );
     return novedad;
   }
 
@@ -150,13 +160,17 @@ export class VigilanciaMovilService {
 
     // El QR puede codificar el codigo_qr del punto o directamente su id.
     // Solo comparamos contra id si tiene forma de UUID (la columna es uuid).
-    const esUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      checkpointId ?? '',
-    );
+    const esUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        checkpointId ?? '',
+      );
     const checkpoint = await this.prisma.puntoControl.findFirst({
       where: {
         tenant_id: tenantId,
-        OR: [{ codigo_qr: checkpointId }, ...(esUuid ? [{ id: checkpointId }] : [])],
+        OR: [
+          { codigo_qr: checkpointId },
+          ...(esUuid ? [{ id: checkpointId }] : []),
+        ],
       },
       include: { puesto: true },
     });
@@ -164,12 +178,78 @@ export class VigilanciaMovilService {
     if (!checkpoint) throw new NotFoundException('Punto de control no válido');
 
     const cuando = this.cuando(ts);
+
+    // Si el vigilador tiene una ronda en progreso, el scan queda como marca
+    // (evidencia); al cubrir todos los puntos de la plantilla, se completa.
+    let ronda: {
+      id: string;
+      marcados: number;
+      total: number;
+      completada: boolean;
+    } | null = null;
+    const rondaActiva = await this.prisma.ronda.findFirst({
+      where: {
+        tenant_id: tenantId,
+        vigilador_id: vigiladorId,
+        estado: 'EN_PROGRESO',
+      },
+      orderBy: { hora_inicio: 'desc' },
+      include: {
+        plantilla: { include: { puntos: true } },
+        marcas: { select: { punto_control_id: true } },
+      },
+    });
+
+    if (rondaActiva) {
+      const yaMarcado = rondaActiva.marcas.some(
+        (m: { punto_control_id: string }) =>
+          m.punto_control_id === checkpoint.id,
+      );
+      if (!yaMarcado) {
+        await this.prisma.marcaRonda.create({
+          data: {
+            ronda_id: rondaActiva.id,
+            punto_control_id: checkpoint.id,
+            timestamp: cuando,
+            lat: location?.lat,
+            lng: location?.lng,
+          },
+        });
+      }
+
+      const marcadosIds = new Set(
+        rondaActiva.marcas.map(
+          (m: { punto_control_id: string }) => m.punto_control_id,
+        ),
+      );
+      marcadosIds.add(checkpoint.id);
+      const puntosPlantilla: string[] =
+        rondaActiva.plantilla?.puntos.map(
+          (p: { punto_control_id: string }) => p.punto_control_id,
+        ) ?? [];
+      const total = puntosPlantilla.length;
+      const marcados = puntosPlantilla.filter((id) =>
+        marcadosIds.has(id),
+      ).length;
+      const completada = total > 0 && marcados >= total;
+
+      if (completada) {
+        await this.prisma.ronda.update({
+          where: { id: rondaActiva.id },
+          data: { estado: 'COMPLETADA', hora_fin: cuando },
+        });
+      }
+      ronda = { id: rondaActiva.id, marcados, total, completada };
+    }
+
     const payload = {
       vigilante_id: vigiladorId,
       punto_control_id: checkpoint.id,
+      punto_nombre: checkpoint.nombre,
       puesto_id: checkpoint.puesto_id,
       location,
       ts: cuando,
+      ronda,
     };
 
     this.coGateway.emitToTenant(
@@ -178,8 +258,173 @@ export class VigilanciaMovilService {
       payload,
     );
 
-    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkpoint', cuando);
+    await this.registrarEvento(
+      tenantId,
+      vigiladorId,
+      clientEventId,
+      'checkpoint',
+      cuando,
+    );
     return payload;
+  }
+
+  /**
+   * Rondas asignadas al objetivo del turno actual del vigilador, con el estado
+   * de la ejecución en curso (o la última dentro del turno) y sus marcas.
+   */
+  async rondasDelTurno(tenantId: string, vigiladorId: string) {
+    const turno = await this.turnoActual(tenantId, vigiladorId);
+    if (!turno?.puesto) return [];
+
+    const puesto = await this.prisma.puesto.findFirst({
+      where: { id: turno.puesto.id, tenant_id: tenantId },
+      select: { objetivo_id: true },
+    });
+    if (!puesto?.objetivo_id) return [];
+
+    const plantillas = await this.prisma.rondaPlantilla.findMany({
+      where: {
+        tenant_id: tenantId,
+        objetivo_id: puesto.objetivo_id,
+        activa: true,
+      },
+      orderBy: { created_at: 'asc' },
+      include: {
+        puntos: {
+          orderBy: { orden: 'asc' },
+          include: {
+            punto_control: {
+              select: { id: true, nombre: true, codigo_qr: true },
+            },
+          },
+        },
+      },
+    });
+    if (plantillas.length === 0) return [];
+
+    // Última ejecución de cada plantilla dentro del turno (en curso o cerrada).
+    const ejecuciones = await this.prisma.ronda.findMany({
+      where: {
+        tenant_id: tenantId,
+        vigilador_id: vigiladorId,
+        plantilla_id: { in: plantillas.map((p: { id: string }) => p.id) },
+        hora_inicio: { gte: turno.inicio_plan },
+      },
+      orderBy: { hora_inicio: 'desc' },
+      include: {
+        marcas: { select: { punto_control_id: true, timestamp: true } },
+      },
+    });
+
+    return plantillas.map(
+      (pl: {
+        id: string;
+        nombre: string;
+        puntos: Array<{
+          orden: number;
+          punto_control: {
+            id: string;
+            nombre: string;
+            codigo_qr: string | null;
+          };
+        }>;
+      }) => {
+        const ejecucion = ejecuciones.find(
+          (e: { plantilla_id: string | null }) => e.plantilla_id === pl.id,
+        );
+        const marcas = new Map<string, Date>(
+          (ejecucion?.marcas ?? []).map(
+            (m: { punto_control_id: string; timestamp: Date }) =>
+              [m.punto_control_id, m.timestamp] as [string, Date],
+          ),
+        );
+        return {
+          id: pl.id,
+          nombre: pl.nombre,
+          puntos: pl.puntos.map((p) => ({
+            id: p.punto_control.id,
+            nombre: p.punto_control.nombre,
+            codigo_qr: p.punto_control.codigo_qr,
+            orden: p.orden,
+            marcada: marcas.get(p.punto_control.id) ?? null,
+          })),
+          ejecucion: ejecucion
+            ? {
+                id: ejecucion.id,
+                estado: ejecucion.estado,
+                hora_inicio: ejecucion.hora_inicio,
+                hora_fin: ejecucion.hora_fin,
+              }
+            : null,
+        };
+      },
+    );
+  }
+
+  /** Inicia una ejecución de ronda a partir de una plantilla (idempotente offline). */
+  async iniciarRonda(
+    tenantId: string,
+    vigiladorId: string,
+    plantillaId: string,
+    clientEventId?: string,
+    ts?: string,
+  ) {
+    if (await this.yaProcesado(tenantId, clientEventId)) {
+      return { duplicated: true };
+    }
+
+    const plantilla = await this.prisma.rondaPlantilla.findFirst({
+      where: { id: plantillaId, tenant_id: tenantId, activa: true },
+      include: { puntos: { include: { punto_control: true } } },
+    });
+    if (!plantilla) throw new NotFoundException('Ronda no encontrada');
+
+    // Si ya hay una en progreso de esta plantilla, se reutiliza (reintento offline).
+    const existente = await this.prisma.ronda.findFirst({
+      where: {
+        tenant_id: tenantId,
+        vigilador_id: vigiladorId,
+        plantilla_id: plantillaId,
+        estado: 'EN_PROGRESO',
+      },
+    });
+    if (existente) return existente;
+
+    const turno = await this.turnoActual(tenantId, vigiladorId);
+    const puestoId =
+      turno?.puesto?.id ?? plantilla.puntos[0]?.punto_control.puesto_id;
+    if (!puestoId) {
+      throw new BadRequestException('La ronda no tiene puntos de control.');
+    }
+
+    const cuando = this.cuando(ts);
+    const ronda = await this.prisma.ronda.create({
+      data: {
+        tenant_id: tenantId,
+        puesto_id: puestoId,
+        vigilador_id: vigiladorId,
+        plantilla_id: plantillaId,
+        nombre: plantilla.nombre,
+        hora_inicio: cuando,
+        estado: 'EN_PROGRESO',
+      },
+    });
+
+    this.coGateway.emitToTenant(tenantId, 'ronda.start', {
+      rondaId: ronda.id,
+      plantillaId,
+      vigiladorId,
+      ts: cuando,
+    });
+
+    await this.registrarEvento(
+      tenantId,
+      vigiladorId,
+      clientEventId,
+      'ronda_inicio',
+      cuando,
+    );
+    return ronda;
   }
 
   async dispararPanico(
@@ -220,7 +465,13 @@ export class VigilanciaMovilService {
 
     this.coGateway.emitToTenant(tenantId, 'incident.new', incident);
 
-    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'panic', cuando);
+    await this.registrarEvento(
+      tenantId,
+      vigiladorId,
+      clientEventId,
+      'panic',
+      cuando,
+    );
     return incident;
   }
 
@@ -305,7 +556,13 @@ export class VigilanciaMovilService {
       // Ya tiene ingreso: si viene de la cola offline lo tomamos como éxito
       // idempotente; en el flujo online normal seguimos avisando el doble.
       if (clientEventId) {
-        await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkin', turno.inicio_real);
+        await this.registrarEvento(
+          tenantId,
+          vigiladorId,
+          clientEventId,
+          'checkin',
+          turno.inicio_real,
+        );
         return turno;
       }
       throw new BadRequestException('Ya se registró el ingreso de este turno');
@@ -324,7 +581,13 @@ export class VigilanciaMovilService {
       ts: cuando,
     });
 
-    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkin', cuando);
+    await this.registrarEvento(
+      tenantId,
+      vigiladorId,
+      clientEventId,
+      'checkin',
+      cuando,
+    );
     return actualizado;
   }
 
@@ -348,7 +611,13 @@ export class VigilanciaMovilService {
     }
     if (turno.fin_real) {
       if (clientEventId) {
-        await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkout', turno.fin_real);
+        await this.registrarEvento(
+          tenantId,
+          vigiladorId,
+          clientEventId,
+          'checkout',
+          turno.fin_real,
+        );
         return turno;
       }
       throw new BadRequestException('Ya se registró la salida de este turno');
@@ -367,7 +636,13 @@ export class VigilanciaMovilService {
       ts: cuando,
     });
 
-    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkout', cuando);
+    await this.registrarEvento(
+      tenantId,
+      vigiladorId,
+      clientEventId,
+      'checkout',
+      cuando,
+    );
     return actualizado;
   }
 }

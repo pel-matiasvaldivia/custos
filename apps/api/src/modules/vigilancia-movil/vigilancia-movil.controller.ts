@@ -25,7 +25,12 @@ export class VigilanciaMovilController {
   @Post('checkpoint')
   async scanCheckpoint(
     @Body()
-    data: { checkpointId: string; location?: any; clientEventId?: string; ts?: string },
+    data: {
+      checkpointId: string;
+      location?: any;
+      clientEventId?: string;
+      ts?: string;
+    },
     @Request() req: any,
   ) {
     return this.mobileService.registrarPuntoControl(
@@ -74,6 +79,28 @@ export class VigilanciaMovilController {
     return this.mobileService.turnoActual(
       req.user.tenantId,
       req.user.vigiladorId,
+    );
+  }
+
+  @Get('rondas')
+  async rondas(@Request() req: any) {
+    return this.mobileService.rondasDelTurno(
+      req.user.tenantId,
+      req.user.vigiladorId,
+    );
+  }
+
+  @Post('rondas/iniciar')
+  async iniciarRonda(
+    @Body() data: { plantillaId: string; clientEventId?: string; ts?: string },
+    @Request() req: any,
+  ) {
+    return this.mobileService.iniciarRonda(
+      req.user.tenantId,
+      req.user.vigiladorId,
+      data.plantillaId,
+      data.clientEventId,
+      data.ts,
     );
   }
 
@@ -127,7 +154,12 @@ export class VigilanciaMovilController {
   @Post('novedades')
   @UseInterceptors(FilesInterceptor('media', 3))
   async crearNovedad(
-    @UploadedFiles() media: Array<{ buffer: Buffer; originalname: string; mimetype: string }> = [],
+    @UploadedFiles()
+    media: Array<{
+      buffer: Buffer;
+      originalname: string;
+      mimetype: string;
+    }> = [],
     @Body()
     data: {
       tipo: string;

@@ -10,7 +10,13 @@ import mobileApi from '../services/mobileApi';
  * client_event_id, así que reintentar es seguro.
  */
 
-export type OutboxTipo = 'checkin' | 'checkout' | 'panic' | 'checkpoint' | 'novedad';
+export type OutboxTipo =
+  | 'checkin'
+  | 'checkout'
+  | 'panic'
+  | 'checkpoint'
+  | 'novedad'
+  | 'ronda_inicio';
 
 export interface OutboxFile {
   field: string;
