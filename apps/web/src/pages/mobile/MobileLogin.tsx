@@ -207,6 +207,15 @@ export default function MobileLogin() {
             )}
           </form>
         </div>
+
+        <div className="text-center mt-6">
+          <a
+            href="/login?force=1"
+            className="text-white/30 text-[10px] font-black uppercase tracking-widest hover:text-white/60 transition-colors"
+          >
+            Ingreso administración
+          </a>
+        </div>
       </div>
     </div>
   );
