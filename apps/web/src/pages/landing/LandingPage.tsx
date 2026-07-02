@@ -8,6 +8,7 @@ import {
   ClipboardList, Truck, Wrench, Bell, Lock, Globe, Star,
   Calendar, CreditCard, UploadCloud, Menu,
   TrendingUp, QrCode, Fingerprint, DollarSign,
+  Camera, Mic, MapPin, WifiOff, RefreshCw, Zap, KeyRound,
 } from 'lucide-react';
 
 /* ─── ONBOARDING MODAL — usa el mismo endpoint que /registro ─── */
@@ -264,6 +265,222 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
+/* ─── SHOWCASE APP VIGILADOR — vitrina comercial del producto móvil ─── */
+function MobileShowcase({ onDemo }: { onDemo: () => void }) {
+  const capacidades = [
+    {
+      icon: KeyRound,
+      title: 'Login con legajo y PIN',
+      desc: 'Sin emails ni contraseñas corporativas: el vigilador entra con su legajo y un PIN, desde cualquier celular.',
+    },
+    {
+      icon: Fingerprint,
+      title: 'Asistencia geolocalizada',
+      desc: 'Entrada y salida con GPS y hora exacta del dispositivo. Impacta al instante en el cuadrante y la liquidación.',
+    },
+    {
+      icon: RefreshCw,
+      title: 'Cambios de turno',
+      desc: 'El vigilador solicita su relevo con motivo; el supervisor aprueba con candidatos sugeridos sin solapamientos.',
+    },
+    {
+      icon: Camera,
+      title: 'Novedades con foto y audio',
+      desc: 'Tipos predefinidos, prioridad y adjuntos multimedia. Llegan en vivo a la oficina con autor, puesto y hora.',
+    },
+    {
+      icon: QrCode,
+      title: 'Rondas con puntos QR',
+      desc: 'Escanea los puntos de control del objetivo. Cada marca queda con GPS y hora como evidencia auditable.',
+    },
+    {
+      icon: AlertTriangle,
+      title: 'Botón de pánico SOS',
+      desc: 'Un toque dispara un incidente crítico con la ubicación exacta. El Centro de Operaciones lo ve al segundo.',
+    },
+  ];
+
+  return (
+    <section className="relative py-28 bg-slate-950 overflow-hidden">
+      {/* Glows decorativos */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-brand-blue/20 rounded-full blur-[140px]" />
+      <div className="pointer-events-none absolute bottom-0 -left-40 w-[420px] h-[420px] bg-emerald/10 rounded-full blur-[120px]" />
+      <div className="pointer-events-none absolute top-1/3 -right-32 w-[380px] h-[380px] bg-red-600/10 rounded-full blur-[120px]" />
+
+      <div className="relative max-w-7xl mx-auto px-6">
+        {/* Encabezado */}
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <span className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.25em] bg-brand-blue/10 border border-brand-blue/20 px-4 py-2 rounded-full">
+            <Smartphone size={13} /> CustOS GO · App del vigilador
+          </span>
+          <h2 className="mt-6 font-display text-4xl lg:text-6xl font-black text-white tracking-tighter leading-[1.05]">
+            Todo el turno,<br />
+            <span className="text-brand-blue">en el bolsillo del vigilador.</span>
+          </h2>
+          <p className="mt-6 text-slate-400 text-lg leading-relaxed">
+            Login, asistencia, relevos, novedades, rondas QR y pánico — cada acción del
+            vigilador queda registrada con hora y ubicación, y llega en vivo a tu Centro
+            de Operaciones. Sin llamadas, sin WhatsApp, sin planillas.
+          </p>
+        </div>
+
+        {/* Composición de teléfonos */}
+        <div className="relative flex items-end justify-center gap-6 lg:gap-10 mb-20">
+          {/* Teléfono izq — Novedad */}
+          <div className="hidden lg:block -rotate-6 translate-y-6 opacity-90 scale-90 origin-bottom">
+            <PhoneFrame>
+              <div className="bg-slate-950 text-white pt-9 pb-5 px-4 space-y-3 min-h-[380px]">
+                <p className="text-xs font-black italic uppercase tracking-tighter">Nueva novedad</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Incidente', 'Rotura', 'Ingreso'].map((t, i) => (
+                    <span key={t} className={`px-2 py-1 rounded-lg text-[9px] font-bold border ${i === 0 ? 'bg-brand-blue border-brand-blue' : 'bg-white/5 border-white/10 text-white/50'}`}>{t}</span>
+                  ))}
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-[10px] text-white/40 leading-relaxed">
+                  Portón lateral con candado forzado. Se adjunta foto y descargo de audio…
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-white/5 border border-white/10 rounded-xl py-3 text-center">
+                    <Camera size={16} className="text-brand-blue mx-auto" />
+                    <p className="text-[8px] font-black uppercase tracking-widest text-white/50 mt-1">Foto</p>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl py-3 text-center">
+                    <Mic size={16} className="text-brand-blue mx-auto" />
+                    <p className="text-[8px] font-black uppercase tracking-widest text-white/50 mt-1">Audio</p>
+                  </div>
+                </div>
+                <button className="w-full bg-brand-blue rounded-xl py-2.5 text-[9px] font-black uppercase tracking-widest">Registrar novedad</button>
+              </div>
+            </PhoneFrame>
+          </div>
+
+          {/* Teléfono central — Dashboard del turno */}
+          <div className="relative z-10 scale-100 lg:scale-110">
+            <div className="pointer-events-none absolute inset-0 -m-8 bg-brand-blue/25 rounded-full blur-3xl" />
+            <PhoneFrame>
+              <div className="relative bg-slate-950 text-white pt-9 pb-4 px-4 space-y-3 min-h-[430px]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 bg-brand-blue rounded-lg flex items-center justify-center">
+                      <Shield size={12} />
+                    </div>
+                    <span className="font-black italic uppercase tracking-tighter text-xs">CustOS <span className="text-brand-blue">GO</span></span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald">En línea</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" />
+                  </div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+                  <p className="text-[8px] font-mono text-white/40 uppercase tracking-wider">Turno actual</p>
+                  <p className="font-bold text-xs mt-0.5">Planta Norte — Perímetro</p>
+                  <p className="text-white/40 text-[10px]">Hoy · 06:00 – 18:00</p>
+                  <div className="mt-2 flex items-center gap-1.5 text-emerald text-[10px] font-bold">
+                    <CheckCircle2 size={11} /> Entrada 05:58 · GPS verificado
+                  </div>
+                </div>
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-brand-blue">Ronda perimetral</p>
+                    <span className="text-[8px] font-black uppercase text-amber">2/3 puntos</span>
+                  </div>
+                  {[
+                    ['Acceso principal', '06:12', true],
+                    ['Depósito Este', '06:31', true],
+                    ['Perímetro Norte', 'Pendiente', false],
+                  ].map(([label, time, done]) => (
+                    <div key={label as string} className={`flex justify-between items-center px-2.5 py-1.5 rounded-lg border ${done ? 'bg-emerald/10 border-emerald/20' : 'bg-white/5 border-white/5'}`}>
+                      <span className={`text-[9px] font-bold ${done ? 'text-emerald' : 'text-white/50'}`}>{label}</span>
+                      <span className="text-[8px] font-mono text-white/30 uppercase">{time}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button className="bg-brand-blue rounded-2xl py-3 flex flex-col items-center gap-1">
+                    <QrCode size={16} />
+                    <span className="text-[8px] font-black uppercase tracking-widest">Escanear QR</span>
+                  </button>
+                  <button className="bg-white/5 border border-white/10 rounded-2xl py-3 flex flex-col items-center gap-1 text-white/70">
+                    <RefreshCw size={16} />
+                    <span className="text-[8px] font-black uppercase tracking-widest">Relevo</span>
+                  </button>
+                </div>
+                <button className="w-full bg-red-600 rounded-2xl py-3 flex items-center justify-center gap-2 shadow-lg shadow-red-600/40">
+                  <AlertTriangle size={14} />
+                  <span className="text-[10px] font-black italic uppercase tracking-tighter">Pánico / SOS</span>
+                </button>
+              </div>
+            </PhoneFrame>
+          </div>
+
+          {/* Teléfono der — Pánico enviado */}
+          <div className="hidden lg:block rotate-6 translate-y-6 opacity-90 scale-90 origin-bottom">
+            <PhoneFrame>
+              <div className="bg-red-600 text-white pt-9 pb-5 px-4 flex flex-col items-center justify-center text-center min-h-[380px]">
+                <Zap size={44} className="mb-4 animate-pulse" />
+                <p className="text-xl font-black italic uppercase tracking-tighter leading-tight">Alerta<br />enviada</p>
+                <p className="text-white/80 text-[9px] font-bold uppercase tracking-widest mt-3">El SOC está interviniendo</p>
+                <div className="mt-5 bg-white/15 rounded-xl px-3 py-2 flex items-center gap-1.5 text-[9px] font-mono">
+                  <MapPin size={11} /> -34.6037, -58.3816
+                </div>
+                <p className="text-white/60 text-[8px] font-mono uppercase tracking-widest mt-2">Incidente crítico · 03:47:12</p>
+              </div>
+            </PhoneFrame>
+          </div>
+        </div>
+
+        {/* Grid de capacidades */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-16">
+          {capacidades.map((c) => (
+            <div
+              key={c.title}
+              className="group bg-white/[0.03] border border-white/10 rounded-2xl p-6 hover:bg-white/[0.06] hover:border-brand-blue/40 transition-all"
+            >
+              <div className="w-11 h-11 rounded-xl bg-brand-blue/15 border border-brand-blue/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <c.icon size={20} className="text-brand-blue" />
+              </div>
+              <h3 className="text-white font-display font-bold text-base mb-1.5">{c.title}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">{c.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Franja de confianza */}
+        <div className="grid sm:grid-cols-3 gap-4 mb-14">
+          {[
+            { icon: WifiOff, title: 'Funciona sin señal', desc: 'Cada acción se guarda en el teléfono y se sincroniza sola al volver la conexión.' },
+            { icon: Activity, title: 'En vivo en el SOC', desc: 'Asistencia, marcas de ronda, novedades y pánico llegan al Centro de Operaciones al instante.' },
+            { icon: ShieldCheck, title: 'Evidencia auditable', desc: 'Todo queda con hora del dispositivo, GPS y autor: trazabilidad completa para tus clientes.' },
+          ].map((t) => (
+            <div key={t.title} className="flex items-start gap-4 bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+              <div className="w-10 h-10 rounded-xl bg-emerald/15 border border-emerald/20 flex items-center justify-center shrink-0">
+                <t.icon size={18} className="text-emerald" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm">{t.title}</p>
+                <p className="text-slate-400 text-xs leading-relaxed mt-1">{t.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div className="text-center">
+          <button
+            onClick={onDemo}
+            className="inline-flex items-center gap-2 bg-brand-blue hover:bg-brand-deep text-white font-black px-8 py-4 rounded-2xl text-sm uppercase tracking-widest shadow-2xl shadow-brand-blue/30 transition-all hover:scale-105"
+          >
+            Ver la app en acción <ArrowRight size={16} />
+          </button>
+          <p className="text-slate-500 text-xs mt-4">
+            Incluida en todos los planes · Sin costo por dispositivo · Instalable en Android y iPhone
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── MAIN LANDING ─── */
 export default function LandingPage() {
   const [showModal, setShowModal] = useState(false);
@@ -509,69 +726,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── FEATURE 2 — App vigilador (mockup izq · texto der) ── */}
-      <section className="py-24 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="order-2 lg:order-1">
-              <PhoneFrame>
-                <div className="pt-8 pb-5 px-4 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-brand-blue rounded-lg flex items-center justify-center">
-                      <Shield size={14} className="text-white" />
-                    </div>
-                    <span className="font-display text-sm font-black text-navy uppercase italic">CustOS</span>
-                  </div>
-                  <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-                    <p className="text-[9px] font-mono text-slate-400 uppercase tracking-wider">Turno actual</p>
-                    <p className="text-navy font-bold text-sm mt-1">Planta Norte — Perímetro</p>
-                    <p className="text-slate-400 text-xs mt-0.5">Hoy · 06:00 – 18:00</p>
-                    <div className="mt-3 flex items-center gap-2 text-emerald text-xs font-bold">
-                      <CheckCircle2 size={13} /> Entrada registrada 05:58
-                    </div>
-                  </div>
-                  <button className="w-full bg-brand-blue text-white rounded-2xl py-3 text-sm font-black flex items-center justify-center gap-2 shadow-lg shadow-brand-blue/30">
-                    <Fingerprint size={16} /> Marcar salida
-                  </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
-                      <QrCode size={18} className="text-brand-blue mx-auto" />
-                      <p className="text-[10px] text-slate-500 mt-1 font-medium">Ronda QR</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-3 border border-slate-100 text-center">
-                      <AlertTriangle size={18} className="text-amber mx-auto" />
-                      <p className="text-[10px] text-slate-500 mt-1 font-medium">Novedad</p>
-                    </div>
-                  </div>
-                </div>
-              </PhoneFrame>
-            </div>
-            <div className="order-1 lg:order-2 space-y-6">
-              <span className="inline-flex items-center gap-2 text-[10px] font-black font-mono text-brand-blue uppercase tracking-[0.2em]">
-                <Smartphone size={13} /> App Vigilancia Móvil
-              </span>
-              <h2 className="font-display text-4xl lg:text-5xl font-black text-navy tracking-tighter leading-tight">
-                Cada vigilador,<br /><span className="text-brand-blue">conectado.</span>
-              </h2>
-              <p className="text-slate-500 text-base leading-relaxed">
-                Los vigiladores se autentican con su legajo y PIN. Ven su turno, registran entrada y salida con geolocalización, hacen rondas con QR y solicitan cambios de turno — todo desde el celular, sin llamadas ni WhatsApp.
-              </p>
-              <ul className="space-y-3">
-                {[
-                  'Login por legajo + PIN, sin depender de email',
-                  'Check-in / check-out con validación de ubicación',
-                  'Rondas verificadas con puntos de control QR',
-                  'Botón de pánico y novedades en tiempo real',
-                ].map(i => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-slate-600">
-                    <CheckCircle2 size={16} className="text-emerald shrink-0 mt-0.5" /> {i}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* ── FEATURE 2 — Showcase App Vigilador (vitrina comercial full-width) ── */}
+      <MobileShowcase onDemo={openDemo} />
 
       {/* ── FEATURE 3 — Cotización y margen (texto izq · mockup der) ── */}
       <section className="py-24 bg-white">
