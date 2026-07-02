@@ -6,6 +6,7 @@ import {
   NotificacionesProcessor,
   NOTIFICACIONES_QUEUE,
 } from './notificaciones.processor';
+import { RondaModule } from '../../ronda/ronda.module';
 
 /**
  * Notificaciones (worker BullMQ). La conexión a Redis se toma de env
@@ -24,6 +25,7 @@ import {
           },
     }),
     BullModule.registerQueue({ name: NOTIFICACIONES_QUEUE }),
+    RondaModule,
   ],
   providers: [NotificacionesService, NotificacionesProcessor],
   exports: [NotificacionesService],
@@ -35,7 +37,8 @@ export class NotificacionesModule implements OnModuleInit {
     @InjectQueue(NOTIFICACIONES_QUEUE) private readonly queue: Queue,
   ) {}
 
-  // Programa el escaneo diario de vencimientos (job repetible idempotente).
+  // Programa los jobs repetibles idempotentes (escaneo de vencimientos y
+  // vigilancia de rondas en progreso).
   async onModuleInit() {
     try {
       await this.queue.add(
@@ -48,9 +51,19 @@ export class NotificacionesModule implements OnModuleInit {
           removeOnFail: 100,
         },
       );
+      await this.queue.add(
+        'vigilar-rondas',
+        {},
+        {
+          repeat: { pattern: '* * * * *' }, // cada minuto (tolerancia se mide en minutos)
+          jobId: 'vigilancia-rondas',
+          removeOnComplete: true,
+          removeOnFail: 20,
+        },
+      );
     } catch (e) {
       this.logger.warn(
-        `No se pudo programar el escaneo de vencimientos (¿Redis arriba?): ${e}`,
+        `No se pudieron programar los jobs repetibles (¿Redis arriba?): ${e}`,
       );
     }
   }

@@ -5,6 +5,8 @@ import {
   Body,
   Param,
   Patch,
+  Delete,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -19,6 +21,34 @@ export class RondaController {
   @Post('checkpoints')
   createCheckpoint(@Request() req: any, @Body() data: any) {
     return this.rondaService.createCheckpoint(req.user.tenantId, data);
+  }
+
+  // ─── Plantillas de ronda (rondas programadas) ───
+
+  @Post('plantillas')
+  crearPlantilla(@Request() req: any, @Body() data: any) {
+    return this.rondaService.crearPlantilla(req.user.tenantId, data);
+  }
+
+  @Get('plantillas')
+  listarPlantillas(
+    @Request() req: any,
+    @Query('objetivoId') objetivoId: string,
+  ) {
+    return this.rondaService.listarPlantillas(req.user.tenantId, objetivoId);
+  }
+
+  @Delete('plantillas/:id')
+  desactivarPlantilla(@Request() req: any, @Param('id') id: string) {
+    return this.rondaService.desactivarPlantilla(req.user.tenantId, id);
+  }
+
+  @Get('ejecuciones')
+  ejecuciones(@Request() req: any, @Query('objetivoId') objetivoId: string) {
+    return this.rondaService.ejecucionesPorObjetivo(
+      req.user.tenantId,
+      objetivoId,
+    );
   }
 
   @Get('checkpoints/:puestoId')

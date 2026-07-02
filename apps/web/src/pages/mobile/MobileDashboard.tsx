@@ -13,10 +13,16 @@ import {
   WifiOff,
 } from 'lucide-react';
 import mobileApi from '../../services/mobileApi';
-import { vigilanciaMovilService, TurnoActual, Location } from '../../services/vigilanciaMovil.service';
+import {
+  vigilanciaMovilService,
+  TurnoActual,
+  Location,
+  RondaMovil,
+} from '../../services/vigilanciaMovil.service';
 import { AsistenciaCard } from './AsistenciaCard';
 import { SolicitarRelevoModal } from './SolicitarRelevoModal';
 import { NovedadMovilModal } from './NovedadMovilModal';
+import { EscanerQRModal } from './EscanerQRModal';
 import { useOnline } from '../../hooks/useOnline';
 import { usePendingSync } from '../../hooks/usePendingSync';
 import { initOutbox } from '../../offline/outbox';
@@ -24,13 +30,16 @@ import { initOutbox } from '../../offline/outbox';
 export const MobileDashboard = () => {
   const online = useOnline();
   const pendientes = usePendingSync();
-  const [scanning, setScanning] = useState(false);
   const [isPanicActive, setIsPanicActive] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [turno, setTurno] = useState<TurnoActual | null>(null);
   const [procesandoAsistencia, setProcesandoAsistencia] = useState(false);
   const [modalRelevo, setModalRelevo] = useState(false);
   const [modalNovedad, setModalNovedad] = useState(false);
+  const [modalEscaner, setModalEscaner] = useState(false);
+  const [scanMensaje, setScanMensaje] = useState<string | null>(null);
+
+  const [rondas, setRondas] = useState<RondaMovil[]>([]);
 
   const cargarTurno = useCallback(async () => {
     try {
@@ -41,10 +50,20 @@ export const MobileDashboard = () => {
     }
   }, []);
 
+  const cargarRondas = useCallback(async () => {
+    try {
+      const data = await vigilanciaMovilService.rondas();
+      setRondas(data);
+    } catch {
+      // sin señal: conservamos el estado local (marcas optimistas)
+    }
+  }, []);
+
   useEffect(() => {
     initOutbox(); // arranca la sincronización de la cola offline
     cargarTurno();
-  }, [cargarTurno]);
+    cargarRondas();
+  }, [cargarTurno, cargarRondas]);
 
   useEffect(() => {
     // Start GPS tracking
@@ -65,13 +84,49 @@ export const MobileDashboard = () => {
     setTimeout(() => setIsPanicActive(false), 3000);
   };
 
-  const handleScan = async () => {
-    setScanning(true);
-    // Simula la lectura de QR; el scan se encola (offline-safe).
-    setTimeout(async () => {
-      await vigilanciaMovilService.checkpoint('8092023a-f4ef-4b41-b847-1925b3991202', location ?? undefined);
-      setScanning(false);
-    }, 1500);
+  const handleQRDetectado = async (codigo: string) => {
+    setModalEscaner(false);
+    // El scan se encola y se envía apenas hay señal (offline-safe).
+    await vigilanciaMovilService.checkpoint(codigo, location ?? undefined);
+
+    // Marca optimista local (por si no hay señal); luego intentamos refrescar.
+    const ahora = new Date().toISOString();
+    setRondas((prev) =>
+      prev.map((r) => ({
+        ...r,
+        puntos: r.puntos.map((p) =>
+          !p.marcada && (p.codigo_qr === codigo || p.id === codigo)
+            ? { ...p, marcada: ahora }
+            : p,
+        ),
+      })),
+    );
+    setScanMensaje('Punto de control registrado');
+    setTimeout(() => setScanMensaje(null), 2500);
+    cargarRondas();
+  };
+
+  const handleIniciarRonda = async (plantillaId: string) => {
+    await vigilanciaMovilService.iniciarRonda(plantillaId);
+    // Optimista: la ronda queda en progreso al toque (con marcas en cero si es
+    // un reintento tras quedar incompleta); se sincroniza detrás.
+    setRondas((prev) =>
+      prev.map((r) =>
+        r.id === plantillaId && r.ejecucion?.estado !== 'EN_PROGRESO'
+          ? {
+              ...r,
+              puntos: r.puntos.map((p) => ({ ...p, marcada: null })),
+              ejecucion: {
+                id: 'local',
+                estado: 'EN_PROGRESO',
+                hora_inicio: new Date().toISOString(),
+                hora_fin: null,
+              },
+            }
+          : r,
+      ),
+    );
+    cargarRondas();
   };
 
   const handleCheckin = async () => {
@@ -157,13 +212,12 @@ export const MobileDashboard = () => {
         {/* Big Actions */}
         <div className="grid grid-cols-2 gap-4">
             <button
-                onClick={handleScan}
-                disabled={scanning}
+                onClick={() => setModalEscaner(true)}
                 className="bg-brand-blue aspect-square rounded-[3rem] shadow-2xl shadow-brand-blue/20 flex flex-col items-center justify-center gap-3 active:scale-95 transition-all text-white relative overflow-hidden"
             >
                 <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full blur-xl -mr-4 -mt-4" />
-                <Scan size={32} className={scanning ? 'animate-spin' : ''} />
-                <span className="font-black uppercase text-xs tracking-widest">{scanning ? 'Leyendo...' : 'Escanear QR'}</span>
+                <Scan size={32} />
+                <span className="font-black uppercase text-xs tracking-widest">Escanear QR</span>
             </button>
 
             <button
@@ -175,11 +229,12 @@ export const MobileDashboard = () => {
             </button>
         </div>
 
-        {/* Active Task / Ronda */}
-        <div className="bg-slate-900 rounded-[2.5rem] p-8 border border-white/5 relative overflow-hidden shadow-2xl">
+        {/* Rondas asignadas al objetivo del turno */}
+        {rondas.length > 0 && (
+          <div className="bg-slate-900 rounded-[2.5rem] p-8 border border-white/5 relative overflow-hidden shadow-2xl">
             <div className="flex justify-between items-start mb-6">
                 <div>
-                   <h4 className="text-sm font-black uppercase tracking-widest text-brand-blue mb-1">Ronda en Curso</h4>
+                   <h4 className="text-sm font-black uppercase tracking-widest text-brand-blue mb-1">Rondas del Turno</h4>
                    <p className="text-xl font-black italic uppercase tracking-tighter">{turno?.puesto?.nombre ?? 'Objetivo'}</p>
                 </div>
                 <div className="p-3 bg-white/5 rounded-2xl text-white/60">
@@ -187,16 +242,82 @@ export const MobileDashboard = () => {
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <RondaItem label="Acceso Principal" time="Hace 12m" done />
-                <RondaItem label="Depósito Este" time="Pendiente" />
-                <RondaItem label="Perímetro Norte" time="Pendiente" />
+            <div className="space-y-6">
+              {rondas.map((r) => {
+                const marcados = r.puntos.filter((p) => p.marcada).length;
+                const enProgreso = r.ejecucion?.estado === 'EN_PROGRESO';
+                const completada = r.ejecucion?.estado === 'COMPLETADA';
+                const incompleta = r.ejecucion?.estado === 'INCOMPLETA';
+                return (
+                  <div key={r.id}>
+                    <div className="flex justify-between items-center mb-3">
+                      <p className="text-xs font-black uppercase tracking-widest text-white/70">
+                        {r.nombre}
+                        {r.tolerancia_min != null && (
+                          <span className="text-white/30 normal-case tracking-normal font-bold">
+                            {' '}· {r.tolerancia_min} min
+                          </span>
+                        )}
+                      </p>
+                      <span
+                        className={`text-[9px] font-black uppercase tracking-widest ${
+                          completada
+                            ? 'text-emerald'
+                            : enProgreso
+                              ? 'text-amber'
+                              : incompleta
+                                ? 'text-red-500'
+                                : 'text-white/30'
+                        }`}
+                      >
+                        {completada
+                          ? 'Completada'
+                          : enProgreso
+                            ? `${marcados}/${r.puntos.length} puntos`
+                            : incompleta
+                              ? 'Incompleta'
+                              : 'Sin iniciar'}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {r.puntos.map((p) => (
+                        <RondaItem
+                          key={p.id}
+                          label={p.nombre}
+                          time={
+                            p.marcada
+                              ? new Date(p.marcada).toLocaleTimeString('es-AR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })
+                              : 'Pendiente'
+                          }
+                          done={!!p.marcada}
+                        />
+                      ))}
+                    </div>
+                    {!enProgreso && !completada && (
+                      <button
+                        onClick={() => handleIniciarRonda(r.id)}
+                        className="w-full mt-4 py-4 bg-brand-blue/20 border border-brand-blue/40 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand-blue hover:bg-brand-blue/30 transition-all active:scale-95"
+                      >
+                        {incompleta ? 'Reintentar ronda' : 'Iniciar ronda'}
+                      </button>
+                    )}
+                    {enProgreso && (
+                      <p className="mt-3 text-[10px] text-white/40 font-bold uppercase tracking-widest text-center">
+                        Escaneá el QR de cada punto
+                        {r.tolerancia_min != null
+                          ? ` · Tenés ${r.tolerancia_min} min para completarla`
+                          : ''}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-
-            <button className="w-full mt-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all">
-                Ver Mapa de Puntos
-            </button>
-        </div>
+          </div>
+        )}
 
         {/* Quick Chat */}
         <div className="flex items-center gap-4 bg-brand-blue/5 border border-brand-blue/20 p-4 rounded-[2rem]">
@@ -248,6 +369,16 @@ export const MobileDashboard = () => {
 
       {modalNovedad && (
         <NovedadMovilModal onClose={() => setModalNovedad(false)} onCreada={() => setModalNovedad(false)} />
+      )}
+
+      {modalEscaner && (
+        <EscanerQRModal onDetectado={handleQRDetectado} onClose={() => setModalEscaner(false)} />
+      )}
+
+      {scanMensaje && (
+        <div className="fixed top-24 left-6 right-6 z-[96] bg-emerald text-slate-950 rounded-2xl px-5 py-3 text-center text-xs font-black uppercase tracking-widest shadow-2xl animate-in fade-in slide-in-from-top duration-300">
+          {scanMensaje}
+        </div>
       )}
     </div>
   );

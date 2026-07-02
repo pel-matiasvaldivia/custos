@@ -25,6 +25,27 @@ export interface Location {
   lng: number;
 }
 
+export interface RondaPuntoMovil {
+  id: string;
+  nombre: string;
+  codigo_qr: string | null;
+  orden: number;
+  marcada: string | null;
+}
+
+export interface RondaMovil {
+  id: string;
+  nombre: string;
+  tolerancia_min: number | null;
+  puntos: RondaPuntoMovil[];
+  ejecucion: {
+    id: string;
+    estado: string;
+    hora_inicio: string;
+    hora_fin: string | null;
+  } | null;
+}
+
 export const vigilanciaMovilService = {
   turnoActual: async (): Promise<TurnoActual | null> => {
     const response = await mobileApi.get<TurnoActual | null>('/mobile/turno-actual');
@@ -47,6 +68,15 @@ export const vigilanciaMovilService = {
 
   checkpoint: async (checkpointId: string, location?: Location) => {
     return enqueue('checkpoint', '/mobile/checkpoint', { checkpointId, location });
+  },
+
+  rondas: async (): Promise<RondaMovil[]> => {
+    const response = await mobileApi.get<RondaMovil[]>('/mobile/rondas');
+    return response.data;
+  },
+
+  iniciarRonda: async (plantillaId: string) => {
+    return enqueue('ronda_inicio', '/mobile/rondas/iniciar', { plantillaId });
   },
 
   novedadTipos: async (): Promise<NovedadTipo[]> => {

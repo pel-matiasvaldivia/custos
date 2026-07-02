@@ -47,6 +47,7 @@ model Tenant {
   novedades               Novedad[]
   puntos_control          PuntoControl[]
   rondas                  Ronda[]
+  ronda_plantillas        RondaPlantilla[]
   umbrales_aprobacion     UmbralAprobacion[]
   solicitudes_compra      SolicitudCompra[]
   ordenes_compra          OrdenCompra[]
@@ -231,9 +232,10 @@ model Objetivo {
   dispositivos   Dispositivo[]
   eventos        Evento[]
   incidentes     Incidente[]
-  contactos      ContactoEmergencia[]
-  programaciones ProgramacionHoraria[]
-  contratos      Contrato[]
+  contactos        ContactoEmergencia[]
+  programaciones   ProgramacionHoraria[]
+  contratos        Contrato[]
+  ronda_plantillas RondaPlantilla[]
 
   @@unique([tenant_id, codigo])
   @@map("objetivos")
@@ -428,9 +430,10 @@ model PuntoControl {
   lng        Float?
   created_at DateTime @default(now()) @db.Timestamptz
 
-  tenant Tenant       @relation(fields: [tenant_id], references: [id])
-  puesto Puesto       @relation(fields: [puesto_id], references: [id])
-  marcas MarcaRonda[]
+  tenant           Tenant                @relation(fields: [tenant_id], references: [id])
+  puesto           Puesto                @relation(fields: [puesto_id], references: [id])
+  marcas           MarcaRonda[]
+  plantilla_puntos RondaPlantillaPunto[]
 
   @@map("puntos_control")
 }
@@ -440,17 +443,52 @@ model Ronda {
   tenant_id    String    @db.Uuid
   puesto_id    String    @db.Uuid
   vigilador_id String    @db.Uuid
+  plantilla_id String?   @db.Uuid
   nombre       String
   hora_inicio  DateTime  @default(now()) @db.Timestamptz
   hora_fin     DateTime? @db.Timestamptz
   estado       String    @default("EN_PROGRESO") // EN_PROGRESO | COMPLETADA | INCOMPLETA
 
-  tenant    Tenant       @relation(fields: [tenant_id], references: [id])
-  puesto    Puesto       @relation(fields: [puesto_id], references: [id])
-  vigilador Vigilador    @relation(fields: [vigilador_id], references: [id])
+  tenant    Tenant          @relation(fields: [tenant_id], references: [id])
+  puesto    Puesto          @relation(fields: [puesto_id], references: [id])
+  vigilador Vigilador       @relation(fields: [vigilador_id], references: [id])
+  plantilla RondaPlantilla? @relation(fields: [plantilla_id], references: [id])
   marcas    MarcaRonda[]
 
   @@map("rondas")
+}
+
+// Plantilla de ronda: define qué puntos de control debe recorrer el personal
+// de turno de un objetivo. Cada ejecución real es una fila en Ronda.
+model RondaPlantilla {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  objetivo_id    String   @db.Uuid
+  nombre         String
+  // Minutos desde el inicio para completar el recorrido; NULL = sin límite.
+  tolerancia_min Int?
+  activa         Boolean  @default(true)
+  created_at     DateTime @default(now()) @db.Timestamptz
+
+  tenant      Tenant                @relation(fields: [tenant_id], references: [id])
+  objetivo    Objetivo              @relation(fields: [objetivo_id], references: [id])
+  puntos      RondaPlantillaPunto[]
+  ejecuciones Ronda[]
+
+  @@map("ronda_plantillas")
+}
+
+model RondaPlantillaPunto {
+  id               String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plantilla_id     String @db.Uuid
+  punto_control_id String @db.Uuid
+  orden            Int    @default(0)
+
+  plantilla     RondaPlantilla @relation(fields: [plantilla_id], references: [id], onDelete: Cascade)
+  punto_control PuntoControl   @relation(fields: [punto_control_id], references: [id])
+
+  @@unique([plantilla_id, punto_control_id])
+  @@map("ronda_plantilla_puntos")
 }
 
 model MarcaRonda {
