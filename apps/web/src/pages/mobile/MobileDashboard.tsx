@@ -108,12 +108,14 @@ export const MobileDashboard = () => {
 
   const handleIniciarRonda = async (plantillaId: string) => {
     await vigilanciaMovilService.iniciarRonda(plantillaId);
-    // Optimista: la ronda queda en progreso al toque; se sincroniza detrás.
+    // Optimista: la ronda queda en progreso al toque (con marcas en cero si es
+    // un reintento tras quedar incompleta); se sincroniza detrás.
     setRondas((prev) =>
       prev.map((r) =>
-        r.id === plantillaId && !r.ejecucion
+        r.id === plantillaId && r.ejecucion?.estado !== 'EN_PROGRESO'
           ? {
               ...r,
+              puntos: r.puntos.map((p) => ({ ...p, marcada: null })),
               ejecucion: {
                 id: 'local',
                 estado: 'EN_PROGRESO',
@@ -245,22 +247,36 @@ export const MobileDashboard = () => {
                 const marcados = r.puntos.filter((p) => p.marcada).length;
                 const enProgreso = r.ejecucion?.estado === 'EN_PROGRESO';
                 const completada = r.ejecucion?.estado === 'COMPLETADA';
+                const incompleta = r.ejecucion?.estado === 'INCOMPLETA';
                 return (
                   <div key={r.id}>
                     <div className="flex justify-between items-center mb-3">
                       <p className="text-xs font-black uppercase tracking-widest text-white/70">
                         {r.nombre}
+                        {r.tolerancia_min != null && (
+                          <span className="text-white/30 normal-case tracking-normal font-bold">
+                            {' '}· {r.tolerancia_min} min
+                          </span>
+                        )}
                       </p>
                       <span
                         className={`text-[9px] font-black uppercase tracking-widest ${
-                          completada ? 'text-emerald' : enProgreso ? 'text-amber' : 'text-white/30'
+                          completada
+                            ? 'text-emerald'
+                            : enProgreso
+                              ? 'text-amber'
+                              : incompleta
+                                ? 'text-red-500'
+                                : 'text-white/30'
                         }`}
                       >
                         {completada
                           ? 'Completada'
                           : enProgreso
                             ? `${marcados}/${r.puntos.length} puntos`
-                            : 'Sin iniciar'}
+                            : incompleta
+                              ? 'Incompleta'
+                              : 'Sin iniciar'}
                       </span>
                     </div>
                     <div className="space-y-3">
@@ -285,12 +301,15 @@ export const MobileDashboard = () => {
                         onClick={() => handleIniciarRonda(r.id)}
                         className="w-full mt-4 py-4 bg-brand-blue/20 border border-brand-blue/40 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand-blue hover:bg-brand-blue/30 transition-all active:scale-95"
                       >
-                        Iniciar ronda
+                        {incompleta ? 'Reintentar ronda' : 'Iniciar ronda'}
                       </button>
                     )}
                     {enProgreso && (
                       <p className="mt-3 text-[10px] text-white/40 font-bold uppercase tracking-widest text-center">
-                        Escaneá el QR de cada punto para marcarlo
+                        Escaneá el QR de cada punto
+                        {r.tolerancia_min != null
+                          ? ` · Tenés ${r.tolerancia_min} min para completarla`
+                          : ''}
                       </p>
                     )}
                   </div>

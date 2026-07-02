@@ -461,12 +461,14 @@ model Ronda {
 // Plantilla de ronda: define qué puntos de control debe recorrer el personal
 // de turno de un objetivo. Cada ejecución real es una fila en Ronda.
 model RondaPlantilla {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tenant_id   String   @db.Uuid
-  objetivo_id String   @db.Uuid
-  nombre      String
-  activa      Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  objetivo_id    String   @db.Uuid
+  nombre         String
+  // Minutos desde el inicio para completar el recorrido; NULL = sin límite.
+  tolerancia_min Int?
+  activa         Boolean  @default(true)
+  created_at     DateTime @default(now()) @db.Timestamptz
 
   tenant      Tenant                @relation(fields: [tenant_id], references: [id])
   objetivo    Objetivo              @relation(fields: [objetivo_id], references: [id])

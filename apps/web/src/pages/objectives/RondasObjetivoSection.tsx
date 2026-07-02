@@ -104,6 +104,11 @@ export const RondasObjetivoSection = ({ objetivoId, puestos }: Props) => {
                       {pl.puntos.length} punto{pl.puntos.length !== 1 ? 's' : ''}:{' '}
                       {pl.puntos.map((p) => p.punto_control.nombre).join(' → ')}
                     </p>
+                    <p className="text-xs text-muted mt-0.5">
+                      {pl.tolerancia_min
+                        ? `Tolerancia: ${pl.tolerancia_min} min — si no se completa a tiempo, alerta al Centro de Operaciones`
+                        : 'Sin tolerancia configurada'}
+                    </p>
                   </div>
                   {confirmandoBaja === pl.id ? (
                     <div className="flex items-center gap-2 shrink-0 ml-3">
@@ -237,6 +242,7 @@ interface PuntoDisponible extends PuntoControl {
 
 function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps) {
   const [nombre, setNombre] = useState('');
+  const [tolerancia, setTolerancia] = useState('');
   const [disponibles, setDisponibles] = useState<PuntoDisponible[]>([]);
   const [seleccion, setSeleccion] = useState<string[]>([]); // ids en orden de recorrido
   const [cargando, setCargando] = useState(true);
@@ -273,12 +279,18 @@ function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps)
       setError('Elegí al menos un punto de control.');
       return;
     }
+    const toleranciaMin = tolerancia.trim() === '' ? null : Number(tolerancia);
+    if (toleranciaMin !== null && (!Number.isInteger(toleranciaMin) || toleranciaMin < 1)) {
+      setError('La tolerancia debe ser un número entero de minutos mayor a cero.');
+      return;
+    }
     setGuardando(true);
     setError(null);
     try {
       await puntoControlService.crearPlantilla({
         objetivo_id: objetivoId,
         nombre: nombre.trim(),
+        tolerancia_min: toleranciaMin,
         puntos: seleccion.map((id, i) => ({ punto_control_id: id, orden: i })),
       });
       onCreada();
@@ -315,6 +327,24 @@ function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps)
               placeholder='Ej: "Ronda perimetral nocturna"'
               className="w-full mt-1 border border-line rounded-lg p-2 text-sm"
             />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted uppercase tracking-wider">
+              Tiempo de tolerancia (minutos)
+            </label>
+            <input
+              type="number"
+              min={1}
+              value={tolerancia}
+              onChange={(e) => setTolerancia(e.target.value)}
+              placeholder="Opcional — ej: 30"
+              className="w-full mt-1 border border-line rounded-lg p-2 text-sm"
+            />
+            <p className="text-[11px] text-muted mt-1">
+              Si la ronda no se completa dentro de este tiempo desde su inicio, queda
+              INCOMPLETA y se alerta al Centro de Operaciones. Vacío = sin límite.
+            </p>
           </div>
 
           <div>

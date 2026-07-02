@@ -320,6 +320,7 @@ export class VigilanciaMovilService {
       (pl: {
         id: string;
         nombre: string;
+        tolerancia_min: number | null;
         puntos: Array<{
           orden: number;
           punto_control: {
@@ -341,6 +342,7 @@ export class VigilanciaMovilService {
         return {
           id: pl.id,
           nombre: pl.nombre,
+          tolerancia_min: pl.tolerancia_min,
           puntos: pl.puntos.map((p) => ({
             id: p.punto_control.id,
             nombre: p.punto_control.nombre,

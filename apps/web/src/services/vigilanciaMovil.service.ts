@@ -36,6 +36,7 @@ export interface RondaPuntoMovil {
 export interface RondaMovil {
   id: string;
   nombre: string;
+  tolerancia_min: number | null;
   puntos: RondaPuntoMovil[];
   ejecucion: {
     id: string;

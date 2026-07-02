@@ -77,6 +77,29 @@ export const MonitoringPage = () => {
     setEvents(prev => [event, ...prev.slice(0, 49)]); // Keep last 50
   });
 
+  // Ronda cerrada como INCOMPLETA (tolerancia vencida / fin de turno):
+  // entra al stream de eventos con severidad ALTA.
+  on('ronda.alerta', (data: {
+    ts?: string;
+    motivo?: string;
+    ronda_nombre?: string;
+    vigilador_nombre?: string;
+    puesto_nombre?: string;
+  }) => {
+    setEvents(prev => [
+      {
+        ts_evento: data.ts ?? new Date().toISOString(),
+        severidad: 'ALTA',
+        tipo: data.motivo === 'TOLERANCIA_VENCIDA' ? 'RONDA VENCIDA' : 'RONDA INCOMPLETA',
+        objetivo: { nombre: `${data.ronda_nombre} · ${data.vigilador_nombre}` },
+        origen: 'RONDAS',
+        zona_id: data.puesto_nombre,
+        dispositivo_id: '',
+      },
+      ...prev.slice(0, 49),
+    ]);
+  });
+
   on('incident.new', (incident: any) => {
     setIncidents(prev => [incident, ...prev]);
     // Auto-verify if CRITICAL

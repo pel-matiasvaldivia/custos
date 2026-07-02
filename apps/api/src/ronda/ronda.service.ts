@@ -16,11 +16,24 @@ export class RondaService {
     dto: {
       objetivo_id: string;
       nombre: string;
+      tolerancia_min?: number | null;
       puntos: { punto_control_id: string; orden?: number }[];
     },
   ) {
     if (!dto.nombre?.trim()) {
       throw new BadRequestException('La ronda necesita un nombre.');
+    }
+    const tolerancia =
+      dto.tolerancia_min == null
+        ? null
+        : Math.floor(Number(dto.tolerancia_min));
+    if (
+      tolerancia !== null &&
+      (!Number.isFinite(tolerancia) || tolerancia < 1)
+    ) {
+      throw new BadRequestException(
+        'La tolerancia debe ser un número de minutos mayor a cero.',
+      );
     }
     if (!dto.puntos?.length) {
       throw new BadRequestException(
@@ -47,6 +60,7 @@ export class RondaService {
         tenant_id: tenantId,
         objetivo_id: dto.objetivo_id,
         nombre: dto.nombre.trim(),
+        tolerancia_min: tolerancia,
         puntos: {
           create: dto.puntos.map((p, i) => ({
             punto_control_id: p.punto_control_id,

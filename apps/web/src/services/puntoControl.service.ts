@@ -29,6 +29,7 @@ export interface RondaPlantilla {
   id: string;
   objetivo_id: string;
   nombre: string;
+  tolerancia_min: number | null;
   activa: boolean;
   created_at: string;
   puntos: RondaPlantillaPunto[];
@@ -81,6 +82,7 @@ export const puntoControlService = {
   crearPlantilla: async (dto: {
     objetivo_id: string;
     nombre: string;
+    tolerancia_min?: number | null;
     puntos: { punto_control_id: string; orden: number }[];
   }): Promise<RondaPlantilla> => {
     const { data } = await api.post<RondaPlantilla>('/rondas/plantillas', dto);
