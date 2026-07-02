@@ -78,6 +78,7 @@ model Tenant {
   liquidaciones           Liquidacion[]
   liquidacion_items       LiquidacionItem[]
   adelantos               Adelanto[]
+  mobile_eventos          MobileEvento[]
 
   @@map("tenants")
 }
@@ -1179,4 +1180,22 @@ model PuestoCobertura {
 
   @@unique([tenant_id, puesto_id])
   @@map("puesto_cobertura")
+}
+
+/// Registro de eventos de la app móvil ya procesados, para idempotencia: si una
+/// acción encolada offline se reintenta al recuperar señal, el mismo
+/// client_event_id no vuelve a aplicarse (evita checkins/pánicos duplicados).
+model MobileEvento {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id       String    @db.Uuid
+  vigilador_id    String    @db.Uuid
+  client_event_id String
+  tipo            String
+  ts              DateTime? @db.Timestamptz
+  procesado_at    DateTime  @default(now()) @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, client_event_id])
+  @@map("mobile_eventos")
 }

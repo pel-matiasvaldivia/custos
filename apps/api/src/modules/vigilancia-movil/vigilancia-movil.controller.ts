@@ -21,25 +21,36 @@ export class VigilanciaMovilController {
 
   @Post('checkpoint')
   async scanCheckpoint(
-    @Body() data: { checkpointId: string; location?: any },
+    @Body()
+    data: { checkpointId: string; location?: any; clientEventId?: string; ts?: string },
     @Request() req: any,
   ) {
     return this.mobileService.registrarPuntoControl(
+      req.user.tenantId,
       req.user.vigiladorId,
       data.checkpointId,
       data.location,
+      data.clientEventId,
+      data.ts,
     );
   }
 
   @Post('panic')
   async triggerPanic(
-    @Body() data: { location: { lat: number; lng: number } },
+    @Body()
+    data: {
+      location: { lat: number; lng: number };
+      clientEventId?: string;
+      ts?: string;
+    },
     @Request() req: any,
   ) {
     return this.mobileService.dispararPanico(
       req.user.vigiladorId,
       req.user.tenantId,
       data.location,
+      data.clientEventId,
+      data.ts,
     );
   }
 
@@ -70,6 +81,8 @@ export class VigilanciaMovilController {
       turnoId: string;
       metodo: string;
       location?: { lat: number; lng: number };
+      clientEventId?: string;
+      ts?: string;
     },
     @Request() req: any,
   ) {
@@ -79,6 +92,8 @@ export class VigilanciaMovilController {
       data.turnoId,
       data.metodo,
       data.location,
+      data.clientEventId,
+      data.ts,
     );
   }
 

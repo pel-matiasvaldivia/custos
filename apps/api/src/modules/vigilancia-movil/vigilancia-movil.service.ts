@@ -17,11 +17,70 @@ export class VigilanciaMovilService {
     private readonly coGateway: COGateway,
   ) {}
 
+  /**
+   * Idempotencia para acciones encoladas offline: devuelve true si el
+   * client_event_id ya se procesó (para no reaplicar). Si no, no hace nada.
+   */
+  private async yaProcesado(
+    tenantId: string,
+    clientEventId?: string,
+  ): Promise<boolean> {
+    if (!clientEventId) return false;
+    const existe = await this.prisma.mobileEvento.findUnique({
+      where: {
+        tenant_id_client_event_id: {
+          tenant_id: tenantId,
+          client_event_id: clientEventId,
+        },
+      },
+      select: { id: true },
+    });
+    return !!existe;
+  }
+
+  private async registrarEvento(
+    tenantId: string,
+    vigiladorId: string,
+    clientEventId: string | undefined,
+    tipo: string,
+    ts: Date,
+  ): Promise<void> {
+    if (!clientEventId) return;
+    await this.prisma.mobileEvento
+      .create({
+        data: {
+          tenant_id: tenantId,
+          vigilador_id: vigiladorId,
+          client_event_id: clientEventId,
+          tipo,
+          ts,
+        },
+      })
+      .catch(() => undefined); // choque por unicidad = ya registrado, se ignora
+  }
+
+  /** Fecha del evento: la que reporta el dispositivo (acción real, aunque se
+   *  sincronice más tarde) o, si no viene, la del servidor. */
+  private cuando(ts?: string): Date {
+    if (ts) {
+      const d = new Date(ts);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  }
+
   async registrarPuntoControl(
+    tenantId: string,
     vigiladorId: string,
     checkpointId: string,
     location?: { lat: number; lng: number },
+    clientEventId?: string,
+    ts?: string,
   ) {
+    if (await this.yaProcesado(tenantId, clientEventId)) {
+      return { duplicated: true };
+    }
+
     const checkpoint = await this.prisma.puntoControl.findUnique({
       where: { id: checkpointId },
       include: { puesto: true },
@@ -29,12 +88,13 @@ export class VigilanciaMovilService {
 
     if (!checkpoint) throw new NotFoundException('Punto de control no válido');
 
+    const cuando = this.cuando(ts);
     const payload = {
       vigilante_id: vigiladorId,
       punto_control_id: checkpointId,
       puesto_id: checkpoint.puesto_id,
       location,
-      ts: new Date(),
+      ts: cuando,
     };
 
     this.coGateway.emitToTenant(
@@ -43,6 +103,7 @@ export class VigilanciaMovilService {
       payload,
     );
 
+    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkpoint', cuando);
     return payload;
   }
 
@@ -50,9 +111,15 @@ export class VigilanciaMovilService {
     vigiladorId: string,
     tenantId: string,
     location: { lat: number; lng: number },
+    clientEventId?: string,
+    ts?: string,
   ) {
+    if (await this.yaProcesado(tenantId, clientEventId)) {
+      return { duplicated: true };
+    }
+
     this.logger.warn(
-      `PANIC TRIGGERED by Vigilador ${vigiladorId} at ${location.lat}, ${location.lng}`,
+      `PANIC TRIGGERED by Vigilador ${vigiladorId} at ${location?.lat}, ${location?.lng}`,
     );
 
     const objective = await this.prisma.objetivo.findFirst({
@@ -61,6 +128,7 @@ export class VigilanciaMovilService {
     if (!objective)
       throw new NotFoundException('No se encontró objetivo para el tenant');
 
+    const cuando = this.cuando(ts);
     const incident = await this.prisma.incidente.create({
       data: {
         tenant_id: tenantId,
@@ -69,14 +137,15 @@ export class VigilanciaMovilService {
         tipo: 'PANICO_MOVIL',
         severidad: 'CRITICA',
         estado: 'NUEVO',
-        resumen: `¡BOTÓN DE PÁNICO ACTIVADO! Vigilador ID: ${vigiladorId}. Ubicación: ${location.lat}, ${location.lng}`,
-        abierto_el: new Date(),
+        resumen: `¡BOTÓN DE PÁNICO ACTIVADO! Vigilador ID: ${vigiladorId}. Ubicación: ${location?.lat}, ${location?.lng}`,
+        abierto_el: cuando,
       },
       include: { objetivo: true },
     });
 
     this.coGateway.emitToTenant(tenantId, 'incident.new', incident);
 
+    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'panic', cuando);
     return incident;
   }
 
@@ -149,24 +218,38 @@ export class VigilanciaMovilService {
     turnoId: string,
     metodo: string,
     location?: { lat: number; lng: number },
+    clientEventId?: string,
+    ts?: string,
   ) {
     const turno = await this.turnoDelVigilador(tenantId, vigiladorId, turnoId);
+
+    // Idempotencia: si ya se procesó este evento (reintento offline), no-op.
+    if (await this.yaProcesado(tenantId, clientEventId)) return turno;
+
     if (turno.inicio_real) {
+      // Ya tiene ingreso: si viene de la cola offline lo tomamos como éxito
+      // idempotente; en el flujo online normal seguimos avisando el doble.
+      if (clientEventId) {
+        await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkin', turno.inicio_real);
+        return turno;
+      }
       throw new BadRequestException('Ya se registró el ingreso de este turno');
     }
 
+    const cuando = this.cuando(ts);
     const actualizado = await this.prisma.turnoPlanificado.update({
       where: { id: turno.id },
-      data: { inicio_real: new Date(), metodo, asistencia_estado: 'OK' },
+      data: { inicio_real: cuando, metodo, asistencia_estado: 'OK' },
     });
 
     this.coGateway.emitToTenant(tenantId, 'asistencia.checkin', {
       turnoId: turno.id,
       vigiladorId,
       location,
-      ts: new Date(),
+      ts: cuando,
     });
 
+    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkin', cuando);
     return actualizado;
   }
 
@@ -176,29 +259,40 @@ export class VigilanciaMovilService {
     turnoId: string,
     metodo: string,
     location?: { lat: number; lng: number },
+    clientEventId?: string,
+    ts?: string,
   ) {
     const turno = await this.turnoDelVigilador(tenantId, vigiladorId, turnoId);
+
+    if (await this.yaProcesado(tenantId, clientEventId)) return turno;
+
     if (!turno.inicio_real) {
       throw new BadRequestException(
         'No se puede marcar la salida sin haber marcado el ingreso',
       );
     }
     if (turno.fin_real) {
+      if (clientEventId) {
+        await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkout', turno.fin_real);
+        return turno;
+      }
       throw new BadRequestException('Ya se registró la salida de este turno');
     }
 
+    const cuando = this.cuando(ts);
     const actualizado = await this.prisma.turnoPlanificado.update({
       where: { id: turno.id },
-      data: { fin_real: new Date(), metodo },
+      data: { fin_real: cuando, metodo },
     });
 
     this.coGateway.emitToTenant(tenantId, 'asistencia.checkout', {
       turnoId: turno.id,
       vigiladorId,
       location,
-      ts: new Date(),
+      ts: cuando,
     });
 
+    await this.registrarEvento(tenantId, vigiladorId, clientEventId, 'checkout', cuando);
     return actualizado;
   }
 }

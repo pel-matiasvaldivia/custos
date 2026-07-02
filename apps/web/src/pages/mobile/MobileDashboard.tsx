@@ -17,9 +17,12 @@ import { vigilanciaMovilService, TurnoActual, Location } from '../../services/vi
 import { AsistenciaCard } from './AsistenciaCard';
 import { SolicitarRelevoModal } from './SolicitarRelevoModal';
 import { useOnline } from '../../hooks/useOnline';
+import { usePendingSync } from '../../hooks/usePendingSync';
+import { initOutbox } from '../../offline/outbox';
 
 export const MobileDashboard = () => {
   const online = useOnline();
+  const pendientes = usePendingSync();
   const [scanning, setScanning] = useState(false);
   const [isPanicActive, setIsPanicActive] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
@@ -37,6 +40,7 @@ export const MobileDashboard = () => {
   }, []);
 
   useEffect(() => {
+    initOutbox(); // arranca la sincronización de la cola offline
     cargarTurno();
   }, [cargarTurno]);
 
@@ -54,31 +58,17 @@ export const MobileDashboard = () => {
 
   const handlePanic = async () => {
     setIsPanicActive(true);
-    try {
-      await mobileApi.post('/mobile/panic', { location });
-      // Visual feedback
-      setTimeout(() => setIsPanicActive(false), 3000);
-    } catch (err) {
-      alert('Error al enviar pánico');
-      setIsPanicActive(false);
-    }
+    // El pánico se encola y se envía apenas hay señal (funciona offline).
+    await vigilanciaMovilService.panic(location ?? undefined);
+    setTimeout(() => setIsPanicActive(false), 3000);
   };
 
   const handleScan = async () => {
     setScanning(true);
-    // Simulate QR reading after 1.5s
+    // Simula la lectura de QR; el scan se encola (offline-safe).
     setTimeout(async () => {
-      try {
-        await mobileApi.post('/mobile/checkpoint', {
-          checkpointId: '8092023a-f4ef-4b41-b847-1925b3991202', // Dummy UUID
-          location,
-        });
-        alert('Punto de control verificado');
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setScanning(false);
-      }
+      await vigilanciaMovilService.checkpoint('8092023a-f4ef-4b41-b847-1925b3991202', location ?? undefined);
+      setScanning(false);
     }, 1500);
   };
 
@@ -87,9 +77,8 @@ export const MobileDashboard = () => {
     setProcesandoAsistencia(true);
     try {
       await vigilanciaMovilService.checkin(turno.id, 'APP', location ?? undefined);
-      await cargarTurno();
-    } catch {
-      alert('No se pudo marcar la entrada');
+      // Optimista: reflejamos el ingreso al toque; se sincroniza en segundo plano.
+      setTurno({ ...turno, inicio_real: new Date().toISOString() });
     } finally {
       setProcesandoAsistencia(false);
     }
@@ -100,9 +89,7 @@ export const MobileDashboard = () => {
     setProcesandoAsistencia(true);
     try {
       await vigilanciaMovilService.checkout(turno.id, 'APP', location ?? undefined);
-      await cargarTurno();
-    } catch {
-      alert('No se pudo marcar la salida');
+      setTurno({ ...turno, fin_real: new Date().toISOString() });
     } finally {
       setProcesandoAsistencia(false);
     }
@@ -133,7 +120,15 @@ export const MobileDashboard = () => {
         <div className="bg-amber/15 border-b border-amber/30 px-6 py-2.5 flex items-center gap-2 text-amber">
           <WifiOff size={15} />
           <span className="text-[11px] font-bold uppercase tracking-wider">
-            Sin conexión · seguí trabajando, se sincroniza al recuperar señal
+            Sin conexión · seguí trabajando{pendientes > 0 ? ` · ${pendientes} sin sincronizar` : ''}
+          </span>
+        </div>
+      )}
+      {online && pendientes > 0 && (
+        <div className="bg-brand-blue/15 border-b border-brand-blue/30 px-6 py-2.5 flex items-center gap-2 text-brand-blue">
+          <RefreshCw size={14} className="animate-spin" />
+          <span className="text-[11px] font-bold uppercase tracking-wider">
+            Sincronizando {pendientes} acción(es)...
           </span>
         </div>
       )}
