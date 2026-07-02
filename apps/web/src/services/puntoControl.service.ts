@@ -89,6 +89,18 @@ export const puntoControlService = {
     return data;
   },
 
+  actualizarPlantilla: async (
+    id: string,
+    dto: {
+      nombre?: string;
+      tolerancia_min?: number | null;
+      puntos?: { punto_control_id: string; orden: number }[];
+    },
+  ): Promise<RondaPlantilla> => {
+    const { data } = await api.put<RondaPlantilla>(`/rondas/plantillas/${id}`, dto);
+    return data;
+  },
+
   desactivarPlantilla: async (id: string): Promise<void> => {
     await api.delete(`/rondas/plantillas/${id}`);
   },

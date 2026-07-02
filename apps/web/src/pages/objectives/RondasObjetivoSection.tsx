@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Plus,
+  Pencil,
   Route,
   Trash2,
   X,
@@ -42,6 +43,7 @@ export const RondasObjetivoSection = ({ objetivoId, puestos }: Props) => {
   const [ejecuciones, setEjecuciones] = useState<RondaEjecucion[]>([]);
   const [cargando, setCargando] = useState(true);
   const [modalCrear, setModalCrear] = useState(false);
+  const [editando, setEditando] = useState<RondaPlantilla | null>(null);
   const [ejecucionAbierta, setEjecucionAbierta] = useState<string | null>(null);
   const [confirmandoBaja, setConfirmandoBaja] = useState<string | null>(null);
 
@@ -127,13 +129,22 @@ export const RondasObjetivoSection = ({ objetivoId, puestos }: Props) => {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setConfirmandoBaja(pl.id)}
-                      className="p-1 text-muted hover:text-red-500 transition-colors shrink-0 ml-3"
-                      title="Dar de baja la ronda"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0 ml-3">
+                      <button
+                        onClick={() => setEditando(pl)}
+                        className="p-1 text-muted hover:text-brand-blue transition-colors"
+                        title="Editar la ronda"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmandoBaja(pl.id)}
+                        className="p-1 text-muted hover:text-red-500 transition-colors"
+                        title="Dar de baja la ronda"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   )}
                 </li>
               ))}
@@ -212,13 +223,15 @@ export const RondasObjetivoSection = ({ objetivoId, puestos }: Props) => {
         </>
       )}
 
-      {modalCrear && (
+      {(modalCrear || editando) && (
         <CrearRondaModal
           objetivoId={objetivoId}
           puestos={puestos}
-          onClose={() => setModalCrear(false)}
+          plantillaEditando={editando}
+          onClose={() => { setModalCrear(false); setEditando(null); }}
           onCreada={() => {
             setModalCrear(false);
+            setEditando(null);
             cargar();
           }}
         />
@@ -232,6 +245,7 @@ export const RondasObjetivoSection = ({ objetivoId, puestos }: Props) => {
 interface ModalProps {
   objetivoId: string;
   puestos: Puesto[];
+  plantillaEditando?: RondaPlantilla | null;
   onClose: () => void;
   onCreada: () => void;
 }
@@ -240,11 +254,16 @@ interface PuntoDisponible extends PuntoControl {
   puestoNombre: string;
 }
 
-function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps) {
-  const [nombre, setNombre] = useState('');
-  const [tolerancia, setTolerancia] = useState('');
+function CrearRondaModal({ objetivoId, puestos, plantillaEditando, onClose, onCreada }: ModalProps) {
+  const esEdicion = !!plantillaEditando;
+  const [nombre, setNombre] = useState(plantillaEditando?.nombre ?? '');
+  const [tolerancia, setTolerancia] = useState(
+    plantillaEditando?.tolerancia_min != null ? String(plantillaEditando.tolerancia_min) : '',
+  );
   const [disponibles, setDisponibles] = useState<PuntoDisponible[]>([]);
-  const [seleccion, setSeleccion] = useState<string[]>([]); // ids en orden de recorrido
+  const [seleccion, setSeleccion] = useState<string[]>(
+    plantillaEditando ? plantillaEditando.puntos.map((p) => p.punto_control_id) : [],
+  );
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -287,15 +306,24 @@ function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps)
     setGuardando(true);
     setError(null);
     try {
-      await puntoControlService.crearPlantilla({
-        objetivo_id: objetivoId,
-        nombre: nombre.trim(),
-        tolerancia_min: toleranciaMin,
-        puntos: seleccion.map((id, i) => ({ punto_control_id: id, orden: i })),
-      });
+      const puntosDto = seleccion.map((id, i) => ({ punto_control_id: id, orden: i }));
+      if (esEdicion && plantillaEditando) {
+        await puntoControlService.actualizarPlantilla(plantillaEditando.id, {
+          nombre: nombre.trim(),
+          tolerancia_min: toleranciaMin,
+          puntos: puntosDto,
+        });
+      } else {
+        await puntoControlService.crearPlantilla({
+          objetivo_id: objetivoId,
+          nombre: nombre.trim(),
+          tolerancia_min: toleranciaMin,
+          puntos: puntosDto,
+        });
+      }
       onCreada();
     } catch {
-      setError('No se pudo crear la ronda.');
+      setError(esEdicion ? 'No se pudo guardar la ronda.' : 'No se pudo crear la ronda.');
       setGuardando(false);
     }
   };
@@ -310,7 +338,7 @@ function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps)
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-display font-bold text-navy">Crear ronda</h3>
+          <h3 className="text-lg font-display font-bold text-navy">{esEdicion ? 'Editar ronda' : 'Crear ronda'}</h3>
           <button onClick={onClose} className="text-muted hover:text-navy">
             <X size={20} />
           </button>
@@ -403,7 +431,7 @@ function CrearRondaModal({ objetivoId, puestos, onClose, onCreada }: ModalProps)
               disabled={guardando}
               className="text-sm bg-brand-blue text-white px-4 py-2 rounded-lg font-medium hover:bg-brand-deep transition-colors disabled:opacity-50"
             >
-              {guardando ? 'Creando...' : 'Crear ronda'}
+              {guardando ? 'Guardando...' : esEdicion ? 'Guardar cambios' : 'Crear ronda'}
             </button>
           </div>
         </div>

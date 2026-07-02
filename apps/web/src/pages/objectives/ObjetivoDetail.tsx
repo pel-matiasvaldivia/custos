@@ -24,6 +24,7 @@ import { EsquemaCuadranteObjetivo } from './EsquemaCuadranteObjetivo';
 import { PuntosControlSection } from './PuntosControlSection';
 import { RondasObjetivoSection } from './RondasObjetivoSection';
 import { DispositivoObjetivoSection } from './DispositivoObjetivoSection';
+import { GeoObjetivoSection } from './GeoObjetivoSection';
 import { VincularContratoModal } from './VincularContratoModal';
 
 const ETIQUETAS_MODO: Record<string, string> = {
@@ -282,6 +283,15 @@ export const ObjetivoDetail = () => {
               </div>
             )}
           </div>
+
+          <GeoObjetivoSection
+            objetivoId={id!}
+            lat={objetivo.lat}
+            lng={objetivo.lng}
+            area={objetivo.area_cobertura}
+            direccion={objetivo.direccion}
+            onSaved={cargar}
+          />
 
           <PuntosControlSection objetivoNombre={objetivo.nombre} puestos={puestos} />
 

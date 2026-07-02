@@ -54,6 +54,21 @@ export class ObjetivoController {
     return this.objetivoService.update(id, req.user.tenantId, body);
   }
 
+  /** Geoposición del objetivo (lat/lng del domicilio) + área de cobertura. */
+  @Put(':id/geo')
+  async setGeo(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      lat?: number | null;
+      lng?: number | null;
+      area_cobertura?: Array<{ lat: number; lng: number }> | null;
+    },
+    @Request() req: any,
+  ) {
+    return this.objetivoService.setGeo(id, req.user.tenantId, body);
+  }
+
   /** Estado de las credenciales del dispositivo compartido del objetivo. */
   @Get(':id/dispositivo')
   async estadoDispositivo(@Param('id') id: string, @Request() req: any) {
@@ -67,7 +82,11 @@ export class ObjetivoController {
     @Body() body: ConfigurarDispositivoDto,
     @Request() req: any,
   ) {
-    return this.objetivoService.configurarDispositivo(id, req.user.tenantId, body);
+    return this.objetivoService.configurarDispositivo(
+      id,
+      req.user.tenantId,
+      body,
+    );
   }
 
   @Post(':id/vehiculos')

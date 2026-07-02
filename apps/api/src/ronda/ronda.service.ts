@@ -77,6 +77,84 @@ export class RondaService {
     });
   }
 
+  /**
+   * Edita una plantilla: nombre, tolerancia y/o puntos (recorrido).
+   * Cuando cambia el set de puntos, borra los viejos y crea los nuevos para
+   * respetar @@unique([plantilla_id, punto_control_id]) sin conflictos.
+   */
+  async actualizarPlantilla(
+    tenantId: string,
+    id: string,
+    dto: {
+      nombre?: string;
+      tolerancia_min?: number | null;
+      puntos?: { punto_control_id: string; orden?: number }[];
+    },
+  ) {
+    const existente = await this.prisma.rondaPlantilla.findFirst({
+      where: { id, tenant_id: tenantId },
+    });
+    if (!existente) throw new NotFoundException('Ronda no encontrada');
+
+    const data: Record<string, unknown> = {};
+    if (dto.nombre !== undefined) {
+      if (!dto.nombre.trim()) {
+        throw new BadRequestException('La ronda necesita un nombre.');
+      }
+      data.nombre = dto.nombre.trim();
+    }
+    if (dto.tolerancia_min !== undefined) {
+      const tol =
+        dto.tolerancia_min == null
+          ? null
+          : Math.floor(Number(dto.tolerancia_min));
+      if (tol !== null && (!Number.isFinite(tol) || tol < 1)) {
+        throw new BadRequestException(
+          'La tolerancia debe ser un número de minutos mayor a cero.',
+        );
+      }
+      data.tolerancia_min = tol;
+    }
+
+    if (dto.puntos) {
+      if (dto.puntos.length === 0) {
+        throw new BadRequestException(
+          'La ronda necesita al menos un punto de control.',
+        );
+      }
+      const validos = await this.prisma.puntoControl.count({
+        where: {
+          tenant_id: tenantId,
+          id: { in: dto.puntos.map((p) => p.punto_control_id) },
+        },
+      });
+      if (validos !== dto.puntos.length) {
+        throw new BadRequestException('Hay puntos de control no válidos.');
+      }
+      await this.prisma.rondaPlantillaPunto.deleteMany({
+        where: { plantilla_id: id },
+      });
+      await this.prisma.rondaPlantillaPunto.createMany({
+        data: dto.puntos.map((p, i) => ({
+          plantilla_id: id,
+          punto_control_id: p.punto_control_id,
+          orden: p.orden ?? i,
+        })),
+      });
+    }
+
+    return this.prisma.rondaPlantilla.update({
+      where: { id },
+      data,
+      include: {
+        puntos: {
+          orderBy: { orden: 'asc' },
+          include: { punto_control: true },
+        },
+      },
+    });
+  }
+
   async listarPlantillas(tenantId: string, objetivoId: string) {
     return this.prisma.rondaPlantilla.findMany({
       where: { tenant_id: tenantId, objetivo_id: objetivoId, activa: true },
