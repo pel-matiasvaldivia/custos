@@ -18,8 +18,10 @@ export class TenantMiddleware implements NestMiddleware {
       try {
         // VERIFY (no decode): valida la firma para que el tenant no sea forjable.
         const decoded: any = jwt.verify(token, getJwtSecret());
-        // El claim del payload es `tenant_id` (ver AuthService.login).
-        const tenantId = decoded?.tenant_id;
+        // Oficina firma `tenant_id` (AuthService.login); la app del vigilador
+        // firma `tenantId` (VigilanteAuthService). Sin esto, los requests
+        // móviles corren sin contexto y RLS los bloquea (pánico 404, novedad 500).
+        const tenantId = decoded?.tenant_id ?? decoded?.tenantId;
         if (tenantId && UUID_RE.test(tenantId)) {
           return this.tenantContext.run(tenantId, () => next());
         }
