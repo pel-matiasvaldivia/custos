@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Calculator, RotateCcw, Info } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Calculator, RotateCcw, Info, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 /**
  * Calculadora interna de costo y precio de la hora-hombre de seguridad.
@@ -60,14 +62,18 @@ const CAMPOS_PARAMS: {
   { key: 'horasMes', label: 'Horas mensuales del vigilador', hint: 'Divisor de convenio (≈200)', suffix: 'hs' },
   { key: 'factorCobertura', label: 'Factor de dotación (24/7)', hint: 'Vigiladores por puesto', step: 0.1 },
   { key: 'horasPuesto', label: 'Horas del puesto por mes', hint: '24×7 ≈ 730', suffix: 'hs' },
-  { key: 'margenPct', label: 'Margen objetivo', hint: 'Markup sobre el costo', suffix: '%' },
+  { key: 'margenPct', label: 'Margen objetivo', hint: 'Sobre el precio de venta', suffix: '%' },
 ];
 
 export const CalculadoraHHTab = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const storageKey = `custos:calc-hh:${user?.tenantId ?? 'default'}`;
 
   const [v, setV] = useState<Valores>(DEFAULTS);
+  // Cargas sociales que aplica el cotizador (sobre el costo_hora base). Se lee
+  // para "des-cargar" el costo antes de mandarlo y no duplicar cargas allá.
+  const [cargasCotizador, setCargasCotizador] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -77,6 +83,13 @@ export const CalculadoraHHTab = () => {
       /* valores por defecto */
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    api
+      .get('/config/costos')
+      .then((res) => setCargasCotizador(Number(res.data?.cargas_sociales)))
+      .catch(() => setCargasCotizador(null));
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(storageKey, JSON.stringify(v));
@@ -99,7 +112,9 @@ export const CalculadoraHHTab = () => {
     const horasPuesto = v.horasPuesto || 1;
     const costoHoraPuesto = costoPuestoMes / horasPuesto;
 
-    const hhFacturada = costoHoraPuesto * (1 + v.margenPct / 100);
+    // Margen sobre el precio de venta (mismo criterio que el cotizador).
+    const margenFrac = Math.min(Math.max(v.margenPct / 100, 0), 0.95);
+    const hhFacturada = costoHoraPuesto / (1 - margenFrac);
     const facturacionPuestoMes = hhFacturada * horasPuesto;
     const margenPuestoMes = facturacionPuestoMes - costoPuestoMes;
 
@@ -119,6 +134,26 @@ export const CalculadoraHHTab = () => {
 
   const usd = (n: number) =>
     v.tipoCambio > 0 ? ` · US$ ${Math.round(n / v.tipoCambio).toLocaleString('es-AR')}` : '';
+
+  // Cierra el circuito: arranca una cotización con este puesto precargado. El
+  // cotizador reaplica sus cargas sobre el costo_hora, así que le mandamos el
+  // costo por hora-hombre "des-cargado" para que su precio reproduzca la HH de
+  // acá exactamente. El margen usa el mismo criterio (sobre el precio).
+  const aplicarAlCotizador = () => {
+    const factorCargas = 1 + (cargasCotizador ?? v.cargasPct / 100);
+    const costoHoraBase = r.costoHoraPuesto / factorCargas;
+    navigate('/quotes/new', {
+      state: {
+        prefill: {
+          puesto_nombre: 'Puesto 24/7 (calculadora HH)',
+          tipo: 'HORAS_HOMBRE',
+          horas_mensuales: v.horasPuesto,
+          costo_hora: Math.round(costoHoraBase),
+          margen: Math.min(Math.max(v.margenPct / 100, 0), 0.95),
+        },
+      },
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -226,6 +261,16 @@ export const CalculadoraHHTab = () => {
                 <p className="text-lg font-bold text-emerald">{money(r.margenPuestoMes)}</p>
               </div>
             </div>
+
+            <button
+              onClick={aplicarAlCotizador}
+              className="w-full mt-4 py-3 rounded-xl bg-brand-blue hover:bg-brand-deep transition-colors flex items-center justify-center gap-2 text-sm font-bold text-white"
+            >
+              Aplicar al cotizador <ArrowRight size={16} />
+            </button>
+            <p className="text-[11px] text-white/40 text-center mt-2">
+              Arranca una cotización con este puesto y esta HH ya cargados.
+            </p>
           </div>
 
           <p className="text-xs text-muted px-1">
