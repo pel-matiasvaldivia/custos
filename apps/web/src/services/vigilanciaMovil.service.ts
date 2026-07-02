@@ -1,4 +1,12 @@
 import mobileApi from './mobileApi';
+import { enqueue, OutboxFile } from '../offline/outbox';
+
+export interface NovedadTipo {
+  id: string | null;
+  codigo: string;
+  etiqueta: string;
+  esDefault: boolean;
+}
 
 export interface TurnoActual {
   id: string;
@@ -23,14 +31,41 @@ export const vigilanciaMovilService = {
     return response.data;
   },
 
+  // Escrituras críticas → van por la cola offline (se envían al backend con
+  // idempotencia y el timestamp del dispositivo; funcionan sin señal).
   checkin: async (turnoId: string, metodo: string, location?: Location) => {
-    const response = await mobileApi.post('/mobile/asistencia/checkin', { turnoId, metodo, location });
-    return response.data;
+    return enqueue('checkin', '/mobile/asistencia/checkin', { turnoId, metodo, location });
   },
 
   checkout: async (turnoId: string, metodo: string, location?: Location) => {
-    const response = await mobileApi.post('/mobile/asistencia/checkout', { turnoId, metodo, location });
+    return enqueue('checkout', '/mobile/asistencia/checkout', { turnoId, metodo, location });
+  },
+
+  panic: async (location?: Location) => {
+    return enqueue('panic', '/mobile/panic', { location });
+  },
+
+  checkpoint: async (checkpointId: string, location?: Location) => {
+    return enqueue('checkpoint', '/mobile/checkpoint', { checkpointId, location });
+  },
+
+  novedadTipos: async (): Promise<NovedadTipo[]> => {
+    const response = await mobileApi.get<NovedadTipo[]>('/mobile/novedad-tipos');
     return response.data;
+  },
+
+  crearNovedad: async (
+    tipo: string,
+    descripcion: string,
+    prioridad: string,
+    adjuntos: { blob: Blob; filename: string }[],
+  ) => {
+    const files: OutboxFile[] = adjuntos.map((a) => ({
+      field: 'media',
+      filename: a.filename,
+      blob: a.blob,
+    }));
+    return enqueue('novedad', '/mobile/novedades', { tipo, descripcion, prioridad }, files);
   },
 
   solicitarRelevo: async (turnoOriginalId: string, motivo?: string) => {
