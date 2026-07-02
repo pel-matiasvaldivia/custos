@@ -50,6 +50,20 @@ export const liquidacionService = {
     });
     return res.data;
   },
+  descargarPdf: async (desde: string, hasta: string, valorHoraDefault = 0): Promise<void> => {
+    const res = await api.get('/liquidaciones/reporte/pdf', {
+      params: { desde, hasta, valor_hora_default: valorHoraDefault },
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `liquidacion-${desde}_${hasta}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  },
   historial: async (): Promise<LiquidacionResumen[]> => {
     const res = await api.get<LiquidacionResumen[]>('/liquidaciones/historial');
     return res.data;
