@@ -16,6 +16,7 @@ import { CreateObjetivoDto } from './dto/create-objetivo.dto';
 import { UpdateObjetivoDto } from './dto/update-objetivo.dto';
 import { AsignarVehiculoDto } from './dto/asignar-vehiculo.dto';
 import { FindObjetivosDto } from './dto/find-objetivos.dto';
+import { ConfigurarDispositivoDto } from './dto/configurar-dispositivo.dto';
 
 @Controller('objetivos')
 @UseGuards(JwtAuthGuard)
@@ -51,6 +52,22 @@ export class ObjetivoController {
     @Request() req: any,
   ) {
     return this.objetivoService.update(id, req.user.tenantId, body);
+  }
+
+  /** Estado de las credenciales del dispositivo compartido del objetivo. */
+  @Get(':id/dispositivo')
+  async estadoDispositivo(@Param('id') id: string, @Request() req: any) {
+    return this.objetivoService.estadoDispositivo(id, req.user.tenantId);
+  }
+
+  /** Configura PIN y/o TAG NFC del dispositivo compartido del objetivo. */
+  @Post(':id/dispositivo')
+  async configurarDispositivo(
+    @Param('id') id: string,
+    @Body() body: ConfigurarDispositivoDto,
+    @Request() req: any,
+  ) {
+    return this.objetivoService.configurarDispositivo(id, req.user.tenantId, body);
   }
 
   @Post(':id/vehiculos')

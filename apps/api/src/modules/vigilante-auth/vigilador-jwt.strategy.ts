@@ -24,6 +24,27 @@ export class VigiladorJwtStrategy extends PassportStrategy(
   }
 
   async validate(payload: any) {
+    // Modo "un celular por objetivo": el token identifica al objetivo, no a un
+    // vigilador. Los guardias se identifican por acción (se valida en el service).
+    if (payload.tipo === 'DISPOSITIVO') {
+      const objetivo = await this.prismaAdmin.objetivo.findFirst({
+        where: {
+          id: payload.objetivoId,
+          tenant_id: payload.tenantId,
+          estado: 'ACTIVO',
+        },
+        select: { id: true },
+      });
+      if (!objetivo) {
+        throw new UnauthorizedException('El objetivo ya no está activo.');
+      }
+      return {
+        objetivoId: payload.objetivoId,
+        tenantId: payload.tenantId,
+        tipo: 'DISPOSITIVO',
+      };
+    }
+
     if (payload.tipo !== 'VIGILADOR') {
       throw new UnauthorizedException('Token inválido');
     }

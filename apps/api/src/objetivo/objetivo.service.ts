@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import * as bcrypt from 'bcrypt';
 
 // Sólo para convertir horas semanales de cobertura a una estimación mensual
 // de costo de vehículo (asignarVehiculo) — no interviene en el cálculo de dotación.
@@ -276,6 +277,52 @@ export class ObjetivoService {
       data = { ...data, cliente_nombre: clienteNombre };
     }
     return this.prisma.objetivo.update({ where: { id }, data });
+  }
+
+  /** Estado de las credenciales del dispositivo compartido (sin exponer el hash). */
+  async estadoDispositivo(id: string, tenantId: string) {
+    const obj = await this.prisma.objetivo.findFirst({
+      where: { id, tenant_id: tenantId },
+      select: { dispositivo_pin: true, nfc_tag_id: true },
+    });
+    if (!obj) throw new NotFoundException('Objetivo no encontrado');
+    return {
+      tiene_pin: !!obj.dispositivo_pin,
+      nfc_tag_id: obj.nfc_tag_id,
+    };
+  }
+
+  /** Setea PIN (hasheado) y/o TAG NFC del dispositivo. Cadena vacía limpia. */
+  async configurarDispositivo(
+    id: string,
+    tenantId: string,
+    body: { pin?: string; nfc_tag_id?: string },
+  ) {
+    await this.findOne(id, tenantId);
+    const data: Prisma.ObjetivoUncheckedUpdateInput = {};
+
+    if (body.pin !== undefined) {
+      data.dispositivo_pin = body.pin ? await bcrypt.hash(body.pin, 10) : null;
+    }
+    if (body.nfc_tag_id !== undefined) {
+      const tag = body.nfc_tag_id.trim();
+      if (tag) {
+        // El TAG es único global: no puede estar tomado por otro objetivo.
+        const tomado = await this.prisma.objetivo.findFirst({
+          where: { nfc_tag_id: tag, id: { not: id } },
+          select: { id: true },
+        });
+        if (tomado) {
+          throw new ConflictException(
+            'Ese TAG NFC ya está asignado a otro objetivo.',
+          );
+        }
+      }
+      data.nfc_tag_id = tag || null;
+    }
+
+    await this.prisma.objetivo.update({ where: { id }, data });
+    return this.estadoDispositivo(id, tenantId);
   }
 
   async asignarVehiculo(

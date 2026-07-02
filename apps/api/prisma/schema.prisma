@@ -225,6 +225,9 @@ model Objetivo {
   updated_at     DateTime @default(now()) @db.Timestamptz
   lat            Float?
   lng            Float?
+  // Modo "un celular por objetivo": credenciales del dispositivo compartido.
+  dispositivo_pin String? // hash bcrypt del PIN de objetivo
+  nfc_tag_id      String? @unique // TAG NFC/RFID pegado en el objetivo
 
   tenant         Tenant                @relation(fields: [tenant_id], references: [id])
   cliente        Cliente?              @relation(fields: [cliente_id], references: [id])

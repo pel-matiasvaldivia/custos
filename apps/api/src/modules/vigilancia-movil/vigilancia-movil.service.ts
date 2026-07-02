@@ -146,6 +146,136 @@ export class VigilanciaMovilService {
     return new Date();
   }
 
+  /**
+   * Resuelve el vigilador que ejecuta la acción.
+   *  - Token de vigilador (login personal): es el del propio token.
+   *  - Token de dispositivo (un celular por objetivo): el vigilador viene en el
+   *    payload y se valida que esté asignado a ese objetivo (se identificó).
+   */
+  async resolverVigilador(
+    user: {
+      tipo: string;
+      vigiladorId?: string;
+      objetivoId?: string;
+      tenantId: string;
+    },
+    vigiladorIdPayload?: string,
+  ): Promise<string> {
+    if (user.tipo === 'VIGILADOR' && user.vigiladorId) {
+      return user.vigiladorId;
+    }
+    if (!vigiladorIdPayload) {
+      throw new BadRequestException(
+        'Identificate: elegí tu nombre antes de continuar.',
+      );
+    }
+    const asignado = await this.esVigiladorDelObjetivo(
+      user.tenantId,
+      user.objetivoId!,
+      vigiladorIdPayload,
+    );
+    if (!asignado) {
+      throw new ForbiddenException(
+        'Ese vigilador no está asignado a este objetivo.',
+      );
+    }
+    return vigiladorIdPayload;
+  }
+
+  /** IDs de los puestos (no eliminados) de un objetivo. */
+  private async puestoIdsDeObjetivo(
+    tenantId: string,
+    objetivoId: string,
+  ): Promise<string[]> {
+    const puestos = await this.prisma.puesto.findMany({
+      where: { tenant_id: tenantId, objetivo_id: objetivoId, deleted_at: null },
+      select: { id: true },
+    });
+    return puestos.map((p) => p.id);
+  }
+
+  /** ¿El vigilador tiene turnos en algún puesto de este objetivo? */
+  private async esVigiladorDelObjetivo(
+    tenantId: string,
+    objetivoId: string,
+    vigiladorId: string,
+  ): Promise<boolean> {
+    const puestoIds = await this.puestoIdsDeObjetivo(tenantId, objetivoId);
+    if (puestoIds.length === 0) return false;
+    const turno = await this.prisma.turnoPlanificado.findFirst({
+      where: {
+        tenant_id: tenantId,
+        vigilador_id: vigiladorId,
+        puesto_id: { in: puestoIds },
+      },
+      select: { id: true },
+    });
+    return !!turno;
+  }
+
+  /**
+   * Vigiladores asignados al objetivo del dispositivo, con el estado de su turno
+   * (en curso / próximo / sin turno) — alimenta el selector "¿Quién sos?".
+   */
+  async vigiladoresDelObjetivo(tenantId: string, objetivoId: string) {
+    const ahora = new Date();
+    const desde = new Date(ahora.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const hasta = new Date(ahora.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    const puestoIds = await this.puestoIdsDeObjetivo(tenantId, objetivoId);
+    if (puestoIds.length === 0) return [];
+
+    const turnos = await this.prisma.turnoPlanificado.findMany({
+      where: {
+        tenant_id: tenantId,
+        puesto_id: { in: puestoIds },
+        inicio_plan: { gte: desde, lte: hasta },
+      },
+      orderBy: { inicio_plan: 'asc' },
+      select: {
+        id: true,
+        vigilador_id: true,
+        inicio_plan: true,
+        fin_plan: true,
+        inicio_real: true,
+        fin_real: true,
+      },
+    });
+
+    const vigiladorIds = [...new Set(turnos.map((t) => t.vigilador_id))];
+    if (vigiladorIds.length === 0) return [];
+
+    const vigiladores = await this.prisma.vigilador.findMany({
+      where: { id: { in: vigiladorIds }, tenant_id: tenantId, estado: 'ACTIVO' },
+      select: { id: true, nombre: true, apellido: true, legajo_nro: true },
+    });
+
+    return vigiladores.map((v) => {
+      const suyos = turnos.filter((t) => t.vigilador_id === v.id);
+      const enCurso = suyos.find(
+        (t) => t.inicio_plan <= ahora && t.fin_plan >= ahora,
+      );
+      const proximo = suyos.find((t) => t.inicio_plan > ahora);
+      const turnoRef = enCurso ?? proximo ?? null;
+      return {
+        id: v.id,
+        nombre: v.nombre,
+        apellido: v.apellido,
+        legajo_nro: v.legajo_nro,
+        estado_turno: enCurso ? 'EN_TURNO' : proximo ? 'PROXIMO' : 'SIN_TURNO',
+        turno: turnoRef
+          ? {
+              id: turnoRef.id,
+              inicio_plan: turnoRef.inicio_plan,
+              fin_plan: turnoRef.fin_plan,
+              inicio_real: turnoRef.inicio_real,
+              fin_real: turnoRef.fin_real,
+            }
+          : null,
+      };
+    });
+  }
+
   async registrarPuntoControl(
     tenantId: string,
     vigiladorId: string,
@@ -435,6 +565,7 @@ export class VigilanciaMovilService {
     location: { lat: number; lng: number },
     clientEventId?: string,
     ts?: string,
+    objetivoId?: string,
   ) {
     if (await this.yaProcesado(tenantId, clientEventId)) {
       return { duplicated: true };
@@ -444,9 +575,13 @@ export class VigilanciaMovilService {
       `PANIC TRIGGERED by Vigilador ${vigiladorId} at ${location?.lat}, ${location?.lng}`,
     );
 
-    const objective = await this.prisma.objetivo.findFirst({
-      where: { tenant_id: tenantId },
-    });
+    // Modo dispositivo: el objetivo lo conocemos del token. Modo personal: se
+    // usa el puesto del turno en curso; como fallback, el primero del tenant.
+    const objective = objetivoId
+      ? await this.prisma.objetivo.findFirst({
+          where: { id: objetivoId, tenant_id: tenantId },
+        })
+      : await this.prisma.objetivo.findFirst({ where: { tenant_id: tenantId } });
     if (!objective)
       throw new NotFoundException('No se encontró objetivo para el tenant');
 
@@ -478,12 +613,14 @@ export class VigilanciaMovilService {
   }
 
   async updateLocation(
-    vigiladorId: string,
+    vigiladorId: string | undefined,
     tenantId: string,
     location: { lat: number; lng: number },
+    objetivoId?: string,
   ) {
     this.coGateway.emitToTenant(tenantId, 'vigilante.location', {
       vigiladorId,
+      objetivoId,
       ...location,
       ts: new Date(),
     });

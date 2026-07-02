@@ -1,7 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaAdminService } from '../../prisma/prisma-admin.service';
 import * as bcrypt from 'bcrypt';
+import { LoginDispositivoDto } from './dto/login-dispositivo.dto';
 
 @Injectable()
 export class VigilanteAuthService {
@@ -49,5 +54,80 @@ export class VigilanteAuthService {
     }
 
     throw new UnauthorizedException('Legajo o PIN inválidos');
+  }
+
+  /**
+   * Login del dispositivo compartido de un objetivo. Emite un token
+   * { objetivoId, tenantId, tipo: 'DISPOSITIVO' }. Los vigiladores no se
+   * loguean: se identifican por acción desde este dispositivo.
+   */
+  async loginDispositivo(body: LoginDispositivoDto) {
+    let objetivo: {
+      id: string;
+      tenant_id: string;
+      nombre: string;
+      direccion: string | null;
+      lat: number | null;
+      lng: number | null;
+      dispositivo_pin: string | null;
+    } | null = null;
+
+    if (body.nfc_tag) {
+      // El TAG físico es la credencial: no requiere PIN.
+      objetivo = await this.prismaAdmin.objetivo.findFirst({
+        where: { nfc_tag_id: body.nfc_tag, estado: 'ACTIVO' },
+        select: {
+          id: true,
+          tenant_id: true,
+          nombre: true,
+          direccion: true,
+          lat: true,
+          lng: true,
+          dispositivo_pin: true,
+        },
+      });
+      if (!objetivo) {
+        throw new UnauthorizedException('TAG no reconocido.');
+      }
+    } else if (body.objetivo_id && body.pin) {
+      objetivo = await this.prismaAdmin.objetivo.findFirst({
+        where: { id: body.objetivo_id, estado: 'ACTIVO' },
+        select: {
+          id: true,
+          tenant_id: true,
+          nombre: true,
+          direccion: true,
+          lat: true,
+          lng: true,
+          dispositivo_pin: true,
+        },
+      });
+      if (!objetivo || !objetivo.dispositivo_pin) {
+        throw new UnauthorizedException('Objetivo o PIN inválidos.');
+      }
+      const ok = await bcrypt.compare(body.pin, objetivo.dispositivo_pin);
+      if (!ok) throw new UnauthorizedException('Objetivo o PIN inválidos.');
+    } else {
+      throw new BadRequestException(
+        'Escaneá el TAG del objetivo o ingresá ID de objetivo y PIN.',
+      );
+    }
+
+    const payload = {
+      objetivoId: objetivo.id,
+      tenantId: objetivo.tenant_id,
+      tipo: 'DISPOSITIVO',
+    };
+    return {
+      access_token: this.jwtService.sign(payload),
+      objetivo: {
+        id: objetivo.id,
+        nombre: objetivo.nombre,
+        direccion: objetivo.direccion,
+        lat: objetivo.lat,
+        lng: objetivo.lng,
+        tenantId: objetivo.tenant_id,
+      },
+    };
   }
 }
