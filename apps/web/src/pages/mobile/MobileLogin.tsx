@@ -29,9 +29,18 @@ export default function MobileLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-brand-blue/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand-blue/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-b from-[#04140f] via-slate-950 to-[#050b16] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Identidad "de campo" de CustOS GO — distinta del login de oficina (azul):
+          acento verde táctico + textura de escaneo. */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-emerald/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-brand-blue/10 rounded-full blur-3xl pointer-events-none" />
+      <div
+        className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(45deg, #10b981 0, #10b981 1px, transparent 1px, transparent 22px)',
+        }}
+      />
 
       <div className="relative z-10 w-full max-w-sm">
         <div className="text-center mb-12">
@@ -46,6 +55,9 @@ export default function MobileLogin() {
           <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
             Ingresá con tu legajo y PIN
           </p>
+          <span className="inline-flex items-center gap-1.5 mt-4 text-emerald text-[10px] font-black uppercase tracking-[0.2em]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald animate-pulse" /> Modo campo · vigilador
+          </span>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 shadow-2xl">

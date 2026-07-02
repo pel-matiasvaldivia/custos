@@ -8,7 +8,6 @@ import {
   Shield,
   ChevronRight,
   Zap,
-  User,
   RefreshCw,
   WifiOff,
 } from 'lucide-react';
@@ -25,11 +24,17 @@ import { NovedadMovilModal } from './NovedadMovilModal';
 import { EscanerQRModal } from './EscanerQRModal';
 import { useOnline } from '../../hooks/useOnline';
 import { usePendingSync } from '../../hooks/usePendingSync';
+import { useWakeLock } from '../../hooks/useWakeLock';
 import { initOutbox } from '../../offline/outbox';
+import { mobileAuthService } from '../../services/mobileAuth.service';
 
 export const MobileDashboard = () => {
   const online = useOnline();
   const pendientes = usePendingSync();
+  const sesion = mobileAuthService.getSesion();
+  // Mantiene la pantalla encendida mientras la app está en primer plano, para
+  // que el guardia no pierda el turno en curso por el bloqueo del celular.
+  useWakeLock();
   const [isPanicActive, setIsPanicActive] = useState(false);
   const [location, setLocation] = useState<Location | null>(null);
   const [turno, setTurno] = useState<TurnoActual | null>(null);
@@ -164,12 +169,25 @@ export const MobileDashboard = () => {
             <span className="font-black italic uppercase tracking-tighter text-lg">CustOS <span className="text-brand-blue">GO</span></span>
         </div>
         <div className="flex items-center gap-3">
-            <span className={`text-[9px] font-black uppercase tracking-widest ${online ? 'text-emerald' : 'text-amber'}`}>
-              {online ? 'En línea' : 'Sin conexión'}
-            </span>
+            {sesion && (
+              <div className="text-right leading-tight">
+                <p className="text-[11px] font-bold text-white truncate max-w-[130px]">
+                  {sesion.apellido}, {sesion.nombre}
+                </p>
+                <p className="text-[9px] font-mono uppercase tracking-widest text-white/40">
+                  {sesion.legajo_nro ? `Legajo ${sesion.legajo_nro}` : 'Vigilador'}
+                </p>
+              </div>
+            )}
             <div className={`w-2 h-2 rounded-full ${location ? 'bg-emerald animate-pulse' : 'bg-red-500'}`} title="GPS" />
-            <User size={20} className="text-white/40" />
         </div>
+      </div>
+
+      {/* Estado de conexión + GPS bajo la barra, para no competir con la identidad */}
+      <div className="px-6 py-1.5 bg-slate-900/30 flex items-center justify-end gap-2 border-b border-white/5">
+        <span className={`text-[9px] font-black uppercase tracking-widest ${online ? 'text-emerald' : 'text-amber'}`}>
+          {online ? 'En línea' : 'Sin conexión'}
+        </span>
       </div>
 
       {/* Aviso offline: la app sigue operando; las acciones se sincronizan al volver la señal */}

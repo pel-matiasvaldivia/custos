@@ -4,6 +4,7 @@ export interface VigiladorSesion {
   id: string;
   nombre: string;
   apellido: string;
+  legajo_nro?: string;
   tenantId: string;
 }
 

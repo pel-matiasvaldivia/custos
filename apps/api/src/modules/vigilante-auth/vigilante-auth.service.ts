@@ -23,6 +23,7 @@ export class VigilanteAuthService {
         pin: true,
         nombre: true,
         apellido: true,
+        legajo_nro: true,
       },
     });
 
@@ -40,6 +41,7 @@ export class VigilanteAuthService {
             id: candidato.id,
             nombre: candidato.nombre,
             apellido: candidato.apellido,
+            legajo_nro: candidato.legajo_nro,
             tenantId: candidato.tenant_id,
           },
         };
