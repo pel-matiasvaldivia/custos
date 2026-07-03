@@ -763,6 +763,23 @@ export class VigilanciaMovilService {
     }
 
     const cuando = this.cuando(ts);
+
+    // Salida anticipada: no se permite marcar la salida antes del fin planificado
+    // del turno; el guardia debe pedir un relevo. Validamos con `cuando` (el `ts`
+    // del dispositivo = momento real en que se tocó "salir"), NO con la hora del
+    // servidor: si el checkout se encoló offline antes de fin_plan y recién se
+    // sincroniza más tarde, la intención original fue salir antes, así que se
+    // rechaza igual. El frontend distingue este caso por el `code`.
+    if (cuando < turno.fin_plan) {
+      throw new BadRequestException({
+        code: 'SALIDA_ANTICIPADA',
+        turnoId: turno.id,
+        finPlan: turno.fin_plan,
+        message:
+          'No se puede marcar la salida antes del fin del turno. Solicitá un relevo.',
+      });
+    }
+
     const actualizado = await this.prisma.turnoPlanificado.update({
       where: { id: turno.id },
       data: { fin_real: cuando, metodo },
