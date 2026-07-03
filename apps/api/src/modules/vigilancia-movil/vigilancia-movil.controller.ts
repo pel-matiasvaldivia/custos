@@ -95,15 +95,13 @@ export class VigilanciaMovilController {
     @Body() data: { location: { lat: number; lng: number }; vigiladorId?: string },
     @Request() req: any,
   ) {
-    // El tracking no exige identificación: si no hay vigilador (dispositivo sin
-    // seleccionar), se reporta el objetivo igual para el mapa en vivo.
-    const vigiladorId =
-      req.user.tipo === 'VIGILADOR' ? req.user.vigiladorId : data.vigiladorId;
+    // El tracking es el único endpoint que no exige identificación (para no dejar
+    // el mapa en vivo a oscuras). El service valida el vigiladorId del dispositivo
+    // sin bloquear y marca el ping como verificado o no.
     return this.mobileService.updateLocation(
-      vigiladorId,
-      req.user.tenantId,
+      req.user,
       data.location,
-      req.user.objetivoId,
+      data.vigiladorId,
     );
   }
 

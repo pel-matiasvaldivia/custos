@@ -26,7 +26,7 @@ import { EscanerQRModal } from './EscanerQRModal';
 import { useOnline } from '../../hooks/useOnline';
 import { usePendingSync } from '../../hooks/usePendingSync';
 import { useWakeLock } from '../../hooks/useWakeLock';
-import { initOutbox } from '../../offline/outbox';
+import { initOutbox, subscribeRejections } from '../../offline/outbox';
 import { mobileAuthService, VigiladorActivo } from '../../services/mobileAuth.service';
 import { Users, LogOut, ChevronDown } from 'lucide-react';
 
@@ -188,6 +188,17 @@ export const MobileDashboard = () => {
       setProcesandoAsistencia(false);
     }
   };
+
+  // Si un checkout encolado se rechaza por salida anticipada (p. ej. sincronizado
+  // tarde o por una vía que salteó el guard), lo derivamos al modal de relevo en
+  // vez de perderlo en silencio en el outbox.
+  useEffect(() => {
+    return subscribeRejections((r) => {
+      if (r.tipo === 'checkout' && r.code === 'SALIDA_ANTICIPADA') {
+        setModalRelevo(true);
+      }
+    });
+  }, []);
 
   const handleCheckout = async () => {
     if (!turno) return;

@@ -37,6 +37,41 @@ describe('conciliacion.domain', () => {
     it('null si falta asistencia', () => {
       expect(horasNocturnas(null, D('2026-06-01T20:00'))).toBe(0);
     });
+
+    it('cruce del límite a mitad de hora: 20:30→21:30 → 0.5 nocturnas', () => {
+      // Caso que la versión de liquidaciones (tramos anclados al inicio del
+      // turno) calculaba mal: el tramo 20:30–21:30 arrancaba en h=20 y perdía
+      // la media hora 21:00–21:30.
+      expect(
+        horasNocturnas(D('2026-06-01T20:30'), D('2026-06-01T21:30')),
+      ).toBe(0.5);
+    });
+
+    it('relevo real 20:30→06:00 → 9 nocturnas (21→06)', () => {
+      expect(
+        horasNocturnas(D('2026-06-01T20:30'), D('2026-06-02T06:00')),
+      ).toBe(9);
+    });
+  });
+
+  describe('horasNocturnas (ventana que NO cruza medianoche, 00→06)', () => {
+    it('turno 22:00→08:00 → 6 nocturnas (00–06)', () => {
+      expect(
+        horasNocturnas(D('2026-06-01T22:00'), D('2026-06-02T08:00'), 0, 6),
+      ).toBe(6);
+    });
+
+    it('turno diurno 08–20 → 0 nocturnas (la versión vieja contaba 12)', () => {
+      expect(
+        horasNocturnas(D('2026-06-01T08:00'), D('2026-06-01T20:00'), 0, 6),
+      ).toBe(0);
+    });
+
+    it('ventana vacía (inicio === fin) → 0', () => {
+      expect(
+        horasNocturnas(D('2026-06-01T00:00'), D('2026-06-02T00:00'), 6, 6),
+      ).toBe(0);
+    });
   });
 
   describe('conciliarHH', () => {

@@ -21,9 +21,19 @@ export class VigilanciaMovilService {
     private readonly storage: StorageService,
   ) {}
 
-  /** Tipos de novedad predefinidos (catálogo NOVEDAD_TIPO del tenant). */
+  /**
+   * Tipos de novedad predefinidos (catálogo NOVEDAD_TIPO del tenant).
+   *
+   * ADELANTO_SUELDO se excluye del móvil: crear esa novedad por la web
+   * (NovedadService.create) genera una fila en el ledger `adelanto` que
+   * Liquidaciones descuenta del recibo — es un acto administrativo que
+   * registra la oficina cuando aprueba y entrega el dinero, no algo que el
+   * vigilador se auto-registre desde el teléfono. Desde el móvil, el pedido
+   * se hace como novedad GENERAL y la oficina lo formaliza en Novedades.
+   */
   async listarNovedadTipos(tenantId: string) {
-    return this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO');
+    const tipos = await this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO');
+    return tipos.filter((t) => t.codigo !== 'ADELANTO_SUELDO');
   }
 
   /** Crea una novedad desde el móvil, con adjuntos (foto/audio) opcionales. */
@@ -43,6 +53,18 @@ export class VigilanciaMovilService {
       mimetype: string;
     }> = [],
   ) {
+    // No alcanza con ocultar el tipo en listarNovedadTipos: un request armado
+    // a mano igual crearía la novedad SIN pasar por el ledger de adelantos
+    // (eso solo lo hace NovedadService.create, el camino de la web) y quedaría
+    // un "adelanto" que Liquidaciones nunca descuenta.
+    if (data.tipo === 'ADELANTO_SUELDO') {
+      throw new BadRequestException({
+        code: 'ADELANTO_SOLO_OFICINA',
+        message:
+          'El adelanto de sueldo se registra desde la oficina (módulo Novedades). Pedilo con una novedad general.',
+      });
+    }
+
     if (await this.yaProcesado(tenantId, data.clientEventId)) {
       return { duplicated: true };
     }
@@ -612,15 +634,48 @@ export class VigilanciaMovilService {
     return incident;
   }
 
+  /**
+   * Reporta la ubicación para el mapa en vivo del SOC. A diferencia del resto de
+   * endpoints móviles, el tracking NO exige identificación: en un dispositivo
+   * compartido queremos que el mapa siga mostrando la posición aunque todavía
+   * nadie se haya seleccionado. Pero no confiamos ciegamente en el vigiladorId
+   * del body: en modo dispositivo lo validamos contra el objetivo y, si no
+   * pertenece (o no vino), igual emitimos la ubicación marcada como no verificada
+   * (`validado: false`) para que el mapa la muestre con un indicador distinto en
+   * vez de aceptar una identidad spoofeada como si fuera confiable.
+   */
   async updateLocation(
-    vigiladorId: string | undefined,
-    tenantId: string,
+    user: {
+      tipo: string;
+      vigiladorId?: string;
+      objetivoId?: string;
+      tenantId: string;
+    },
     location: { lat: number; lng: number },
-    objetivoId?: string,
+    vigiladorIdPayload?: string,
   ) {
-    this.coGateway.emitToTenant(tenantId, 'vigilante.location', {
+    let vigiladorId: string | undefined;
+    let validado = false;
+
+    if (user.tipo === 'VIGILADOR' && user.vigiladorId) {
+      // Identidad del token personal: confiable.
+      vigiladorId = user.vigiladorId;
+      validado = true;
+    } else if (vigiladorIdPayload && user.objetivoId) {
+      // Modo dispositivo: conservamos el vigilador reclamado pero marcamos si
+      // realmente está asignado a este objetivo.
+      vigiladorId = vigiladorIdPayload;
+      validado = await this.esVigiladorDelObjetivo(
+        user.tenantId,
+        user.objetivoId,
+        vigiladorIdPayload,
+      );
+    }
+
+    this.coGateway.emitToTenant(user.tenantId, 'vigilante.location', {
       vigiladorId,
-      objetivoId,
+      objetivoId: user.objetivoId,
+      validado,
       ...location,
       ts: new Date(),
     });
@@ -763,6 +818,23 @@ export class VigilanciaMovilService {
     }
 
     const cuando = this.cuando(ts);
+
+    // Salida anticipada: no se permite marcar la salida antes del fin planificado
+    // del turno; el guardia debe pedir un relevo. Validamos con `cuando` (el `ts`
+    // del dispositivo = momento real en que se tocó "salir"), NO con la hora del
+    // servidor: si el checkout se encoló offline antes de fin_plan y recién se
+    // sincroniza más tarde, la intención original fue salir antes, así que se
+    // rechaza igual. El frontend distingue este caso por el `code`.
+    if (cuando < turno.fin_plan) {
+      throw new BadRequestException({
+        code: 'SALIDA_ANTICIPADA',
+        turnoId: turno.id,
+        finPlan: turno.fin_plan,
+        message:
+          'No se puede marcar la salida antes del fin del turno. Solicitá un relevo.',
+      });
+    }
+
     const actualizado = await this.prisma.turnoPlanificado.update({
       where: { id: turno.id },
       data: { fin_real: cuando, metodo },

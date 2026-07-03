@@ -91,6 +91,22 @@ export function subscribePending(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+// ─── Suscripción a rechazos permanentes del servidor ───
+export interface OutboxRejection {
+  tipo: OutboxTipo;
+  status: number;
+  code?: string;
+  data?: unknown;
+}
+type RejectionListener = (r: OutboxRejection) => void;
+const rejectionListeners = new Set<RejectionListener>();
+
+/** Notifica cuando una acción se descarta por rechazo permanente (4xx) del backend. */
+export function subscribeRejections(listener: RejectionListener): () => void {
+  rejectionListeners.add(listener);
+  return () => rejectionListeners.delete(listener);
+}
+
 export async function pendingCount(): Promise<number> {
   return (await getAll().catch(() => [])).length;
 }
@@ -161,6 +177,10 @@ export async function flush(): Promise<void> {
           // se descarta para no bloquear la cola. Los de red / 401 se conservan.
           await tx('readwrite', (s) => s.delete(item.id));
           await notify();
+          const data = (err as { response?: { data?: { code?: string } } })?.response?.data;
+          rejectionListeners.forEach((l) =>
+            l({ tipo: item.tipo, status, code: data?.code, data }),
+          );
           // eslint-disable-next-line no-console
           console.warn(`[outbox] acción ${item.tipo} descartada (HTTP ${status})`);
           continue;
