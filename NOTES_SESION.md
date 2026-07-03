@@ -92,7 +92,25 @@ bajo la clave `undefined`).
 Spec `incidente-familias.spec.ts` → 4/4 passing. (Los tests que tocan DB requieren
 Postgres, no corridos acá; la migración quedó lista para aplicar con `prisma migrate`.)
 
-## FIX 4 — Endpoints legacy de rondas sin aislamiento de tenant — PENDIENTE
+## FIX 4 — Endpoints legacy de rondas sin aislamiento de tenant ✅ APLICADO
+
+**Escenario encontrado:** endpoints MUERTOS. Búsqueda en todo el repo (backend, web,
+mobile, `.md`, `.json`/Postman, `.e2e-spec`) → 0 consumidores de los 4:
+`POST /rondas/start`, `POST /rondas/:id/mark`, `PATCH /rondas/:id/finish`, `GET /rondas/active`.
+Reemplazados por el flujo real en `vigilancia-movil`: `POST /mobile/rondas/iniciar`
+(`iniciarRonda`), marca por scan QR/NFC (`scan`), cierre por el watcher `RondaVigilanciaService`.
+
+**Bug confirmado (por eso importaba):** `markCheckpoint` creaba `marca_ronda` con solo
+`ronda_id`+`punto_control_id`, sin validar que la ronda fuera del tenant; `marca_ronda`
+no tiene `tenant_id`, así que RLS no la cubre → cross-tenant. `startRonda` tampoco
+validaba `puesto_id`/`vigilador_id`.
+
+**Decisión → eliminar** (código muerto e inseguro; no vale la pena mantener superficie
+que nadie usa). Se borraron los 4 handlers del controller + los 4 métodos del service
+(`startRonda`, `markCheckpoint`, `finishRonda`, `getActiveRondas`) + el import `Patch`
+(quedaba sin uso). Se conservan checkpoints, plantillas y `ejecucionesPorObjetivo`.
+
+**Verificación:** `tsc --noEmit` API → 0 errores.
 
 ## FIX 5 — Adelanto de sueldo desde mobile no se registra en Liquidaciones — PENDIENTE
 (Decisión A/B pendiente de confirmar.)
