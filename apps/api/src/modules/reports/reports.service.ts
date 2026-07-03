@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import * as PdfPrinter from 'pdfmake';
-// @ts-ignore
-import printer = require('pdfmake');
+// @ts-ignore - pdfmake no trae tipos; se usa el runtime directamente.
+import pdfMake = require('pdfmake');
 import * as ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -13,17 +12,18 @@ export class ReportsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  // pdfmake 0.3.x: el export es una instancia singleton (no un constructor);
+  // el patrón viejo `new printer(fonts)` reventaba en runtime con 500.
   private getPrinter() {
-    const fonts = {
+    pdfMake.setFonts({
       Roboto: {
         normal: 'Helvetica',
         bold: 'Helvetica-Bold',
         italics: 'Helvetica-Oblique',
         bolditalics: 'Helvetica-BoldOblique',
       },
-    };
-    // @ts-ignore
-    return new printer(fonts);
+    });
+    return pdfMake;
   }
 
   async generateIncidentPdf(tenantId: string, filters: any) {
@@ -86,8 +86,10 @@ export class ReportsService {
       defaultStyle: { fontSize: 9 },
     };
 
-    const printer = this.getPrinter();
-    return printer.createPdfKitDocument(docDefinition);
+    const buffer: Buffer = await this.getPrinter()
+      .createPdf(docDefinition)
+      .getBuffer();
+    return buffer;
   }
 
   async generateIncidentExcel(tenantId: string, filters: any) {

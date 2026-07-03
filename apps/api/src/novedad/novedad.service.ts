@@ -1,15 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateNovedadDto } from './dto/create-novedad.dto';
 import { FiltrarNovedadesDto } from './dto/filtrar-novedades.dto';
 // @ts-ignore - pdfmake no trae tipos; se usa el runtime directamente.
-import printer = require('pdfmake');
+import pdfMake = require('pdfmake');
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 @Injectable()
 export class NovedadService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private storage: StorageService,
+  ) {}
 
   /** Arma el filtro Prisma común al listado y al reporte PDF. */
   private buildWhere(tenantId: string, f: FiltrarNovedadesDto) {
@@ -99,16 +103,17 @@ export class NovedadService {
       take: 1000,
     });
 
-    const fonts = {
+    // pdfmake 0.3.x: el export es una instancia singleton (no un constructor).
+    // El patrón viejo `new printer(fonts)` + createPdfKitDocument revienta en
+    // runtime ("printer is not a constructor") → el reporte devolvía 500.
+    pdfMake.setFonts({
       Roboto: {
         normal: 'Helvetica',
         bold: 'Helvetica-Bold',
         italics: 'Helvetica-Oblique',
         bolditalics: 'Helvetica-BoldOblique',
       },
-    };
-    // @ts-ignore
-    const pdf = new printer(fonts);
+    });
 
     const docDefinition: any = {
       pageMargins: [32, 40, 32, 40],
@@ -153,7 +158,25 @@ export class NovedadService {
       defaultStyle: { fontSize: 8, color: '#0e1f3a' },
     };
 
-    return pdf.createPdfKitDocument(docDefinition);
+    const buffer: Buffer = await pdfMake.createPdf(docDefinition).getBuffer();
+    return buffer;
+  }
+
+  /**
+   * Streamea un adjunto de la novedad (foto/audio subidos desde el móvil).
+   * `adjuntos` guarda keys de MinIO; la URL firmada de MinIO apunta al hostname
+   * interno (no resoluble desde el navegador), así que se sirve a través de la
+   * API, validando que la novedad sea del tenant.
+   */
+  async obtenerAdjunto(tenantId: string, novedadId: string, indice: number) {
+    const novedad = await this.prisma.novedad.findFirst({
+      where: { id: novedadId, tenant_id: tenantId },
+      select: { adjuntos: true },
+    });
+    if (!novedad) throw new NotFoundException('Novedad no encontrada.');
+    const key = novedad.adjuntos[indice];
+    if (!key) throw new NotFoundException('Adjunto no encontrado.');
+    return this.storage.descargar(key);
   }
 
   async findByPuesto(tenantId: string, puestoId: string) {

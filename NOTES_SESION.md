@@ -189,6 +189,94 @@ Trabajo reportado para hacer aparte (no incluido a propósito):
 
 ---
 
+---
+
+# Ronda 2 — 8 bugs reportados por QA (2026-07-03)
+
+Diagnóstico hecho leyendo el código de la rama (los 6 fixes anteriores ya aplicados).
+OJO: el error de consola que reportó QA es de un bundle de producción
+(`index-C_mYU1t0.js`) que NO incluye esta rama; parte de lo reportado ya estaba
+arreglado acá (FIX 2) y falta deployar.
+
+## B1 — Comercial /objetivos: el mapa queda por encima de los modales
+**Causa:** Leaflet usa z-index 400–1000 en sus panes/controles internos y
+`.leaflet-container` no crea stacking context; los modales del app usan `z-50`
+(50 < 400) → el mapa (GeoObjetivoSection y cualquier otro) tapa el overlay.
+**Fix:** CSS global en `index.css`: `.leaflet-container { z-index: 0; isolation: isolate; }`
+(encapsula los z-index internos del mapa). ✅ APLICADO
+
+## B2 — Login del móvil con ID de objetivo + PIN falla
+**Causa probable:** el código se genera `OBJ-2026-0001` (mayúsculas). El input de
+`MobileLogin.tsx` tiene clase CSS `uppercase` (solo visual) y manda lo tipeado tal
+cual; el backend compara `codigo` case-sensitive → "obj-2026-0001" no matchea
+aunque el usuario lo ve en mayúsculas.
+**Fix:** frontend manda `.toUpperCase()`; backend busca con `mode: 'insensitive'`
+(defensa doble). ✅ APLICADO
+
+## B3 — Pánico atendido/cerrado desaparece y no hay dónde verlo
+**Causa:** al resolver, `incident.resolved` lo saca del dashboard, pero el único
+endpoint es `GET incidentes/activos` (estado != RESUELTO) y no existe NINGUNA
+vista de cerrados. Además las pestañas Pendientes/En Atención/Verificando del SOC
+eran decorativas (sin onClick).
+**Fix:** endpoint `GET /centro-operaciones/incidentes/cerrados` (RESUELTO, últimos
+100, filtro desde/hasta) + pestañas funcionales en MonitoringPage con nueva pestaña
+"Cerrados" que lista disposición y hora de cierre. ✅ APLICADO
+
+## B4 — Mapa en Vivo: TypeError .slice sobre undefined
+**Causa:** era el bug de FIX 2 (MapView usaba `guard.vigilanteId.slice(0,8)` con el
+campo mal nombrado → siempre undefined). YA ESTÁ ARREGLADO en esta rama; el bundle
+del deploy es anterior. Quedaba un `.slice` hermano sin guardar:
+`MonitoringPage:314` `ev.dispositivo_id.slice(0,4)` revienta si un evento llega sin
+`dispositivo_id` (p. ej. los sintéticos de rondas ya mandan `''`, pero un payload
+sin el campo crashea el stream).
+**Fix:** guard con `?.` + fallback; y `processEvent` ahora emite `event.new` con
+`objetivo: { nombre }` incluido para que el stream muestre el nombre real. ✅ APLICADO
+**Pendiente de infra:** deployar el frontend de esta rama.
+
+## B5 — Cuadrante no se condice con asignaciones; Generar Mes/Exportar no hacen nada
+**Causa:** `QuadrantPage.tsx` era un MOCKUP hardcodeado (filas "PÉREZ"/"GONZÁLEZ"
+con módulo 5/7, mes fijo "Junio 2026", botones sin onClick). El cuadrante real
+existe por objetivo (`GET /cuadrante/objetivos/:id`).
+**Fix:** página reescrita consolidando el cuadrante real de todos los objetivos
+activos (mes navegable); "Generar Mes" llama al nuevo endpoint
+`POST /cuadrante/generar-mes` (recorre asignaciones-esquema vigentes que pisan el
+mes y genera con la lógica idempotente existente); "Exportar" baja CSV. ✅ APLICADO
+
+## B6 — Novedades: no se ven en vivo y el informe no baja
+**Causa (en vivo):** el backend emite `novedad.new` pero NADIE lo escucha:
+ni MonitoringPage (stream) ni NovedadesPage. Además el payload solo traía IDs.
+**Causa (informe) — CONFIRMADA en runtime:** pdfmake es ^0.3.11 y en 0.3 el
+export es una instancia singleton, NO un constructor. `new printer(fonts)` +
+`createPdfKitDocument()` tiran `TypeError: printer is not a constructor` → el
+endpoint devolvía 500 SIEMPRE (verificado con script aislado). `contrato-pdf` y
+`cotizacion-pdf` ya usaban la API nueva (`setFonts` + `createPdf().getBuffer()`);
+novedades, liquidaciones y reports quedaron con la vieja.
+**Fix:** migrados los 3 servicios rotos a `setFonts` + `createPdf().getBuffer()`
+(devuelven Buffer; los controllers hacen `res.send(buffer)`); patrón validado en
+runtime (genera `%PDF-` OK). Payload de `novedad.new` enriquecido (vigilador,
+puesto, prioridad, descripción); MonitoringPage lo suma al event stream;
+NovedadesPage se suscribe y refresca en vivo; catch con mensaje visible en la
+descarga (antes fallaba en silencio). ✅ APLICADO
+**Observación fuera de alcance:** `ReportsPage.tsx` (Informes) es un mockup:
+KPIs hardcodeados y descarga vía `window.open('/api/v1/reports/...')` que ni
+coincide con la ruta real (`centro-operaciones/informes/...`) ni manda el JWT.
+Se arregló el 500 del backend, pero esa página necesita su propio rework.
+
+## B7 — No se ven inicios de ronda ni escaneos QR en el SOC
+**Causa:** el backend emite `ronda.start` y `ronda.checkpoint` pero MonitoringPage
+solo escuchaba `ronda.alerta`. Payloads con IDs pelados (sin nombres).
+**Fix:** payloads enriquecidos (vigilador, plantilla/punto) + listeners en
+MonitoringPage que los meten al event stream. ✅ APLICADO
+
+## B8 — No se puede escuchar el audio ni ver la foto de la novedad del móvil
+**Causa:** el móvil sube foto/audio a MinIO y guarda las KEYS en
+`novedad.adjuntos`, pero (a) no existía endpoint para servir esos archivos
+(la URL firmada de MinIO apunta al hostname interno) y (b) NovedadesPage ni
+siquiera renderizaba los adjuntos.
+**Fix:** `GET /novedades/:id/adjuntos/:indice` (valida tenant y streamea desde
+MinIO vía StorageService.descargar) + NovedadesPage renderiza miniaturas de fotos
+y reproductor de audio (fetch autenticado a blob). ✅ APLICADO
+
 ### Notas de entorno
 - El repo se clonó en `/workspace/custos` (la tarea inicialmente apuntaba al repo
   equivocado `frigoapp`; el correcto es `custos`).

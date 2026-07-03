@@ -283,16 +283,16 @@ export class LiquidacionesService {
     const totalHoras = computo.items.reduce((s, i) => s + i.hh_trabajadas, 0);
     const totalNeto = computo.items.reduce((s, i) => s + i.neto, 0);
 
-    const fonts = {
+    // pdfmake 0.3.x: el export es una instancia singleton (no un constructor);
+    // el patrón viejo `new pdfPrinter(fonts)` reventaba en runtime con 500.
+    pdfPrinter.setFonts({
       Roboto: {
         normal: 'Helvetica',
         bold: 'Helvetica-Bold',
         italics: 'Helvetica-Oblique',
         bolditalics: 'Helvetica-BoldOblique',
       },
-    };
-    // @ts-ignore
-    const pdf = new pdfPrinter(fonts);
+    });
 
     const header = [
       { text: 'LEGAJO', style: 'th' },
@@ -376,7 +376,8 @@ export class LiquidacionesService {
       defaultStyle: { fontSize: 8, color: '#0e1f3a' },
     };
 
-    return pdf.createPdfKitDocument(docDefinition);
+    const buffer: Buffer = await pdfPrinter.createPdf(docDefinition).getBuffer();
+    return buffer;
   }
 
   // ── helpers ──

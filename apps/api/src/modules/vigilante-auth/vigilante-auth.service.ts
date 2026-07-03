@@ -92,10 +92,18 @@ export class VigilanteAuthService {
     } else if ((body.objetivo_codigo || body.objetivo_id) && body.pin) {
       // Código: puede repetirse entre tenants, así que se comparan todos los
       // candidatos por PIN (como el login por legajo). ID: es único global.
+      // El código se compara case-insensitive: se genera en mayúsculas
+      // (OBJ-2026-0001) pero el guardia puede tipearlo en minúsculas.
       const candidatos = await this.prismaAdmin.objetivo.findMany({
         where: body.objetivo_id
           ? { id: body.objetivo_id, estado: 'ACTIVO' }
-          : { codigo: body.objetivo_codigo, estado: 'ACTIVO' },
+          : {
+              codigo: {
+                equals: (body.objetivo_codigo ?? '').trim(),
+                mode: 'insensitive',
+              },
+              estado: 'ACTIVO',
+            },
         select: {
           id: true,
           tenant_id: true,

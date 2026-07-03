@@ -71,7 +71,7 @@ export class LiquidacionesController {
     @Query('valor_hora_default') valorHoraDefault: string,
     @Res() res: Response,
   ) {
-    const doc = await this.liquidaciones.generarReportePdf(
+    const buffer = await this.liquidaciones.generarReportePdf(
       req.user.tenantId,
       desde,
       hasta,
@@ -82,8 +82,7 @@ export class LiquidacionesController {
       'Content-Disposition',
       `attachment; filename=liquidacion-${desde}_${hasta}.pdf`,
     );
-    doc.pipe(res);
-    doc.end();
+    res.send(buffer);
   }
 
   /** Detalle de una liquidación cerrada. */

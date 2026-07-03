@@ -183,4 +183,13 @@ export const cuadranteService = {
     });
     return response.data;
   },
+
+  /** Genera los turnos de todas las asignaciones de esquema vigentes del tenant en el rango. */
+  generarMes: async (
+    desde: string,
+    hasta: string,
+  ): Promise<GeneracionResultado & { asignaciones: number }> => {
+    const response = await api.post('/cuadrante/generar-mes', { desde, hasta });
+    return response.data;
+  },
 };

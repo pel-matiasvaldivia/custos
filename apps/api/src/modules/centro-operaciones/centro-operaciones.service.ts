@@ -35,6 +35,8 @@ export class CentroOperacionesService {
     }
 
     // 2. Persist Event
+    // Se incluye el objetivo para que el stream en vivo del SOC pueda mostrar
+    // el nombre (el payload de 'event.new' es este mismo registro).
     const event = await this.prisma.evento.create({
       data: {
         tenant_id,
@@ -48,6 +50,7 @@ export class CentroOperacionesService {
         crudo: data.crudo || {},
         id_origen,
       },
+      include: { objetivo: { select: { id: true, nombre: true } } },
     });
 
     // 3. Update Device Health
@@ -165,6 +168,29 @@ export class CentroOperacionesService {
         eventos: { orderBy: { ts_evento: 'desc' }, take: 5 },
       },
       orderBy: { abierto_el: 'desc' },
+    });
+  }
+
+  /**
+   * Incidentes RESUELTOS (pestaña "Cerrados" del SOC). Sin filtro de fechas
+   * devuelve los últimos 100; con desde/hasta acota por fecha de cierre.
+   */
+  async getClosedIncidents(tenantId: string, desde?: string, hasta?: string) {
+    const where: Prisma.IncidenteWhereInput = {
+      tenant_id: tenantId,
+      estado: 'RESUELTO',
+    };
+    if (desde || hasta) {
+      where.resuelto_el = {
+        gte: desde ? new Date(desde) : undefined,
+        lte: hasta ? new Date(`${hasta}T23:59:59`) : undefined,
+      };
+    }
+    return this.prisma.incidente.findMany({
+      where,
+      include: { objetivo: true },
+      orderBy: { resuelto_el: 'desc' },
+      take: 100,
     });
   }
 
