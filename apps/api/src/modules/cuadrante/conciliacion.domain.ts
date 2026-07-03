@@ -52,9 +52,11 @@ export function duracionHoras(inicio: Date, fin: Date): number {
 }
 
 /**
- * Horas dentro de la ventana nocturna (que cruza medianoche, ej. 21→06).
- * Se calcula recorriendo el intervalo hora a hora fraccionada de forma exacta
- * mediante segmentación por límites de la ventana en cada día.
+ * Horas del intervalo [inicio, fin) dentro de la ventana nocturna, con
+ * precisión de minuto. Única fuente de verdad: la usan la conciliación
+ * (facturación) y Liquidaciones (pago) para que ambas informen lo mismo.
+ * Soporta ventanas que cruzan medianoche (21→06) y que no (00→06).
+ * Ventana con inicio === fin se considera vacía → 0.
  */
 export function horasNocturnas(
   inicio: Date | null,
@@ -63,13 +65,17 @@ export function horasNocturnas(
   nocheFinHora = 6,
 ): number {
   if (!inicio || !fin || fin <= inicio) return 0;
+  if (nocheInicioHora === nocheFinHora) return 0;
 
   // Itera en pasos de 1 minuto: simple y exacto para montos en horas.
   let nocturnas = 0;
   const paso = 60_000; // 1 min
   for (let t = inicio.getTime(); t < fin.getTime(); t += paso) {
     const h = new Date(t).getHours();
-    const esNoche = h >= nocheInicioHora || h < nocheFinHora;
+    const esNoche =
+      nocheInicioHora > nocheFinHora
+        ? h >= nocheInicioHora || h < nocheFinHora // ventana que cruza medianoche
+        : h >= nocheInicioHora && h < nocheFinHora; // ventana dentro del mismo día
     if (esNoche) nocturnas += paso;
   }
   return r2(nocturnas / MS_HORA);

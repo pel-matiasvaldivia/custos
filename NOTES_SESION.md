@@ -137,7 +137,38 @@ de solicitud+aprobación sería una feature aparte, no este fix.
 
 **Verificación:** `tsc --noEmit` API → 0 errores.
 
-## FIX 6 — Dos cálculos de horas nocturnas que no coinciden — PENDIENTE
+## FIX 6 — Dos cálculos de horas nocturnas que no coinciden ✅ APLICADO
+
+**Desajuste confirmado (mismo turno, resultados distintos):**
+- `conciliacion.domain.ts` (facturación): minuto-precisa PERO asumía ventana que cruza
+  medianoche (`h >= ini || h < fin`) → con ventana 00→06 contaba las 24h como nocturnas.
+- `liquidaciones.service.ts` (pago): manejaba ambas ventanas PERO iteraba en tramos de
+  1h anclados al inicio del turno, clasificando el tramo por la hora en que empieza →
+  turno 20:30→06:00 con ventana 21→06 daba 8.5h en vez de 9 (perdía 21:00–21:30).
+  Se facturaban 9h al cliente y se pagaban 8.5 al vigilador.
+
+**Cambios:**
+- `conciliacion.domain.ts::horasNocturnas`: única fuente de verdad. Minuto-precisa +
+  soporta ventana que cruza y que no cruza medianoche; inicio===fin → ventana vacía (0).
+- `liquidaciones.service.ts`: se borró el método privado `horasNocturnas`; importa el
+  de dominio y lo usa en `agregarTurnos`. `horasEntre` se queda (duración simple).
+- Tests nuevos en `conciliacion.domain.spec.ts`: 20:30→21:30 → 0.5; 20:30→06:00 → 9;
+  ventana 00→06 con turno 22→08 → 6 y diurno → 0; ventana vacía → 0.
+
+**Verificación:** `npm run test -- --testPathPattern "cuadrante|conciliacion|liquidaciones"`
+→ 5 suites, 37/37 passing. `tsc --noEmit` → 0 errores. (No existe spec de liquidaciones.)
+
+**Evaluación hh_feriado (solo informe, SIN cambios, como se pidió):**
+`ReglaLaboral` ya tiene `recargo_feriado_pct` (default 100) y existe la tabla `feriados`
+por tenant; la conciliación computa `hh_feriado` y lo persiste en `conciliacion_hh`.
+Liquidaciones lo IGNORA: no selecciona `recargo_feriado_pct`, no cruza turnos con
+`feriados`, `LiquidacionItem` no tiene columna `hh_feriado`, y el bruto es solo
+trabajadas + nocturnas + extra → el feriado se factura al cliente pero al vigilador
+se le paga como día común. SÍ correspondería el recargo (CCT vigilancia: feriado
+trabajado al 100%). Implementarlo requiere: cruzar `inicio_real` con `feriados`,
+acumular `hh_feriado` en `agregarTurnos`, sumar `vh·recFeriado·hh_feriado` al bruto,
+y migración para `LiquidacionItem.hh_feriado`. Impacto monetario directo en recibos →
+queda reportado como trabajo aparte.
 
 ---
 

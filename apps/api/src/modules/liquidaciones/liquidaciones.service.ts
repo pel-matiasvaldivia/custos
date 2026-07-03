@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { horasNocturnas } from '../cuadrante/conciliacion.domain';
 // @ts-ignore - pdfmake no trae tipos; se usa el runtime directamente.
 import pdfPrinter = require('pdfmake');
 
@@ -25,20 +26,9 @@ export class LiquidacionesService {
     return Math.max(0, (b.getTime() - a.getTime()) / 3_600_000);
   }
 
-  /** Horas del intervalo [ini,fin] que caen dentro de la ventana nocturna. */
-  private horasNocturnas(ini: Date, fin: Date, desdeH: number, hastaH: number): number {
-    let noct = 0;
-    const cursor = new Date(ini);
-    while (cursor < fin) {
-      const next = new Date(cursor.getTime() + 3_600_000);
-      const tramoFin = next < fin ? next : fin;
-      const h = cursor.getHours();
-      const esNocturna = desdeH > hastaH ? h >= desdeH || h < hastaH : h >= desdeH && h < hastaH;
-      if (esNocturna) noct += this.horasEntre(cursor, tramoFin);
-      cursor.setTime(next.getTime());
-    }
-    return noct;
-  }
+  // Las horas nocturnas se calculan con horasNocturnas() de conciliacion.domain:
+  // misma función que usa la conciliación (facturación), para que lo que se le
+  // factura al cliente y lo que se le paga al vigilador salgan del mismo cálculo.
 
   private parseFechas(desdeStr: string, hastaStr: string) {
     const desde = new Date(desdeStr);
@@ -432,7 +422,7 @@ export class LiquidacionesService {
 
       const hhReal = this.horasEntre(t.inicio_real, t.fin_real);
       a.hh_trabajadas += hhReal;
-      a.hh_nocturnas += this.horasNocturnas(t.inicio_real, t.fin_real, noctIni, noctFin);
+      a.hh_nocturnas += horasNocturnas(t.inicio_real, t.fin_real, noctIni, noctFin);
       if (hhReal > hhPlan + 0.02) a.hh_extra += hhReal - hhPlan;
 
       const tardeMin = (t.inicio_real.getTime() - t.inicio_plan.getTime()) / 60_000;
