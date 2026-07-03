@@ -64,7 +64,33 @@ bajo la clave `undefined`).
 
 **Verificación:** `tsc --noEmit` backend y frontend → 0 errores. Sin spec de módulo.
 
-## FIX 3 — Código de incidente con race condition — PENDIENTE
+## FIX 3 — Código de incidente con race condition ✅ APLICADO
+
+**Premisa corregida:** el `@@unique([tenant_id, codigo])` YA existía (schema + migración
+`20260630080000`). Hoy la colisión no era silenciosa: tiraba `P2002` sin manejar.
+
+**Cambios:**
+- `schema.prisma`: nuevo modelo `IncidenteContador` (`@@id([tenant_id, anio])`, `@@map("incidente_contador")`).
+- Migración `20260703000000_incidente_contador`: tabla + FK a tenants + RLS (ENABLE/FORCE +
+  policy `tenant_isolation`, mismo patrón del repo).
+- `centro-operaciones.service.ts`:
+  - Nuevo `crearIncidente()`: correlativo por (tenant, año) vía `upsert`+`increment`
+    (atómico, `INSERT ... ON CONFLICT DO UPDATE SET valor = valor + 1`). Reset anual
+    (el año es parte de la clave). Retry sobre `P2002`, máx 3 intentos.
+  - **Decisión de diseño:** NO se usa transacción interactiva ni SQL crudo, porque el
+    scoping de tenant (extensión `$allModels` de PrismaService) solo cubre ops de modelo;
+    el `upsert` de modelo pasa por la extensión → RLS OK. La atomicidad del contador basta
+    (cada llamador obtiene número distinto); no hace falta acoplarlo al `create`.
+- **Fusión por familia (pedido del usuario, resuelto ahora):**
+  - Nuevo módulo `incidente-familias.ts` (`familiaDeTipo`, `mismaFamilia`) + spec.
+    Familias: SEGURIDAD_FISICA (INTRUSION/PANICO/PANICO_MOVIL/APERTURA), EMERGENCIA_VIDA
+    (FUEGO/GAS/HUMO); tipo desconocido → `OTRO:<tipo>` (solo fusiona con su mismo tipo).
+  - `handleIncidentTrigger`: ahora trae los incidentes abiertos del objetivo en la ventana
+    y fusiona solo con uno de la MISMA familia (antes: cualquier tipo).
+
+**Verificación:** `prisma generate` OK, `tsc --noEmit` API → 0 errores.
+Spec `incidente-familias.spec.ts` → 4/4 passing. (Los tests que tocan DB requieren
+Postgres, no corridos acá; la migración quedó lista para aplicar con `prisma migrate`.)
 
 ## FIX 4 — Endpoints legacy de rondas sin aislamiento de tenant — PENDIENTE
 

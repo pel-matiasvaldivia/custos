@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { COGateway } from './gateways/co.gateway';
+import { mismaFamilia } from './incidente-familias';
 
 @Injectable()
 export class CentroOperacionesService {
@@ -76,7 +78,11 @@ export class CentroOperacionesService {
     // Check for open incident in the last 5 minutes for the same objective
     const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
 
-    let incident = await this.prisma.incidente.findFirst({
+    // Incidentes abiertos del objetivo en la ventana. Solo fusionamos con uno de
+    // la MISMA familia de respuesta (ver incidente-familias): un FUEGO y una
+    // INTRUSION concurrentes son incidentes distintos porque disparan protocolos
+    // distintos, y el `tipo` del incidente define la SOP.
+    const abiertos = await this.prisma.incidente.findMany({
       where: {
         tenant_id: event.tenant_id,
         objetivo_id: event.objetivo_id,
@@ -86,21 +92,11 @@ export class CentroOperacionesService {
       orderBy: { abierto_el: 'desc' },
     });
 
-    if (!incident) {
-      const count = await this.prisma.incidente.count({
-        where: { tenant_id: event.tenant_id },
-      });
-      const codigo = `INC-${new Date().getFullYear()}-${(count + 1).toString().padStart(4, '0')}`;
+    let incident =
+      abiertos.find((i) => mismaFamilia(i.tipo, event.tipo)) ?? null;
 
-      incident = await this.prisma.incidente.create({
-        data: {
-          tenant_id: event.tenant_id,
-          objetivo_id: event.objetivo_id,
-          codigo,
-          tipo: event.tipo,
-          severidad: event.severidad,
-        },
-      });
+    if (!incident) {
+      incident = await this.crearIncidente(event);
       this.coGateway.emitToTenant(event.tenant_id, 'incident.new', incident);
     }
 
@@ -111,6 +107,54 @@ export class CentroOperacionesService {
     });
 
     this.coGateway.emitToTenant(event.tenant_id, 'incident.updated', incident);
+  }
+
+  /**
+   * Crea un incidente con código correlativo por (tenant, año). El número se toma
+   * de un contador atómico (incidente_contador) vía upsert+increment, que compila
+   * a `INSERT ... ON CONFLICT DO UPDATE SET valor = valor + 1`: dos eventos
+   * concurrentes (p. ej. varias zonas de un panel por el receptor SIA) obtienen
+   * números distintos, sin la race condition del count()+1. Reinicia en 0001 cada
+   * año porque el año es parte de la clave del contador. Si aun así un código
+   * quedara tomado por otra vía (choque P2002 sobre @@unique([tenant_id, codigo])),
+   * se reintenta tomando el siguiente número, hasta 3 veces.
+   */
+  private async crearIncidente(event: any) {
+    const anio = new Date().getFullYear();
+    const MAX_INTENTOS = 3;
+
+    for (let intento = 1; intento <= MAX_INTENTOS; intento++) {
+      const { valor } = await this.prisma.incidenteContador.upsert({
+        where: { tenant_id_anio: { tenant_id: event.tenant_id, anio } },
+        create: { tenant_id: event.tenant_id, anio, valor: 1 },
+        update: { valor: { increment: 1 } },
+        select: { valor: true },
+      });
+      const codigo = `INC-${anio}-${valor.toString().padStart(4, '0')}`;
+
+      try {
+        return await this.prisma.incidente.create({
+          data: {
+            tenant_id: event.tenant_id,
+            objetivo_id: event.objetivo_id,
+            codigo,
+            tipo: event.tipo,
+            severidad: event.severidad,
+          },
+        });
+      } catch (e) {
+        if (
+          e instanceof Prisma.PrismaClientKnownRequestError &&
+          e.code === 'P2002' &&
+          intento < MAX_INTENTOS
+        ) {
+          continue; // código tomado: reintentar con el siguiente número
+        }
+        throw e;
+      }
+    }
+
+    throw new Error('No se pudo generar un código de incidente único');
   }
 
   async getActiveIncidents(tenantId: string) {

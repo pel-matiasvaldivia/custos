@@ -839,6 +839,19 @@ model Incidente {
   @@map("incidentes")
 }
 
+/// Contador atómico de códigos de incidente por (tenant, año). El correlativo
+/// se toma con upsert+increment (evita la race del count()+1) y reinicia en
+/// 0001 cada año porque el año es parte de la clave. Ver
+/// CentroOperacionesService.crearIncidente.
+model IncidenteContador {
+  tenant_id String @db.Uuid
+  anio      Int
+  valor     Int    @default(0)
+
+  @@id([tenant_id, anio])
+  @@map("incidente_contador")
+}
+
 model IncidenteBitacora {
   id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tenant_id    String   @db.Uuid
