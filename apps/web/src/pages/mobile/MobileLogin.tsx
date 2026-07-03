@@ -28,8 +28,10 @@ export default function MobileLogin() {
         const data = await mobileAuthService.login(legajoNro, pin);
         mobileAuthService.guardarSesion(data);
       } else {
+        // El código se genera en mayúsculas (OBJ-2026-0001); el input lo muestra
+        // uppercase por CSS pero el value conserva lo tipeado → se normaliza.
         const data = await mobileAuthService.loginDispositivo({
-          objetivo_codigo: objetivoCodigo.trim(),
+          objetivo_codigo: objetivoCodigo.trim().toUpperCase(),
           pin,
         });
         mobileAuthService.guardarSesionDispositivo(data);
