@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Download, MessageSquare, Clock, User, MapPin, X } from 'lucide-react';
+import { Plus, Search, Download, MessageSquare, Clock, User, MapPin, X, Paperclip } from 'lucide-react';
 import api from '../../services/api';
+import { useSocket } from '../../hooks/useSocket';
+import { useAuth } from '../../context/AuthContext';
 import { catalogoService, CatalogoItemOption } from '../../services/catalogo.service';
 import { objetivoService, Objetivo, Puesto } from '../../services/objetivo.service';
 import { puestoService } from '../../services/puesto.service';
@@ -23,6 +25,7 @@ const FILTROS_VACIOS: Filtros = {
 };
 
 export const NovedadesPage = () => {
+  const { user } = useAuth();
   const [novedades, setNovedades] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,6 +39,8 @@ export const NovedadesPage = () => {
   const [puestos, setPuestos] = useState<Puesto[]>([]);
   const [vigiladores, setVigiladores] = useState<Vigilador[]>([]);
   const [descargando, setDescargando] = useState(false);
+  const [errorDescarga, setErrorDescarga] = useState<string | null>(null);
+  const { on } = useSocket('co', user?.tenantId);
 
   const esAdelanto = formData.tipo === 'ADELANTO_SUELDO';
 
@@ -62,6 +67,9 @@ export const NovedadesPage = () => {
     fetchData();
   }, [fetchData]);
 
+  // Novedad nueva desde el móvil → refresca el listado en vivo.
+  on('novedad.new', () => fetchData());
+
   useEffect(() => {
     catalogoService.getItems('NOVEDAD_TIPO').then(setTiposNovedad).catch(() => {});
     objetivoService.getAll(1, 200).then(setObjetivos).catch(() => {});
@@ -85,6 +93,7 @@ export const NovedadesPage = () => {
 
   const descargarPdf = async () => {
     setDescargando(true);
+    setErrorDescarga(null);
     try {
       const res = await api.get(`/novedades/reporte/pdf?${queryParams().toString()}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
@@ -95,6 +104,9 @@ export const NovedadesPage = () => {
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
+    } catch {
+      // Antes fallaba en silencio y parecía que el botón "no hacía nada".
+      setErrorDescarga('No se pudo generar el reporte. Reintentá en unos segundos.');
     } finally {
       setDescargando(false);
     }
@@ -302,6 +314,7 @@ export const NovedadesPage = () => {
             <Download size={16} /> {descargando ? 'Generando...' : 'Descargar reporte'}
           </button>
         </div>
+        {errorDescarga && <p className="text-xs text-red-500 text-right">{errorDescarga}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -331,6 +344,14 @@ export const NovedadesPage = () => {
 
               <p className="text-navy leading-relaxed">{nov.descripcion}</p>
 
+              {Array.isArray(nov.adjuntos) && nov.adjuntos.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3">
+                  {nov.adjuntos.map((key: string, i: number) => (
+                    <AdjuntoNovedad key={`${nov.id}-${i}`} novedadId={nov.id} indice={i} storageKey={key} />
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-center gap-6 pt-4 border-t border-surface/5">
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <MapPin size={14} className="text-brand-blue" />
@@ -348,3 +369,53 @@ export const NovedadesPage = () => {
     </div>
   );
 };
+
+/**
+ * Foto o audio adjunto de una novedad (subidos desde el móvil). Los archivos
+ * viven en MinIO detrás de la API con auth, así que <img>/<audio> no pueden
+ * apuntar directo a la URL: se baja el blob con el token y se usa un objectURL.
+ */
+function AdjuntoNovedad({ novedadId, indice, storageKey }: { novedadId: string; indice: number; storageKey: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [error, setError] = useState(false);
+  const esAudio = /\.(webm|ogg|oga|mp3|m4a|aac|wav)$/i.test(storageKey);
+
+  useEffect(() => {
+    let objUrl: string | null = null;
+    let cancelado = false;
+    api
+      .get(`/novedades/${novedadId}/adjuntos/${indice}`, { responseType: 'blob' })
+      .then((res) => {
+        objUrl = URL.createObjectURL(res.data);
+        if (!cancelado) setUrl(objUrl);
+      })
+      .catch(() => !cancelado && setError(true));
+    return () => {
+      cancelado = true;
+      if (objUrl) URL.revokeObjectURL(objUrl);
+    };
+  }, [novedadId, indice]);
+
+  if (error) {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted italic">
+        <Paperclip size={13} /> Adjunto no disponible
+      </span>
+    );
+  }
+  if (!url) {
+    return (
+      <span className="flex items-center gap-1.5 text-xs text-muted animate-pulse">
+        <Paperclip size={13} /> Cargando adjunto...
+      </span>
+    );
+  }
+  if (esAudio) {
+    return <audio controls src={url} className="h-10 max-w-xs" preload="metadata" />;
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" title="Ver foto completa">
+      <img src={url} alt="Adjunto de la novedad" className="h-24 w-24 object-cover rounded-xl border border-line hover:opacity-90 transition-opacity" />
+    </a>
+  );
+}
