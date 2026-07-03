@@ -96,13 +96,26 @@ export class VigilanciaMovilService {
         adjuntos,
         created_at: cuando,
       },
+      include: {
+        vigilador: { select: { nombre: true, apellido: true } },
+        puesto: { select: { nombre: true } },
+      },
     });
 
+    // Payload con nombres (no solo IDs) para que el SOC y el listado de
+    // Novedades puedan mostrarlo en vivo sin otra vuelta a la API.
     this.coGateway.emitToTenant(tenantId, 'novedad.new', {
       id: novedad.id,
       tipo: novedad.tipo,
+      prioridad: novedad.prioridad,
+      descripcion: novedad.descripcion,
       vigiladorId,
+      vigilador_nombre: novedad.vigilador
+        ? `${novedad.vigilador.apellido}, ${novedad.vigilador.nombre}`
+        : null,
       puestoId,
+      puesto_nombre: novedad.puesto?.nombre ?? null,
+      adjuntos: novedad.adjuntos.length,
       ts: cuando,
     });
 
@@ -394,11 +407,20 @@ export class VigilanciaMovilService {
       ronda = { id: rondaActiva.id, marcados, total, completada };
     }
 
+    // Con nombres para que el event stream del SOC lo muestre directamente.
+    const vigilador = await this.prisma.vigilador.findFirst({
+      where: { id: vigiladorId, tenant_id: tenantId },
+      select: { nombre: true, apellido: true },
+    });
     const payload = {
       vigilante_id: vigiladorId,
+      vigilador_nombre: vigilador
+        ? `${vigilador.apellido}, ${vigilador.nombre}`
+        : null,
       punto_control_id: checkpoint.id,
       punto_nombre: checkpoint.nombre,
       puesto_id: checkpoint.puesto_id,
+      puesto_nombre: checkpoint.puesto?.nombre ?? null,
       location,
       ts: cuando,
       ronda,
@@ -564,10 +586,19 @@ export class VigilanciaMovilService {
       },
     });
 
+    // Con nombres para que el event stream del SOC lo muestre directamente.
+    const vigilador = await this.prisma.vigilador.findFirst({
+      where: { id: vigiladorId, tenant_id: tenantId },
+      select: { nombre: true, apellido: true },
+    });
     this.coGateway.emitToTenant(tenantId, 'ronda.start', {
       rondaId: ronda.id,
       plantillaId,
+      ronda_nombre: plantilla.nombre,
       vigiladorId,
+      vigilador_nombre: vigilador
+        ? `${vigilador.apellido}, ${vigilador.nombre}`
+        : null,
       ts: cuando,
     });
 

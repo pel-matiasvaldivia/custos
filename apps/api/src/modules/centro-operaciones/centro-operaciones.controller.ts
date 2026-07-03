@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -24,6 +25,16 @@ export class CentroOperacionesController {
   @Get('incidentes/activos')
   async getActiveIncidents(@Request() req: any) {
     return this.coService.getActiveIncidents(req.user.tenantId);
+  }
+
+  // Declarado antes de 'incidentes/:id' para que "cerrados" no matchee como id.
+  @Get('incidentes/cerrados')
+  async getClosedIncidents(
+    @Request() req: any,
+    @Query('desde') desde?: string,
+    @Query('hasta') hasta?: string,
+  ) {
+    return this.coService.getClosedIncidents(req.user.tenantId, desde, hasta);
   }
 
   @Get('incidentes/:id')
