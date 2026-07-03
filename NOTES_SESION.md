@@ -112,8 +112,30 @@ que nadie usa). Se borraron los 4 handlers del controller + los 4 métodos del s
 
 **Verificación:** `tsc --noEmit` API → 0 errores.
 
-## FIX 5 — Adelanto de sueldo desde mobile no se registra en Liquidaciones — PENDIENTE
-(Decisión A/B pendiente de confirmar.)
+## FIX 5 — Adelanto de sueldo desde mobile no se registra en Liquidaciones ✅ APLICADO
+
+**Decisión del usuario: OPCIÓN B** (sacar ADELANTO_SUELDO del móvil).
+
+**Problema:** dos caminos crean novedades pero solo la web alimenta el ledger:
+web → `NovedadService.create` parsea `[ADELANTO monto=NNN cuotas=N]` y crea la fila
+`adelanto` (VIGENTE) que Liquidaciones descuenta al cerrar. Mobile →
+`VigilanciaMovilService.crearNovedad` creaba la novedad directo, sin ledger y sin
+campos de monto/cuotas → adelanto fantasma que nunca se descontaba.
+
+**Fundamento de B (vs A = paridad con monto/cuotas en el modal móvil):** crear la fila
+`adelanto` significa "adelanto OTORGADO" (descuenta plata del recibo al cerrar el
+período). Desde la web lo carga la oficina que aprueba/entrega el dinero; desde el
+móvil sería el propio vigilador auto-registrándose un adelanto sin aprobación. Un flujo
+de solicitud+aprobación sería una feature aparte, no este fix.
+
+**Cambios (solo `vigilancia-movil.service.ts`):**
+- `listarNovedadTipos()`: filtra `ADELANTO_SUELDO` del catálogo que ve el móvil.
+- `crearNovedad()`: rechaza `tipo === 'ADELANTO_SUELDO'` con
+  `BadRequestException({ code: 'ADELANTO_SOLO_OFICINA' })` — ocultar el botón no
+  alcanza, un request armado a mano igual crearía la novedad sin ledger.
+- Frontend sin cambios: el modal renderiza los tipos que devuelve el endpoint.
+
+**Verificación:** `tsc --noEmit` API → 0 errores.
 
 ## FIX 6 — Dos cálculos de horas nocturnas que no coinciden — PENDIENTE
 

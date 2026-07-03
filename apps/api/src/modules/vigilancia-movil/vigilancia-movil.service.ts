@@ -21,9 +21,19 @@ export class VigilanciaMovilService {
     private readonly storage: StorageService,
   ) {}
 
-  /** Tipos de novedad predefinidos (catálogo NOVEDAD_TIPO del tenant). */
+  /**
+   * Tipos de novedad predefinidos (catálogo NOVEDAD_TIPO del tenant).
+   *
+   * ADELANTO_SUELDO se excluye del móvil: crear esa novedad por la web
+   * (NovedadService.create) genera una fila en el ledger `adelanto` que
+   * Liquidaciones descuenta del recibo — es un acto administrativo que
+   * registra la oficina cuando aprueba y entrega el dinero, no algo que el
+   * vigilador se auto-registre desde el teléfono. Desde el móvil, el pedido
+   * se hace como novedad GENERAL y la oficina lo formaliza en Novedades.
+   */
   async listarNovedadTipos(tenantId: string) {
-    return this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO');
+    const tipos = await this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO');
+    return tipos.filter((t) => t.codigo !== 'ADELANTO_SUELDO');
   }
 
   /** Crea una novedad desde el móvil, con adjuntos (foto/audio) opcionales. */
@@ -43,6 +53,18 @@ export class VigilanciaMovilService {
       mimetype: string;
     }> = [],
   ) {
+    // No alcanza con ocultar el tipo en listarNovedadTipos: un request armado
+    // a mano igual crearía la novedad SIN pasar por el ledger de adelantos
+    // (eso solo lo hace NovedadService.create, el camino de la web) y quedaría
+    // un "adelanto" que Liquidaciones nunca descuenta.
+    if (data.tipo === 'ADELANTO_SUELDO') {
+      throw new BadRequestException({
+        code: 'ADELANTO_SOLO_OFICINA',
+        message:
+          'El adelanto de sueldo se registra desde la oficina (módulo Novedades). Pedilo con una novedad general.',
+      });
+    }
+
     if (await this.yaProcesado(tenantId, data.clientEventId)) {
       return { duplicated: true };
     }
