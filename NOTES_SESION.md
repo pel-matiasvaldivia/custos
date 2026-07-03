@@ -257,10 +257,29 @@ runtime (genera `%PDF-` OK). Payload de `novedad.new` enriquecido (vigilador,
 puesto, prioridad, descripción); MonitoringPage lo suma al event stream;
 NovedadesPage se suscribe y refresca en vivo; catch con mensaje visible en la
 descarga (antes fallaba en silencio). ✅ APLICADO
-**Observación fuera de alcance:** `ReportsPage.tsx` (Informes) es un mockup:
-KPIs hardcodeados y descarga vía `window.open('/api/v1/reports/...')` que ni
-coincide con la ruta real (`centro-operaciones/informes/...`) ni manda el JWT.
-Se arregló el 500 del backend, pero esa página necesita su propio rework.
+**Observación fuera de alcance (RESUELTA en Ronda 3):** `ReportsPage.tsx`
+(Informes) era un mockup: KPIs hardcodeados y descarga vía
+`window.open('/api/v1/reports/...')` que ni coincidía con la ruta real
+(`centro-operaciones/informes/...`) ni mandaba el JWT. Se arregló el 500 del
+backend en esta ronda; el rework completo de la página quedó en la ronda
+siguiente (ver más abajo).
+
+## Ronda 3 — Reconstrucción de la página de Informes (2026-07-03)
+**Causa:** `ReportsPage.tsx` mostraba KPIs, gráfico de frecuencia y
+distribuciones con valores fijos; la descarga usaba `window.open` a una ruta
+inexistente y sin token, así que nunca bajaba nada.
+**Fix backend:** nuevo `GET centro-operaciones/informes/estadisticas` (JWT,
+scoped por tenant) → `ReportsService.getEstadisticas`: computa sobre los
+incidentes del rango el total, resueltos, tasa de resolución, tiempo medio de
+respuesta (`tomado_el - abierto_el`) y de resolución (`resuelto_el - abierto_el`),
+la frecuencia (bucket por día o por mes según el largo del rango) y las
+distribuciones por tipo y por severidad.
+**Fix frontend:** `informes.service.ts` tipa la respuesta y descarga PDF/Excel
+por blob autenticado (`api.get(..., responseType:'blob')`) contra la ruta real,
+con `<a download>`. `ReportsPage.tsx` reescrita: filtros de fecha reales
+(default últimos 30 días) con botón "Aplicar", 4 KPIs reales, gráfico de barras
+de frecuencia, distribuciones por tipo/severidad con colores por clave, y
+estados de carga/vacío/error. ✅ APLICADO
 
 ## B7 — No se ven inicios de ronda ni escaneos QR en el SOC
 **Causa:** el backend emite `ronda.start` y `ronda.checkpoint` pero MonitoringPage
