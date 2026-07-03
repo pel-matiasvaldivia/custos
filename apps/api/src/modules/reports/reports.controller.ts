@@ -21,7 +21,7 @@ export class ReportsController {
     @Request() req: any,
     @Res() res: Response,
   ) {
-    const doc = await this.reportsService.generateIncidentPdf(
+    const buffer = await this.reportsService.generateIncidentPdf(
       req.user.tenantId,
       query,
     );
@@ -32,8 +32,7 @@ export class ReportsController {
       'attachment; filename=reporte-incidentes.pdf',
     );
 
-    doc.pipe(res);
-    doc.end();
+    res.send(buffer);
   }
 
   @Get('incidentes/excel')

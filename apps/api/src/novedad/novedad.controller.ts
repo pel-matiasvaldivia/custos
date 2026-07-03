@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  ParseIntPipe,
   Query,
   Res,
   UseGuards,
@@ -36,7 +37,7 @@ export class NovedadController {
     @Query() filtros: FiltrarNovedadesDto,
     @Res() res: Response,
   ) {
-    const doc = await this.novedadService.generarReportePdf(
+    const buffer = await this.novedadService.generarReportePdf(
       req.user.tenantId,
       filtros,
     );
@@ -45,12 +46,29 @@ export class NovedadController {
       'Content-Disposition',
       'attachment; filename=reporte-novedades.pdf',
     );
-    doc.pipe(res);
-    doc.end();
+    res.send(buffer);
   }
 
   @Get('puesto/:id')
   findByPuesto(@Request() req: any, @Param('id') id: string) {
     return this.novedadService.findByPuesto(req.user.tenantId, id);
+  }
+
+  /** Sirve la foto/audio adjunto de una novedad (streaming desde MinIO). */
+  @Get(':id/adjuntos/:indice')
+  async adjunto(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Param('indice', ParseIntPipe) indice: number,
+    @Res() res: Response,
+  ) {
+    const { stream, contentType } = await this.novedadService.obtenerAdjunto(
+      req.user.tenantId,
+      id,
+      indice,
+    );
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    stream.pipe(res);
   }
 }
