@@ -92,6 +92,104 @@ export class ReportsService {
     return buffer;
   }
 
+  /**
+   * Estadísticas reales del período para alimentar los KPIs y gráficos de la
+   * página de Informes. Antes la UI mostraba números hardcodeados; ahora todo
+   * se computa sobre los incidentes del tenant en el rango indicado.
+   */
+  async getEstadisticas(
+    tenantId: string,
+    filters: { desde?: string; hasta?: string },
+  ) {
+    const desde = filters.desde
+      ? new Date(`${filters.desde}T00:00:00`)
+      : new Date(Date.now() - 30 * 86400000);
+    const hasta = filters.hasta
+      ? new Date(`${filters.hasta}T23:59:59`)
+      : new Date();
+
+    const incidentes = await this.prisma.incidente.findMany({
+      where: { tenant_id: tenantId, abierto_el: { gte: desde, lte: hasta } },
+      select: {
+        tipo: true,
+        severidad: true,
+        estado: true,
+        abierto_el: true,
+        tomado_el: true,
+        resuelto_el: true,
+      },
+    });
+
+    const total = incidentes.length;
+    const resueltos = incidentes.filter((i) => i.estado === 'RESUELTO').length;
+
+    const promedio = (valores: number[]) =>
+      valores.length
+        ? Math.round(valores.reduce((a, b) => a + b, 0) / valores.length)
+        : null;
+
+    const minutos = (fin: Date, inicio: Date) =>
+      (fin.getTime() - inicio.getTime()) / 60000;
+
+    const tiempoMedioRespuestaMin = promedio(
+      incidentes
+        .filter((i) => i.tomado_el)
+        .map((i) => minutos(i.tomado_el as Date, i.abierto_el)),
+    );
+    const tiempoMedioResolucionMin = promedio(
+      incidentes
+        .filter((i) => i.resuelto_el)
+        .map((i) => minutos(i.resuelto_el as Date, i.abierto_el)),
+    );
+
+    // Rango largo (> ~2 meses) se agrupa por mes; si no, por día.
+    const usarMeses = hasta.getTime() - desde.getTime() > 62 * 86400000;
+    const buckets = new Map<string, number>();
+    for (const inc of incidentes) {
+      const d = inc.abierto_el;
+      const key = usarMeses
+        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        : d.toISOString().slice(0, 10);
+      buckets.set(key, (buckets.get(key) ?? 0) + 1);
+    }
+    const frecuencia = [...buckets.entries()]
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([periodo, cantidad]) => ({ periodo, total: cantidad }));
+
+    const agrupar = (campo: 'tipo' | 'severidad') => {
+      const m = new Map<string, number>();
+      for (const inc of incidentes) {
+        const clave = inc[campo] || 'S/D';
+        m.set(clave, (m.get(clave) ?? 0) + 1);
+      }
+      return [...m.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([clave, cantidad]) => ({
+          clave,
+          total: cantidad,
+          porcentaje: total ? Math.round((cantidad / total) * 100) : 0,
+        }));
+    };
+
+    return {
+      rango: {
+        desde: desde.toISOString().slice(0, 10),
+        hasta: hasta.toISOString().slice(0, 10),
+      },
+      granularidad: usarMeses ? 'MES' : 'DIA',
+      kpis: {
+        total,
+        resueltos,
+        tasaResolucion: total ? Math.round((resueltos / total) * 100) : 0,
+        tiempoMedioRespuestaMin,
+        tiempoMedioResolucionMin,
+      },
+      frecuencia,
+      porTipo: agrupar('tipo'),
+      porSeveridad: agrupar('severidad'),
+    };
+  }
+
   async generateIncidentExcel(tenantId: string, filters: any) {
     const incidents = await this.prisma.incidente.findMany({
       where: {

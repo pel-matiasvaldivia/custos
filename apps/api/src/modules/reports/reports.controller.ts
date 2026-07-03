@@ -15,6 +15,11 @@ import { Response } from 'express';
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
+  @Get('estadisticas')
+  getEstadisticas(@Query() query: any, @Request() req: any) {
+    return this.reportsService.getEstadisticas(req.user.tenantId, query);
+  }
+
   @Get('incidentes/pdf')
   async downloadIncidentPdf(
     @Query() query: any,
