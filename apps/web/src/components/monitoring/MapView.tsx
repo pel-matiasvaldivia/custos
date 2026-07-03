@@ -32,6 +32,7 @@ if (typeof document !== 'undefined' && !document.getElementById('cutos-map-kf'))
 const objetivoIcon = pin('#1b57d6', '🏢');
 const puestoIcon = pin('#7c3aed', '🛡️');
 const guardIcon = pin('#0e9f6e', '👮');
+const guardUnverifiedIcon = pin('#94a3b8', '👮');
 const vehiculoIcon = pin('#e8a33d', '🚓');
 const incidentIcon = pin('#ef4444', '⚠️', true);
 // Puntos de control: verde si el guardia lo cubrió en la ronda en curso,
@@ -143,14 +144,16 @@ export const MapView: React.FC<MapViewProps> = ({
         {/* Guards (Live moving) — guardias en funciones con dispositivo móvil */}
         {Object.values(guards).map(guard => (
            <Marker
-            key={guard.vigilanteId}
+            key={guard.vigiladorId ?? `obj:${guard.objetivoId}`}
             position={[guard.lat, guard.lng]}
-            icon={guardIcon}
+            icon={guard.validado ? guardIcon : guardUnverifiedIcon}
            >
              <Popup>
               <div className="p-2">
-                <h4 className="font-bold text-emerald italic uppercase">GUARDIA EN FUNCIONES</h4>
-                <p className="text-xs">{guard.nombre || `ID: ${guard.vigilanteId.slice(0,8)}`}</p>
+                <h4 className={`font-bold italic uppercase ${guard.validado ? 'text-emerald' : 'text-slate-400'}`}>
+                  {guard.validado ? 'GUARDIA EN FUNCIONES' : 'UBICACIÓN SIN VERIFICAR'}
+                </h4>
+                <p className="text-xs">{guard.nombre || (guard.vigiladorId ? `ID: ${guard.vigiladorId.slice(0, 8)}` : 'Sin identificar')}</p>
                 <p className="text-[10px] text-muted">Último contacto: {guard.ts ? new Date(guard.ts).toLocaleTimeString() : '—'}</p>
               </div>
              </Popup>

@@ -612,15 +612,48 @@ export class VigilanciaMovilService {
     return incident;
   }
 
+  /**
+   * Reporta la ubicación para el mapa en vivo del SOC. A diferencia del resto de
+   * endpoints móviles, el tracking NO exige identificación: en un dispositivo
+   * compartido queremos que el mapa siga mostrando la posición aunque todavía
+   * nadie se haya seleccionado. Pero no confiamos ciegamente en el vigiladorId
+   * del body: en modo dispositivo lo validamos contra el objetivo y, si no
+   * pertenece (o no vino), igual emitimos la ubicación marcada como no verificada
+   * (`validado: false`) para que el mapa la muestre con un indicador distinto en
+   * vez de aceptar una identidad spoofeada como si fuera confiable.
+   */
   async updateLocation(
-    vigiladorId: string | undefined,
-    tenantId: string,
+    user: {
+      tipo: string;
+      vigiladorId?: string;
+      objetivoId?: string;
+      tenantId: string;
+    },
     location: { lat: number; lng: number },
-    objetivoId?: string,
+    vigiladorIdPayload?: string,
   ) {
-    this.coGateway.emitToTenant(tenantId, 'vigilante.location', {
+    let vigiladorId: string | undefined;
+    let validado = false;
+
+    if (user.tipo === 'VIGILADOR' && user.vigiladorId) {
+      // Identidad del token personal: confiable.
+      vigiladorId = user.vigiladorId;
+      validado = true;
+    } else if (vigiladorIdPayload && user.objetivoId) {
+      // Modo dispositivo: conservamos el vigilador reclamado pero marcamos si
+      // realmente está asignado a este objetivo.
+      vigiladorId = vigiladorIdPayload;
+      validado = await this.esVigiladorDelObjetivo(
+        user.tenantId,
+        user.objetivoId,
+        vigiladorIdPayload,
+      );
+    }
+
+    this.coGateway.emitToTenant(user.tenantId, 'vigilante.location', {
       vigiladorId,
-      objetivoId,
+      objetivoId: user.objetivoId,
+      validado,
       ...location,
       ts: new Date(),
     });

@@ -34,8 +34,35 @@ offline) podía saltarse la restricción.
 
 ---
 
-## FIX 2 — Tracking sin validar identidad en modo dispositivo — PENDIENTE
-(Recomendación primero, antes de tocar código.)
+## FIX 2 — Tracking sin validar identidad en modo dispositivo ✅ APLICADO
+
+**Decisión:** camino intermedio + fix de bug de campo (usuario eligió "intermedio + fix del campo").
+
+**Problema:** `POST /mobile/tracking` (`updateLocation`) era el único endpoint móvil
+que no pasaba por `resolverVigilador()`. En modo dispositivo tomaba `data.vigiladorId`
+del body sin validar contra el objetivo. Solo emite un socket (no escribe DB) → el
+riesgo es spoofear la posición/identidad de un guardia en el mapa del SOC (dentro del
+tenant; tenantId/objetivoId salen del token).
+
+**Bug colateral encontrado:** el backend emite `vigilante.location` con campo
+`vigiladorId`, pero el frontend lo consumía como `data.vigilanteId`
+(`MonitoringPage.tsx`, `MapView.tsx`) → el mapa de guardias estaba roto (todo caía
+bajo la clave `undefined`).
+
+**Cambios:**
+- `vigilancia-movil.controller.ts`: `updateLocation` delega en el service pasando
+  `req.user` completo + `data.vigiladorId`.
+- `vigilancia-movil.service.ts` (`updateLocation`): validación **sin bloquear**.
+  Personal → `validado: true`. Dispositivo con vigiladorId asignado al objetivo →
+  `validado: true`. Sin vigiladorId o no asignado → igual emite con `validado: false`
+  (mapa sigue vivo, identidad marcada como no verificada). Comentario explicando la excepción.
+- `MonitoringPage.tsx`: fix `data.vigilanteId`→`data.vigiladorId`; clave estable
+  (`vigiladorId ?? obj:${objetivoId}`).
+- `MapView.tsx`: nuevo `guardUnverifiedIcon` (gris); marcador/label/color según
+  `guard.validado` ("UBICACIÓN SIN VERIFICAR"); usa `vigiladorId` y maneja el caso
+  "sin identificar" (antes crasheaba con `.slice` sobre undefined).
+
+**Verificación:** `tsc --noEmit` backend y frontend → 0 errores. Sin spec de módulo.
 
 ## FIX 3 — Código de incidente con race condition — PENDIENTE
 

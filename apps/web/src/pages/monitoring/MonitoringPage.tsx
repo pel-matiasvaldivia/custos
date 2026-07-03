@@ -132,9 +132,12 @@ export const MonitoringPage = () => {
   });
 
   on('vigilante.location', (data: any) => {
+    // Clave por vigilador; si el dispositivo aún no se identificó, cae bajo su
+    // objetivo para no pisar a otros dispositivos sin identificar.
+    const key = data.vigiladorId ?? `obj:${data.objetivoId}`;
     setGuards(prev => ({
       ...prev,
-      [data.vigilanteId]: data
+      [key]: data,
     }));
   });
 
