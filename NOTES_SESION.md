@@ -172,6 +172,23 @@ queda reportado como trabajo aparte.
 
 ---
 
+## Verificación final (post 6 fixes)
+
+- `apps/api npm run build` → OK (exit 0).
+- `apps/api npm run test` → 84 passed, 5 skipped, **1 failed PREEXISTENTE**:
+  `vigilante.service.spec.ts › update › should update vigilante after verifying tenant`.
+  Falla idéntico en el commit base `bc89f65` (main, verificado con worktree); ninguno
+  de los 6 fixes toca `src/vigilante`. No fue introducido por esta sesión.
+- `apps/web npm run build` → OK (tsc + vite + PWA, exit 0).
+
+**Estado:** los 6 fixes APLICADOS. Nada quedó pendiente de decisión del usuario.
+Trabajo reportado para hacer aparte (no incluido a propósito):
+- FIX 6: recargo de feriado en Liquidaciones (ver informe en FIX 6).
+- FIX 5: si el negocio quiere "solicitud de adelanto" desde la app, es un flujo
+  con aprobación a diseñar como feature.
+
+---
+
 ### Notas de entorno
 - El repo se clonó en `/workspace/custos` (la tarea inicialmente apuntaba al repo
   equivocado `frigoapp`; el correcto es `custos`).
