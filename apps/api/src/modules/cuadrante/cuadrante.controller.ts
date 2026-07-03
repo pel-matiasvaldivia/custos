@@ -40,6 +40,22 @@ export class CuadranteController {
     );
   }
 
+  // Generar el cuadrante de TODO el tenant para un rango (botón "Generar Mes"):
+  // recorre las asignaciones de esquema vigentes que pisan el rango y genera
+  // los turnos de cada una con la misma lógica idempotente de generarCuadrante.
+  @Post('generar-mes')
+  @Roles('ADMIN', 'GERENCIA', 'SUPERVISOR')
+  generarMes(@Request() req: any, @Body() body: { desde: string; hasta: string }) {
+    if (!body?.desde || !body?.hasta) {
+      throw new BadRequestException('Campos "desde" y "hasta" obligatorios');
+    }
+    return this.cuadranteService.generarMesTenant(
+      req.user.tenantId,
+      new Date(body.desde),
+      new Date(body.hasta),
+    );
+  }
+
   // Detección de cobertura de un puesto: huecos y sobre-dotación.
   @Get('cobertura/:puestoId')
   @Roles('ADMIN', 'GERENCIA', 'SUPERVISOR', 'OPERADOR')

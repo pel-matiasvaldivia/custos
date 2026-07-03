@@ -154,6 +154,39 @@ export class CuadranteService {
   }
 
   /**
+   * "Generar Mes": genera los turnos de TODAS las asignaciones de esquema del
+   * tenant vigentes en el rango [desde, hasta]. Cada asignación se recorta a su
+   * propia vigencia y se genera con generarCuadrante (idempotente), así el botón
+   * del cuadrante consolidado no depende de entrar objetivo por objetivo.
+   */
+  async generarMesTenant(tenantId: string, desde: Date, hasta: Date) {
+    const asignaciones = await this.prisma.asignacionEsquema.findMany({
+      where: {
+        tenant_id: tenantId,
+        vigente_desde: { lte: hasta },
+        OR: [{ vigente_hasta: null }, { vigente_hasta: { gte: desde } }],
+      },
+      select: { id: true, vigente_desde: true, vigente_hasta: true },
+    });
+
+    let generados = 0;
+    let creados = 0;
+    const rechazados: { inicio_plan: string; errores: string[] }[] = [];
+
+    for (const a of asignaciones) {
+      const desdeAsig = a.vigente_desde > desde ? a.vigente_desde : desde;
+      const hastaAsig =
+        a.vigente_hasta && a.vigente_hasta < hasta ? a.vigente_hasta : hasta;
+      const r = await this.generarCuadrante(tenantId, a.id, desdeAsig, hastaAsig);
+      generados += r.generados;
+      creados += r.creados;
+      rechazados.push(...r.rechazados);
+    }
+
+    return { asignaciones: asignaciones.length, generados, creados, rechazados };
+  }
+
+  /**
    * Cierra un período: valida que no queden turnos sin resolver, calcula la
    * conciliación HH por contrato y persiste el snapshot (congelada=true).
    * Vínculo turno→contrato: Contrato.objetivo_id = Puesto.objetivo_id.
