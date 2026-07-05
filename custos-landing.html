@@ -5,6 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CustOS — El sistema operativo de tu empresa de seguridad</title>
 <meta name="description" content="CustOS planifica turnos, controla credenciales, cotiza con el factor de cobertura real y te muestra el margen de cada contrato. Hecho para la seguridad privada argentina.">
+
+<!-- Open Graph / redes (para que se vea bien al compartir en WhatsApp y LinkedIn) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="CustOS">
+<meta property="og:locale" content="es_AR">
+<meta property="og:title" content="CustOS — El sistema operativo de tu empresa de seguridad">
+<meta property="og:description" content="Planificá turnos, controlá credenciales, cotizá con el factor de cobertura real y mirá el margen de cada contrato. Hecho para la seguridad privada argentina.">
+<meta property="og:url" content="https://pymesenlinea.com.ar/">
+<meta property="og:image" content="https://pymesenlinea.com.ar/og-custos.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="CustOS — panel de operaciones de una empresa de seguridad">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CustOS — El sistema operativo de tu empresa de seguridad">
+<meta name="twitter:description" content="Planificá turnos, controlá credenciales y mirá el margen real de cada contrato.">
+<meta name="twitter:image" content="https://pymesenlinea.com.ar/og-custos.png">
+
+<!-- Plausible Analytics (self-hosted). El goal 'Demo: formulario enviado' y demás eventos se disparan desde el JS de abajo. -->
+<script defer data-domain="pymesenlinea.com.ar" src="https://analytics.pymesenlinea.com.ar/js/script.tagged-events.js"></script>
+<script>window.plausible=window.plausible||function(){(window.plausible.q=window.plausible.q||[]).push(arguments)};</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -191,6 +212,61 @@
     html{scroll-behavior:auto}
     .btn:hover,.mod:hover{transform:none}
   }
+
+  /* ---------- Demo: formulario + Cal ---------- */
+  .demo-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:clamp(1.6rem,3vw,2.6rem);align-items:start;text-align:left;margin-top:2.2rem}
+  @media(max-width:820px){.demo-grid{grid-template-columns:1fr}}
+  .demo-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:clamp(1.4rem,3vw,2rem)}
+  .demo-card h3{font-size:1.2rem;margin-bottom:.35rem}
+  .demo-card .sub{color:var(--muted);font-size:.95rem;margin-bottom:1.2rem}
+  .field{margin-bottom:.95rem}
+  .field label{display:block;font-size:.82rem;font-weight:600;color:var(--ink);margin-bottom:.32rem}
+  .field .req{color:var(--brand)}
+  .field input,.field select{
+    width:100%;font-family:var(--body);font-size:.95rem;color:var(--ink);
+    background:#FCFDFF;border:1px solid var(--line);border-radius:9px;padding:.6rem .75rem;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(27,87,214,.14)}
+  .field.two{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
+  .field.two > div{margin:0}
+  .field input.err,.field select.err{border-color:var(--alert);box-shadow:0 0 0 3px rgba(232,163,61,.16)}
+  .consent{display:flex;gap:.6rem;align-items:flex-start;margin:.4rem 0 1.1rem;font-size:.85rem;color:var(--muted);line-height:1.5}
+  .consent input{margin-top:.2rem;flex:none;width:16px;height:16px;accent-color:var(--brand)}
+  .consent a{color:var(--brand);text-decoration:underline}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .demo-card .btn-primary{width:100%;justify-content:center;font-size:1rem;padding:.85rem 1.3rem}
+  .form-msg{margin-top:.9rem;font-size:.9rem;border-radius:9px;padding:.75rem .9rem;display:none}
+  .form-msg.show{display:block}
+  .form-msg.ok{background:var(--signal-tint);color:#0A7A54;border:1px solid #B9E7D3}
+  .form-msg.bad{background:var(--alert-tint);color:#9A6414;border:1px solid #F1D9A9}
+  .demo-alt{margin-top:.4rem}
+  .demo-alt h3{margin-bottom:.35rem}
+  .demo-alt .sub{color:var(--muted);font-size:.95rem;margin-bottom:1.1rem}
+  .demo-alt .btn{width:100%;justify-content:center}
+  .demo-legal{font-size:.78rem;color:var(--muted);margin-top:1rem;line-height:1.5}
+  .btn[aria-busy="true"]{opacity:.7;pointer-events:none}
+
+  /* ---------- WhatsApp flotante ---------- */
+  .wa-float{
+    position:fixed;right:20px;bottom:20px;z-index:80;
+    display:inline-flex;align-items:center;gap:.55rem;
+    background:#25D366;color:#0A2E17;font-weight:600;font-size:.95rem;
+    padding:.7rem 1.05rem;border-radius:999px;
+    box-shadow:0 8px 24px rgba(37,211,102,.36);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .wa-float:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(37,211,102,.44)}
+  .wa-float svg{flex:none}
+  .wa-float .wa-txt{white-space:nowrap}
+  @media(max-width:520px){.wa-float .wa-txt{display:none}.wa-float{padding:.8rem;border-radius:50%}}
+
+  /* ---------- Privacidad ---------- */
+  .privacy{background:var(--surface);border-top:1px solid var(--line)}
+  .privacy .wrap{max-width:760px;padding-top:clamp(3rem,6vw,4.5rem);padding-bottom:clamp(3rem,6vw,4.5rem)}
+  .privacy h2{font-size:1.5rem;margin:.6rem 0 1rem}
+  .privacy p{color:var(--muted);font-size:.96rem;margin-bottom:.9rem}
+  .privacy strong{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -460,14 +536,136 @@
   </div>
 </section>
 
-<!-- FINAL CTA -->
+<!-- FINAL CTA / DEMO -->
 <section class="final" id="demo">
-  <div class="wrap final-inner reveal">
-    <h2>Llevá tu operación a CustOS.</h2>
-    <p>Te mostramos en una demo cómo se ve tu propia operación dentro del sistema, con tus puestos y tus turnos.</p>
-    <a class="btn btn-primary" href="#" style="font-size:1.05rem;padding:.9rem 1.6rem">Pedí una demo</a>
+  <div class="wrap reveal">
+    <div class="final-inner" style="padding-bottom:1rem">
+      <h2>Llevá tu operación a CustOS.</h2>
+      <p>Te mostramos en una demo cómo se ve tu propia operación dentro del sistema, con tus puestos y tus turnos.</p>
+    </div>
+
+    <div class="demo-grid">
+      <!-- Formulario -->
+      <div class="demo-card">
+        <h3>Dejanos tus datos</h3>
+        <p class="sub">Te contactamos para coordinar la demo, sin compromiso.</p>
+        <form id="demo-form" novalidate>
+          <div class="field">
+            <label for="f-nombre">Nombre y apellido <span class="req">*</span></label>
+            <input id="f-nombre" name="nombre" type="text" autocomplete="name" required>
+          </div>
+          <div class="field">
+            <label for="f-empresa">Empresa <span class="req">*</span></label>
+            <input id="f-empresa" name="empresa" type="text" autocomplete="organization" required>
+          </div>
+          <div class="field two">
+            <div>
+              <label for="f-vigiladores">Cantidad de vigiladores <span class="req">*</span></label>
+              <select id="f-vigiladores" name="vigiladores" required>
+                <option value="" selected disabled>Elegí…</option>
+                <option value="1-20">1 a 20</option>
+                <option value="21-50">21 a 50</option>
+                <option value="51-100">51 a 100</option>
+                <option value="101-250">101 a 250</option>
+                <option value="250+">Más de 250</option>
+              </select>
+            </div>
+            <div>
+              <label for="f-provincia">Provincia <span class="req">*</span></label>
+              <select id="f-provincia" name="provincia" required>
+                <option value="" selected disabled>Elegí…</option>
+                <option>Ciudad Autónoma de Buenos Aires</option>
+                <option>Buenos Aires</option>
+                <option>Catamarca</option>
+                <option>Chaco</option>
+                <option>Chubut</option>
+                <option>Córdoba</option>
+                <option>Corrientes</option>
+                <option>Entre Ríos</option>
+                <option>Formosa</option>
+                <option>Jujuy</option>
+                <option>La Pampa</option>
+                <option>La Rioja</option>
+                <option>Mendoza</option>
+                <option>Misiones</option>
+                <option>Neuquén</option>
+                <option>Río Negro</option>
+                <option>Salta</option>
+                <option>San Juan</option>
+                <option>San Luis</option>
+                <option>Santa Cruz</option>
+                <option>Santa Fe</option>
+                <option>Santiago del Estero</option>
+                <option>Tierra del Fuego</option>
+                <option>Tucumán</option>
+              </select>
+            </div>
+          </div>
+          <div class="field two">
+            <div>
+              <label for="f-whatsapp">WhatsApp <span class="req">*</span></label>
+              <input id="f-whatsapp" name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="+54 9 …" required>
+            </div>
+            <div>
+              <label for="f-email">Email <span class="req">*</span></label>
+              <input id="f-email" name="email" type="email" autocomplete="email" placeholder="vos@empresa.com" required>
+            </div>
+          </div>
+
+          <!-- Honeypot anti-spam: invisible para humanos, los bots lo llenan -->
+          <div class="hp" aria-hidden="true">
+            <label for="f-website">No completar</label>
+            <input id="f-website" name="website" type="text" tabindex="-1" autocomplete="off">
+          </div>
+
+          <label class="consent">
+            <input id="f-consent" name="consentimiento" type="checkbox" required>
+            <span>Acepto ser contactado por CustOS y el tratamiento de mis datos según la <a href="#privacidad">política de privacidad</a> (Ley 25.326). Puedo darme de baja cuando quiera.</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary" id="demo-submit">Pedí tu demo</button>
+          <div class="form-msg" id="form-msg" role="status" aria-live="polite"></div>
+        </form>
+      </div>
+
+      <!-- Autoagenda Cal.com -->
+      <div>
+        <div class="demo-card demo-alt">
+          <h3>¿Preferís cerrar ahora?</h3>
+          <p class="sub">Elegí día y horario y agendás la demo en el momento, sin esperar que te contactemos.</p>
+          <button type="button" class="btn btn-ghost" id="cal-open"
+                  data-cal-namespace="demo"
+                  data-cal-link="custos/demo"
+                  data-cal-config='{"layout":"month_view"}'>
+            Elegí día y hora
+          </button>
+        </div>
+        <p class="demo-legal">
+          Tus datos se usan solo para contactarte por la demo. No los compartimos con terceros.
+          Respondemos por WhatsApp o email, lo que te quede más cómodo.
+        </p>
+      </div>
+    </div>
   </div>
 </section>
+
+<!-- PRIVACIDAD (Ley 25.326) -->
+<section class="privacy" id="privacidad">
+  <div class="wrap reveal">
+    <span class="eyebrow">Datos personales</span>
+    <h2>Política de privacidad</h2>
+    <p><strong>Responsable:</strong> CustOS. Al dejar tus datos en el formulario de demo, aceptás que los usemos para contactarte y coordinar una demostración del sistema.</p>
+    <p><strong>Finalidad:</strong> los datos que nos das (nombre, empresa, cantidad de vigiladores, provincia, WhatsApp y email) se usan únicamente para responder tu consulta comercial y enviarte información sobre CustOS. No los vendemos ni los cedemos a terceros.</p>
+    <p><strong>Tus derechos (Ley 25.326):</strong> podés acceder, rectificar, actualizar o pedir la supresión de tus datos, y darte de baja de nuestras comunicaciones en cualquier momento. Todos los correos incluyen un link de baja; también podés escribirnos y lo resolvemos.</p>
+    <p>La Agencia de Acceso a la Información Pública, órgano de control de la Ley 25.326, tiene la atribución de atender denuncias y reclamos por incumplimiento de las normas sobre protección de datos personales.</p>
+  </div>
+</section>
+
+<!-- WHATSAPP FLOTANTE -->
+<a class="wa-float" id="wa-float" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.004c5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2Zm5.8 14.06c-.25.69-1.46 1.32-2 1.4-.51.08-1.16.11-1.87-.12-.43-.14-.98-.32-1.69-.62-2.97-1.28-4.91-4.27-5.06-4.47-.15-.2-1.21-1.61-1.21-3.07 0-1.46.77-2.18 1.04-2.48.27-.3.59-.37.79-.37l.57.01c.18.01.43-.07.67.51.25.6.85 2.06.92 2.21.07.15.12.32.02.52-.1.2-.15.32-.3.5-.15.17-.31.39-.44.52-.15.15-.3.31-.13.6.17.3.76 1.25 1.63 2.02 1.12 1 2.06 1.31 2.36 1.46.3.15.47.12.64-.07.17-.2.74-.86.94-1.16.2-.3.4-.25.67-.15.27.1 1.71.81 2.01.96.3.15.5.22.57.35.07.12.07.71-.18 1.4Z"/></svg>
+  <span class="wa-txt">Escribinos</span>
+</a>
 
 <!-- FOOTER -->
 <footer>
@@ -495,7 +693,7 @@
       <div>
         <h4>Legal</h4>
         <a href="#">Términos</a>
-        <a href="#">Privacidad</a>
+        <a href="#privacidad">Privacidad</a>
       </div>
     </div>
     <div class="foot-bottom">
@@ -506,10 +704,139 @@
 </footer>
 
 <script>
-  const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
-  }, {threshold:.14});
-  document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el));
+/* =========================================================================
+   CONFIG — cambiá SOLO estos valores. No hay dominios hardcodeados abajo.
+   ========================================================================= */
+const CONFIG = {
+  // Webhook de n8n que recibe el formulario (workflow "Captura de demo").
+  WEBHOOK_URL: "https://n8n.pymesenlinea.com.ar/webhook/captura-demo",
+  // Número de WhatsApp comercial en formato internacional, SOLO dígitos.
+  // TODO: reemplazar por el número real (ej. 5492611234567).
+  WHATSAPP_NUMBER: "5490000000000",
+  WHATSAPP_MSG: "Hola, quiero una demo de CustOS",
+  // Instancia self-hosted de Cal.com.
+  CAL_ORIGIN: "https://cal.pymesenlinea.com.ar",
+};
+
+/* ---------- Reveal on scroll ---------- */
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+}, {threshold:.14});
+document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el));
+
+/* ---------- WhatsApp flotante ---------- */
+(function(){
+  const wa = document.getElementById('wa-float');
+  if(!wa) return;
+  wa.href = "https://wa.me/" + CONFIG.WHATSAPP_NUMBER + "?text=" + encodeURIComponent(CONFIG.WHATSAPP_MSG);
+  wa.addEventListener('click', function(){
+    if(window.plausible) window.plausible('Demo: WhatsApp click');
+  });
+})();
+
+/* ---------- Cal.com embed (popup) ---------- */
+(function (C, A, L) { let p = function (a, ar) { a.q.push(ar); }; let d = C.document; C.Cal = C.Cal || function () { let cal = C.Cal; let ar = arguments; if (!cal.loaded) { cal.ns = {}; cal.q = cal.q || []; d.head.appendChild(d.createElement("script")).src = A; cal.loaded = true; } if (ar[0] === L) { const api = function () { p(api, arguments); }; const namespace = ar[1]; api.q = api.q || []; if (typeof namespace === "string") { cal.ns[namespace] = cal.ns[namespace] || api; p(cal.ns[namespace], ar); p(cal, ["initNamespace", namespace]); } else p(cal, ar); return; } p(cal, ar); }; })(window, CONFIG.CAL_ORIGIN + "/embed/embed.js", "init");
+Cal("init", "demo", { origin: CONFIG.CAL_ORIGIN });
+(function(){
+  const calBtn = document.getElementById('cal-open');
+  if(calBtn) calBtn.addEventListener('click', function(){
+    if(window.plausible) window.plausible('Demo: Cal abierto');
+  });
+})();
+
+/* ---------- Formulario de demo ---------- */
+(function(){
+  const form = document.getElementById('demo-form');
+  if(!form) return;
+  const submitBtn = document.getElementById('demo-submit');
+  const msg = document.getElementById('form-msg');
+
+  function getUTMs(){
+    const q = new URLSearchParams(window.location.search);
+    return {
+      utm_source:   q.get('utm_source')   || '',
+      utm_medium:   q.get('utm_medium')   || '',
+      utm_campaign: q.get('utm_campaign') || '',
+      utm_content:  q.get('utm_content')  || '',
+      utm_term:     q.get('utm_term')     || '',
+    };
+  }
+
+  function showMsg(kind, text){
+    msg.textContent = text;
+    msg.className = 'form-msg show ' + kind;
+  }
+
+  function markInvalid(){
+    let firstBad = null;
+    form.querySelectorAll('[required]').forEach(function(el){
+      let bad = false;
+      if(el.type === 'checkbox') bad = !el.checked;
+      else if(el.type === 'email') bad = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim());
+      else bad = !el.value.trim();
+      el.classList.toggle('err', bad);
+      if(bad && !firstBad) firstBad = el;
+    });
+    return firstBad;
+  }
+
+  form.addEventListener('input', function(e){
+    if(e.target.classList.contains('err')) e.target.classList.remove('err');
+  });
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+
+    // Honeypot: si vino lleno, es un bot. Simulamos éxito y descartamos.
+    if(form.website.value.trim() !== ''){
+      showMsg('ok', 'Te contactamos en breve. ¡Gracias!');
+      form.reset();
+      return;
+    }
+
+    const firstBad = markInvalid();
+    if(firstBad){
+      showMsg('bad', 'Revisá los campos marcados: hay datos incompletos o el email no es válido.');
+      firstBad.focus();
+      return;
+    }
+
+    const payload = Object.assign({
+      nombre:        form.nombre.value.trim(),
+      empresa:       form.empresa.value.trim(),
+      vigiladores:   form.vigiladores.value,
+      provincia:     form.provincia.value,
+      whatsapp:      form.whatsapp.value.trim(),
+      email:         form.email.value.trim(),
+      consentimiento: form.consentimiento.checked,
+      referrer:      document.referrer || '',
+      page_url:      window.location.href,
+      timestamp:     new Date().toISOString(),
+    }, getUTMs());
+
+    submitBtn.setAttribute('aria-busy','true');
+    const originalLabel = submitBtn.textContent;
+    submitBtn.textContent = 'Enviando…';
+    msg.className = 'form-msg';
+
+    try{
+      const res = await fetch(CONFIG.WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      showMsg('ok', 'Te contactamos en breve. ¡Gracias por tu interés!');
+      form.reset();
+      if(window.plausible) window.plausible('Demo: formulario enviado');
+    }catch(err){
+      showMsg('bad', 'No pudimos enviar el formulario. Probá de nuevo o escribinos por WhatsApp.');
+    }finally{
+      submitBtn.removeAttribute('aria-busy');
+      submitBtn.textContent = originalLabel;
+    }
+  });
+})();
 </script>
 </body>
 </html>
