@@ -31,6 +31,7 @@ import SuscripcionPage from './pages/suscripcion/SuscripcionPage';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { MobileProtectedRoute } from './components/auth/MobileProtectedRoute';
 import { TrialBanner } from './components/layout/TrialBanner';
+import { OnboardingBar } from './components/layout/OnboardingBar';
 import { ExpiredGate } from './components/layout/ExpiredGate';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
@@ -43,6 +44,7 @@ const AppLayout = () => (
     <Sidebar />
     <div className="flex-1 ml-64 flex flex-col">
       <TrialBanner />
+      <OnboardingBar />
       <header className="h-16 border-b border-line bg-surface flex items-center justify-end px-8 shrink-0">
         <NotificationBell />
       </header>

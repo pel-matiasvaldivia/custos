@@ -16,6 +16,7 @@ export interface OnboardingProgress {
   tiene_esquemas: boolean;
   tiene_cuadrante: boolean;
   tiene_cotizaciones: boolean;
+  tiene_datos_empresa: boolean;
 }
 
 export const dashboardService = {

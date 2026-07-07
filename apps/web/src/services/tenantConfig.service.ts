@@ -5,6 +5,7 @@ export interface MiTenant {
   nombre: string;
   razon_social: string | null;
   cuit: string | null;
+  condicion_iva: string | null;
   direccion: string | null;
   lat: number | null;
   lng: number | null;
@@ -12,9 +13,22 @@ export interface MiTenant {
   telefono_contacto: string | null;
 }
 
+export interface DatosEmpresaInput {
+  razon_social?: string;
+  cuit?: string;
+  condicion_iva?: string;
+  direccion?: string;
+  email_contacto?: string;
+  telefono_contacto?: string;
+}
+
 export const tenantConfigService = {
   get: async (): Promise<MiTenant> => {
     const { data } = await api.get<MiTenant>('/config/tenant');
+    return data;
+  },
+  actualizar: async (input: DatosEmpresaInput): Promise<MiTenant> => {
+    const { data } = await api.put<MiTenant>('/config/tenant', input);
     return data;
   },
   setGeo: async (lat: number | null, lng: number | null) => {

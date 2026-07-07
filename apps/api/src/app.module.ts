@@ -39,6 +39,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { VigilanteAuthModule } from './modules/vigilante-auth/vigilante-auth.module';
 import { SuscripcionModule } from './modules/suscripcion/suscripcion.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
+import { ArcaIntegrationModule } from './modules/arca-integration/arca-integration.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
     VigilanteAuthModule,
     SuscripcionModule,
     UsuariosModule,
+    ArcaIntegrationModule,
   ],
   controllers: [AppController],
   providers: [
