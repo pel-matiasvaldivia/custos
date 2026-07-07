@@ -467,7 +467,7 @@ export const MonitoringPage = () => {
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
-                        <VideoPlayer streamUrl={activeVideo.streamUrl} title={activeVideo.title} />
+                        <VideoPlayer incidentId={activeVideo.id} title={activeVideo.title} />
                     </div>
                     <div className="space-y-6">
                         <div className="bg-white/5 rounded-[2rem] p-6 border border-white/10 h-full">

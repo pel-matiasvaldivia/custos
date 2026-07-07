@@ -56,6 +56,7 @@ model Tenant {
   ordenes_compra          OrdenCompra[]
   vehiculos               Vehiculo[]
   dispositivos            Dispositivo[]
+  dispositivo_canales     DispositivoCanal[]
   eventos                 Evento[]
   incidentes              Incidente[]
   procedimientos          Procedimiento[]
@@ -750,7 +751,11 @@ model Dispositivo {
   marca         String?
   modelo        String?
   nro_abonado   String? // cuenta del panel
-  params        Json      @default("{}") // ip, puerto, usuario, secreto_ref, aes_key_ref, supervision_seg
+  // Token único global que el equipo (p. ej. Alarm Server de Hikvision) incluye
+  // en la URL del push. Permite resolver equipo→tenant sin JWT y sin la colisión
+  // de nro_abonado entre tenants.
+  ingest_token  String?   @unique
+  params        Json      @default("{}") // ip, puerto_http, puerto_rtsp, usuario, secreto_ref, https, supervision_seg
   estado        String    @default("FUERA_DE_LINEA") // EN_LINEA | FUERA_DE_LINEA | EN_FALLA | DESHABILITADO
   ultimo_latido DateTime? @db.Timestamptz
   created_at    DateTime  @default(now()) @db.Timestamptz
@@ -759,13 +764,36 @@ model Dispositivo {
   lat           Float?
   lng           Float?
 
-  tenant   Tenant   @relation(fields: [tenant_id], references: [id])
-  objetivo Objetivo @relation(fields: [objetivo_id], references: [id])
+  tenant   Tenant             @relation(fields: [tenant_id], references: [id])
+  objetivo Objetivo           @relation(fields: [objetivo_id], references: [id])
   zonas    Zona[]
   eventos  Evento[]
+  canales  DispositivoCanal[]
 
   @@unique([tenant_id, nro_abonado])
   @@map("dispositivos")
+}
+
+/// Canal de video de un DVR/NVR (o el único canal de una cámara IP). Es la unidad
+/// verificable: una zona de alarma se mapea a un canal para que el operador vea
+/// exactamente la cámara que corresponde al evento.
+model DispositivoCanal {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String   @db.Uuid
+  dispositivo_id String   @db.Uuid
+  numero_canal   Int // 1..N (canal Hikvision)
+  nombre         String?
+  rtsp_path      String? // override; si es null se arma por convención Hikvision
+  tiene_ptz      Boolean  @default(false)
+  habilitado     Boolean  @default(true)
+  created_at     DateTime @default(now()) @db.Timestamptz
+
+  tenant      Tenant      @relation(fields: [tenant_id], references: [id])
+  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id], onDelete: Cascade)
+  zonas       Zona[]
+
+  @@unique([tenant_id, dispositivo_id, numero_canal])
+  @@map("dispositivo_canales")
 }
 
 model Zona {
@@ -777,8 +805,12 @@ model Zona {
   tipo           String // ROBO | FUEGO | PANICO | TAMPER | TECNICA | CERCO | APERTURA
   particion      String?
   puesto_id      String? @db.Uuid
+  // Canal de video que verifica esta zona ("según la configuración"): al disparar
+  // la zona, el operador ve exactamente esta cámara.
+  canal_id       String? @db.Uuid
 
-  dispositivo Dispositivo @relation(fields: [dispositivo_id], references: [id])
+  dispositivo Dispositivo       @relation(fields: [dispositivo_id], references: [id])
+  canal       DispositivoCanal? @relation(fields: [canal_id], references: [id])
   eventos     Evento[]
 
   @@unique([tenant_id, dispositivo_id, numero_zona])
@@ -800,6 +832,8 @@ model Evento {
   usuario_panel  String?
   id_origen      String? // idempotencia (abonado+seq | msgId)
   en_prueba      Boolean  @default(false)
+  canal_numero   Int? // canal Hikvision que originó el evento nativo de video (CCTV)
+  snapshot_key   String? // objeto en MinIO con el JPEG del instante del disparo
   incidente_id   String?  @db.Uuid
   crudo          Json     @default("{}")
 
