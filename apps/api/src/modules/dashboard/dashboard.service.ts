@@ -20,24 +20,29 @@ export class DashboardService {
     const hoyFin = new Date();
     hoyFin.setHours(23, 59, 59, 999);
 
-    const [vigiladoresActivos, credencialesPorVencer, turnosHoy] = await Promise.all([
-      this.prisma.vigilador.count({
-        where: { tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
-      }),
-      this.prisma.credencial.count({
-        where: { tenant_id: tenantId, vence_el: { lte: en30 } },
-      }),
-      this.prisma.turnoPlanificado.findMany({
-        where: { tenant_id: tenantId, inicio_plan: { gte: hoyIni, lte: hoyFin } },
-        select: { inicio_real: true, asistencia_estado: true },
-      }),
-    ]);
+    const [vigiladoresActivos, credencialesPorVencer, turnosHoy] =
+      await Promise.all([
+        this.prisma.vigilador.count({
+          where: { tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
+        }),
+        this.prisma.credencial.count({
+          where: { tenant_id: tenantId, vence_el: { lte: en30 } },
+        }),
+        this.prisma.turnoPlanificado.findMany({
+          where: {
+            tenant_id: tenantId,
+            inicio_plan: { gte: hoyIni, lte: hoyFin },
+          },
+          select: { inicio_real: true, asistencia_estado: true },
+        }),
+      ]);
 
     const totalTurnos = turnosHoy.length;
     const cubiertos = turnosHoy.filter(
       (t) => t.inicio_real !== null || t.asistencia_estado === 'OK',
     ).length;
-    const coberturaHoy = totalTurnos === 0 ? 100 : Math.round((cubiertos / totalTurnos) * 100);
+    const coberturaHoy =
+      totalTurnos === 0 ? 100 : Math.round((cubiertos / totalTurnos) * 100);
 
     return {
       vigiladores_activos: vigiladoresActivos,
@@ -61,15 +66,43 @@ export class DashboardService {
       esquemas,
       asignaciones,
       cotizaciones,
+      tenant,
     ] = await Promise.all([
-      this.prisma.vigilador.count({ where: { tenant_id: tenantId, deleted_at: null } }),
-      this.prisma.cliente.count({ where: { tenant_id: tenantId, deleted_at: null } }),
+      this.prisma.vigilador.count({
+        where: { tenant_id: tenantId, deleted_at: null },
+      }),
+      this.prisma.cliente.count({
+        where: { tenant_id: tenantId, deleted_at: null },
+      }),
       this.prisma.objetivo.count({ where: { tenant_id: tenantId } }),
-      this.prisma.puesto.count({ where: { tenant_id: tenantId, deleted_at: null } }),
-      this.prisma.esquemaTurno.count({ where: { tenant_id: tenantId, deleted_at: null } }),
-      this.prisma.asignacionEsquema.count({ where: { tenant_id: tenantId, vigente_hasta: null } }),
+      this.prisma.puesto.count({
+        where: { tenant_id: tenantId, deleted_at: null },
+      }),
+      this.prisma.esquemaTurno.count({
+        where: { tenant_id: tenantId, deleted_at: null },
+      }),
+      this.prisma.asignacionEsquema.count({
+        where: { tenant_id: tenantId, vigente_hasta: null },
+      }),
       this.prisma.cotizacion.count({ where: { tenant_id: tenantId } }),
+      this.prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: {
+          razon_social: true,
+          cuit: true,
+          condicion_iva: true,
+          direccion: true,
+        },
+      }),
     ]);
+
+    // Datos de empresa/facturación completos: es el paso final del onboarding.
+    const tiene_datos_empresa = !!(
+      tenant?.razon_social &&
+      tenant?.cuit &&
+      tenant?.condicion_iva &&
+      tenant?.direccion
+    );
 
     return {
       tiene_personal: personal > 0,
@@ -79,6 +112,7 @@ export class DashboardService {
       tiene_esquemas: esquemas > 0,
       tiene_cuadrante: asignaciones > 0,
       tiene_cotizaciones: cotizaciones > 0,
+      tiene_datos_empresa,
     };
   }
 }

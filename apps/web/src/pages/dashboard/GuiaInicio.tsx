@@ -1,90 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check, ChevronRight, Sparkles, X, PartyPopper, Lock } from 'lucide-react';
+import { dashboardService } from '../../services/dashboard.service';
 import {
-  Users,
-  Building2,
-  Shield,
-  CalendarClock,
-  ClipboardList,
-  FileText,
-  Check,
-  ChevronRight,
-  Sparkles,
-  X,
-  PartyPopper,
-} from 'lucide-react';
-import { dashboardService, OnboardingProgress } from '../../services/dashboard.service';
+  Paso,
+  construirPasos,
+  indiceActivo,
+  estadoDe,
+  onboardingCompleto,
+} from './onboardingSteps';
 
 const OCULTAR_KEY = 'custos_guia_inicio_oculta';
-
-interface Paso {
-  key: string;
-  done: boolean;
-  icon: typeof Users;
-  titulo: string;
-  desc: string;
-  cta: string;
-  to: string;
-  opcional?: boolean;
-}
-
-const construirPasos = (p: OnboardingProgress): Paso[] => [
-  {
-    key: 'personal',
-    done: p.tiene_personal,
-    icon: Users,
-    titulo: 'Cargá tu personal',
-    desc: 'Dá de alta a tus vigiladores (uno por uno o importándolos desde Excel). Son las personas que vas a asignar a los puestos.',
-    cta: 'Ir a Personal',
-    to: '/personnel',
-  },
-  {
-    key: 'clientes',
-    done: p.tiene_clientes,
-    icon: Building2,
-    titulo: 'Registrá tus clientes',
-    desc: 'Las empresas o personas a las que les prestás el servicio de seguridad. Después vas a poder vincularles objetivos y contratos.',
-    cta: 'Ir a Clientes',
-    to: '/clients',
-  },
-  {
-    key: 'objetivos',
-    done: p.tiene_objetivos && p.tiene_puestos,
-    icon: Shield,
-    titulo: 'Creá un objetivo con sus puestos',
-    desc: 'El objetivo es el lugar a cubrir (un barrio, una fábrica, un local). Dentro cargás los puestos concretos que hay que vigilar.',
-    cta: 'Ir a Objetivos',
-    to: '/objectives',
-  },
-  {
-    key: 'esquemas',
-    done: p.tiene_esquemas,
-    icon: CalendarClock,
-    titulo: 'Definí un esquema de turno',
-    desc: 'El patrón con el que se cubre un puesto (12×24, 24×48, etc.). Elegí una plantilla lista o armá el tuyo a medida.',
-    cta: 'Ir a Esquema de turnos',
-    to: '/relevos',
-  },
-  {
-    key: 'cuadrante',
-    done: p.tiene_cuadrante,
-    icon: ClipboardList,
-    titulo: 'Armá el cuadrante',
-    desc: 'Afectá a tus vigiladores a los puestos según el esquema elegido. El sistema genera los turnos automáticamente y te avisa si quedan huecos.',
-    cta: 'Ir a Objetivos',
-    to: '/objectives',
-  },
-  {
-    key: 'cotizaciones',
-    done: p.tiene_cotizaciones,
-    icon: FileText,
-    titulo: 'Generá tu primera cotización',
-    desc: 'Calculá el precio de un servicio por horas hombre / vehículo y generá el PDF para enviar al cliente. (Opcional)',
-    cta: 'Ir a Cotizaciones',
-    to: '/quotes',
-    opcional: true,
-  },
-];
 
 export const GuiaInicio = () => {
   const navigate = useNavigate();
@@ -106,15 +32,21 @@ export const GuiaInicio = () => {
     return () => window.removeEventListener('focus', onFocus);
   }, []);
 
-  if (oculta || !pasos) return null;
+  if (!pasos) return null;
 
   const obligatorios = pasos.filter((p) => !p.opcional);
   const completados = obligatorios.filter((p) => p.done).length;
   const total = obligatorios.length;
-  const todoListo = completados === total;
+  const todoListo = onboardingCompleto(pasos);
   const pct = Math.round((completados / total) * 100);
+  const activo = indiceActivo(pasos);
 
+  // La guía es mandatoria: un "oculto" previo solo vale si ya está todo completo.
+  if (oculta && todoListo) return null;
+
+  // La guía solo se puede ocultar una vez completado lo obligatorio (es mandatoria).
   const ocultar = () => {
+    if (!todoListo) return;
     localStorage.setItem(OCULTAR_KEY, '1');
     setOculta(true);
   };
@@ -133,13 +65,15 @@ export const GuiaInicio = () => {
             <p className="text-sm text-muted">
               {todoListo
                 ? 'Completaste la configuración inicial. Podés ocultar esta guía.'
-                : 'Seguí estos pasos en orden para dejar todo operativo. Cada uno te lleva a la pantalla correcta.'}
+                : 'Completá los pasos en orden. Cada uno se habilita al terminar el anterior y te lleva a la pantalla correcta.'}
             </p>
           </div>
         </div>
-        <button onClick={ocultar} className="text-muted hover:text-navy transition-colors shrink-0" title="Ocultar guía">
-          <X size={18} />
-        </button>
+        {todoListo && (
+          <button onClick={ocultar} className="text-muted hover:text-navy transition-colors shrink-0" title="Ocultar guía">
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Barra de progreso */}
@@ -158,36 +92,51 @@ export const GuiaInicio = () => {
         </div>
       </div>
 
-      {/* Lista de pasos */}
+      {/* Lista de pasos (secuencial) */}
       <div className="mt-4 space-y-2">
         {pasos.map((paso, i) => {
           const Icono = paso.icon;
+          const estado = estadoDe(paso, i, activo);
+          const bloqueado = estado === 'locked';
+          const accionable = estado === 'active' || estado === 'opcional';
           return (
             <div
               key={paso.key}
               className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                paso.done ? 'border-emerald/20 bg-emerald/[0.04]' : 'border-line bg-surface'
+                estado === 'done'
+                  ? 'border-emerald/20 bg-emerald/[0.04]'
+                  : estado === 'active'
+                    ? 'border-brand-blue/40 bg-brand-blue/[0.03]'
+                    : bloqueado
+                      ? 'border-line bg-canvas/40 opacity-60'
+                      : 'border-line bg-surface'
               }`}
             >
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                  paso.done ? 'bg-emerald text-white' : 'bg-canvas text-muted border border-line'
+                  estado === 'done'
+                    ? 'bg-emerald text-white'
+                    : estado === 'active'
+                      ? 'bg-brand-blue text-white'
+                      : 'bg-canvas text-muted border border-line'
                 }`}
               >
-                {paso.done ? <Check size={15} /> : <span className="text-xs font-bold">{i + 1}</span>}
+                {estado === 'done' ? <Check size={15} /> : bloqueado ? <Lock size={13} /> : <span className="text-xs font-bold">{i + 1}</span>}
               </div>
-              <Icono size={18} className={paso.done ? 'text-emerald shrink-0' : 'text-brand-blue shrink-0'} />
+              <Icono size={18} className={`shrink-0 ${estado === 'done' ? 'text-emerald' : estado === 'active' ? 'text-brand-blue' : 'text-muted'}`} />
               <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${paso.done ? 'text-muted line-through' : 'text-navy'}`}>
+                <p className={`text-sm font-medium ${estado === 'done' ? 'text-muted line-through' : bloqueado ? 'text-muted' : 'text-navy'}`}>
                   {paso.titulo}
                   {paso.opcional && <span className="ml-2 text-[10px] uppercase text-muted/70">opcional</span>}
                 </p>
-                {!paso.done && <p className="text-xs text-muted mt-0.5">{paso.desc}</p>}
+                {estado === 'active' && <p className="text-xs text-muted mt-0.5">{paso.desc}</p>}
               </div>
-              {!paso.done && (
+              {accionable && (
                 <button
                   onClick={() => navigate(paso.to)}
-                  className="shrink-0 text-xs font-medium text-brand-blue hover:underline flex items-center gap-0.5"
+                  className={`shrink-0 text-xs font-medium flex items-center gap-0.5 ${
+                    estado === 'active' ? 'text-brand-blue hover:underline' : 'text-muted hover:text-navy'
+                  }`}
                 >
                   {paso.cta} <ChevronRight size={14} />
                 </button>
