@@ -317,4 +317,34 @@ Cada fase es desplegable de forma independiente y no rompe lo existente: Hikvisi
 
 ---
 
-*Documento de diseño. Deriva la taxonomía de eventos de `incidente-familias.ts` y el flujo del operador de `ProtocoloIncidenteModal.tsx`. Los nombres de endpoints y campos son propuestas coherentes con las convenciones del repo; ajustar al implementar cada fase.*
+*Documento de diseño. Deriva la taxonomía de eventos de `incidente-familias.ts` y el flujo del operador de `ProtocoloIncidenteModal.tsx`.*
+
+---
+
+## 11. Estado de implementación (F1–F4) ✅
+
+Implementado en esta ronda. Falta solo **F5 — Endurecer** (cierre de puertos de MediaMTX, rotación de tokens, barrido de offline como job).
+
+**Backend**
+- Migración `20260707000000_hikvision_canales_video`: `dispositivo_canales`, `zona.canal_id`, `evento.canal_numero`/`snapshot_key`, `dispositivo.ingest_token` (único global), con RLS en la tabla nueva.
+- `hikvision/hik-isapi.client.ts`: cliente ISAPI con **Digest auth** (sin dependencias) — deviceInfo, descubrir canales, snapshot (JPEG), PTZ continuo, configurar Alarm Server.
+- `hikvision/hikvision.service.ts`: resolver token→dispositivo (admin/cross-tenant), normalizar push (XML/JSON) → taxonomía CustOS, captura y subida de snapshot a MinIO.
+- `hikvision/hik.controller.ts`: receptor `POST /centro-operaciones/hik/eventos/:token` (multipart, **sin JWT**, procesa dentro del `TenantContext`).
+- `common/crypto/secretos.service.ts`: cifrado AES-256-GCM de contraseñas de cámara.
+- `centro-operaciones.service.ts`: CRUD de dispositivos, probar/descubrir, canales, mapeo zona→canal, walk-test; `processEvent` persiste canal/snapshot y **salta el incidente en modo prueba**.
+- `video.service.ts` reescrito: resuelve la cámara del incidente (canal nativo o zona→canal), registra el path **on-demand** en MediaMTX, proxy WHEP, snapshot servido por la API y PTZ real. Path namespaceado por tenant.
+- `video.controller.ts`: `stream/:id`, `whep/:id`, `snapshot/:id`, `ptz/:id`. `main.ts` suma parser de texto para SDP/XML.
+
+**Frontend**
+- `services/dispositivos.service.ts`: cliente tipado de todo lo anterior + WHEP + snapshot autenticado (blob).
+- `DevicesPage.tsx`: datos reales, filtro real, y wizard de alta (`EquipamientoModals.tsx`) con probar conexión, descubrir canales y URL de Alarm Server; acciones de walk-test, canales/mapeo y borrado.
+- `EquipamientoModals.tsx`: wizard de 3 pasos + modal de canales y **mapeo zona→canal**.
+- `VideoPlayer.tsx` reescrito: **snapshot inmediato + vivo por WHEP** (WebRTC nativo) + PTZ.
+- `ProtocoloIncidenteModal.tsx`: botón **"Ver cámara que disparó"** que abre el player dentro del protocolo.
+
+**Verificación:** `tsc --noEmit` limpio (API y web), `nest build` y `vite build` OK, ESLint limpio en los archivos nuevos/tocados.
+
+**Notas de despliegue / F5 pendiente**
+- El vivo por WHEP requiere que MediaMTX publique candidatos ICE alcanzables por el navegador (`webrtcAdditionalHosts` + puertos UDP). En LAN/demo el snapshot funciona siempre; el vivo depende de esa config de red.
+- Cerrar los puertos públicos de MediaMTX (8889/8888/9997) dejándolos solo en la red interna; la API ya hace de proxy.
+- Configurar `APP_SECRET_KEY`, `MEDIAMTX_API`, `MEDIAMTX_WHEP` (ver `infra/.env.example`).

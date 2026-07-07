@@ -1,8 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { COGateway } from './gateways/co.gateway';
 import { mismaFamilia } from './incidente-familias';
+import { HikvisionService } from './hikvision/hikvision.service';
+import { SecretosService } from '../../common/crypto/secretos.service';
+import {
+  CrearDispositivoDto,
+  ActualizarDispositivoDto,
+  ActualizarCanalDto,
+  ProbarDispositivoDto,
+} from './dto/dispositivo.dto';
 
 @Injectable()
 export class CentroOperacionesService {
@@ -11,6 +25,8 @@ export class CentroOperacionesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly coGateway: COGateway,
+    private readonly hik: HikvisionService,
+    private readonly secretos: SecretosService,
   ) {}
 
   async processEvent(data: any) {
@@ -47,6 +63,9 @@ export class CentroOperacionesService {
         severidad,
         origen: data.origen,
         codigo_crudo: data.codigo_crudo,
+        canal_numero: data.canal_numero ?? null,
+        snapshot_key: data.snapshot_key ?? null,
+        en_prueba: data.en_prueba ?? false,
         crudo: data.crudo || {},
         id_origen,
       },
@@ -62,11 +81,12 @@ export class CentroOperacionesService {
       },
     });
 
-    // 4. Simple Correlation Logic: If CRITICA or ALTA, check for open incident or create one
+    // 4. Simple Correlation Logic: If CRITICA or ALTA, check for open incident or create one.
+    // En modo prueba (walk-test) el evento queda registrado para auditoría pero
+    // NO genera incidente en el SOC.
     if (
-      severidad === 'CRITICA' ||
-      severidad === 'ALTA' ||
-      tipo === 'INTRUSION'
+      !event.en_prueba &&
+      (severidad === 'CRITICA' || severidad === 'ALTA' || tipo === 'INTRUSION')
     ) {
       await this.handleIncidentTrigger(event);
     }
@@ -378,11 +398,201 @@ export class CentroOperacionesService {
     return incident;
   }
 
+  /** Actualiza el latido de un equipo sin evento (heartbeat del Alarm Server). */
+  async marcarLatido(dispositivoId: string) {
+    await this.prisma.dispositivo.update({
+      where: { id: dispositivoId },
+      data: { ultimo_latido: new Date(), estado: 'EN_LINEA' },
+    });
+  }
+
   async getDevices(tenantId: string) {
     return this.prisma.dispositivo.findMany({
-      where: { tenant_id: tenantId },
-      include: { objetivo: true },
+      where: { tenant_id: tenantId, deleted_at: null },
+      include: {
+        objetivo: { select: { id: true, nombre: true } },
+        _count: { select: { canales: true } },
+      },
       orderBy: { created_at: 'desc' },
     });
+  }
+
+  // === F1 · Onboarding de dispositivos ======================================
+
+  /** Prueba de conexión ISAPI sin persistir: devuelve identidad del equipo. */
+  async probarConexion(dto: ProbarDispositivoDto) {
+    try {
+      const info = await this.hik.probarConexion({
+        ip: dto.ip,
+        puertoHttp: dto.puerto_http,
+        usuario: dto.usuario,
+        password: dto.password,
+        https: dto.https,
+      });
+      return { ok: true, ...info };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
+  async crearDispositivo(tenantId: string, dto: CrearDispositivoDto) {
+    const objetivo = await this.prisma.objetivo.findFirst({
+      where: { id: dto.objetivo_id },
+      select: { id: true },
+    });
+    if (!objetivo) throw new BadRequestException('Objetivo inexistente');
+
+    const params = {
+      ip: dto.ip,
+      puerto_http: dto.puerto_http ?? 80,
+      puerto_rtsp: dto.puerto_rtsp ?? 554,
+      usuario: dto.usuario,
+      secreto: this.secretos.cifrar(dto.password),
+      https: !!dto.https,
+      supervision_seg: 60,
+    };
+
+    return this.prisma.dispositivo.create({
+      data: {
+        tenant_id: tenantId,
+        objetivo_id: dto.objetivo_id,
+        tipo: dto.tipo,
+        protocolo: dto.protocolo ?? 'ISAPI',
+        marca: dto.marca ?? 'Hikvision',
+        modelo: dto.modelo,
+        nro_abonado: dto.nro_abonado,
+        ingest_token: `hk_${randomBytes(16).toString('hex')}`,
+        params,
+      },
+      include: { objetivo: { select: { id: true, nombre: true } } },
+    });
+  }
+
+  async actualizarDispositivo(
+    tenantId: string,
+    id: string,
+    dto: ActualizarDispositivoDto,
+  ) {
+    const disp = await this.cargarDispositivo(tenantId, id);
+    const params = { ...((disp.params as Record<string, any>) || {}) };
+    if (dto.puerto_http != null) params.puerto_http = dto.puerto_http;
+    if (dto.puerto_rtsp != null) params.puerto_rtsp = dto.puerto_rtsp;
+    if (dto.usuario != null) params.usuario = dto.usuario;
+    if (dto.password) params.secreto = this.secretos.cifrar(dto.password);
+    if (dto.https != null) params.https = dto.https;
+    if (dto.en_prueba != null) params.en_prueba = dto.en_prueba;
+
+    return this.prisma.dispositivo.update({
+      where: { id },
+      data: {
+        modelo: dto.modelo ?? disp.modelo,
+        nro_abonado: dto.nro_abonado ?? disp.nro_abonado,
+        params,
+        updated_at: new Date(),
+      },
+    });
+  }
+
+  async eliminarDispositivo(tenantId: string, id: string) {
+    await this.cargarDispositivo(tenantId, id);
+    await this.prisma.dispositivo.update({
+      where: { id },
+      data: { deleted_at: new Date(), estado: 'DESHABILITADO' },
+    });
+    return { ok: true };
+  }
+
+  /** Descubre los canales por ISAPI y los sincroniza en dispositivo_canales. */
+  async descubrirCanales(tenantId: string, id: string) {
+    const disp = await this.cargarDispositivo(tenantId, id);
+    const canales = await this.hik.clientePara(disp).descubrirCanales();
+    for (const c of canales) {
+      await this.prisma.dispositivoCanal.upsert({
+        where: {
+          tenant_id_dispositivo_id_numero_canal: {
+            tenant_id: tenantId,
+            dispositivo_id: id,
+            numero_canal: c.numero,
+          },
+        },
+        create: {
+          tenant_id: tenantId,
+          dispositivo_id: id,
+          numero_canal: c.numero,
+          nombre: c.nombre,
+          tiene_ptz: !!c.tienePtz,
+        },
+        update: { tiene_ptz: !!c.tienePtz },
+      });
+    }
+    return this.getCanales(tenantId, id);
+  }
+
+  async getCanales(tenantId: string, dispositivoId: string) {
+    return this.prisma.dispositivoCanal.findMany({
+      where: { tenant_id: tenantId, dispositivo_id: dispositivoId },
+      orderBy: { numero_canal: 'asc' },
+    });
+  }
+
+  async actualizarCanal(
+    tenantId: string,
+    canalId: string,
+    dto: ActualizarCanalDto,
+  ) {
+    const canal = await this.prisma.dispositivoCanal.findFirst({
+      where: { id: canalId, tenant_id: tenantId },
+    });
+    if (!canal) throw new NotFoundException('Canal inexistente');
+    return this.prisma.dispositivoCanal.update({
+      where: { id: canalId },
+      data: {
+        nombre: dto.nombre ?? canal.nombre,
+        rtsp_path: dto.rtsp_path ?? canal.rtsp_path,
+        tiene_ptz: dto.tiene_ptz ?? canal.tiene_ptz,
+        habilitado: dto.habilitado ?? canal.habilitado,
+      },
+    });
+  }
+
+  // === F4 · Mapeo zona → canal ==============================================
+
+  async getZonasDeDispositivo(tenantId: string, dispositivoId: string) {
+    return this.prisma.zona.findMany({
+      where: { tenant_id: tenantId, dispositivo_id: dispositivoId },
+      include: {
+        canal: { select: { id: true, numero_canal: true, nombre: true } },
+      },
+      orderBy: { numero_zona: 'asc' },
+    });
+  }
+
+  async mapearZonaCanal(
+    tenantId: string,
+    zonaId: string,
+    canalId: string | null,
+  ) {
+    const zona = await this.prisma.zona.findFirst({
+      where: { id: zonaId, tenant_id: tenantId },
+    });
+    if (!zona) throw new NotFoundException('Zona inexistente');
+    if (canalId) {
+      const canal = await this.prisma.dispositivoCanal.findFirst({
+        where: { id: canalId, tenant_id: tenantId },
+      });
+      if (!canal) throw new BadRequestException('Canal inexistente');
+    }
+    return this.prisma.zona.update({
+      where: { id: zonaId },
+      data: { canal_id: canalId },
+    });
+  }
+
+  private async cargarDispositivo(tenantId: string, id: string) {
+    const disp = await this.prisma.dispositivo.findFirst({
+      where: { id, tenant_id: tenantId, deleted_at: null },
+    });
+    if (!disp) throw new NotFoundException('Dispositivo inexistente');
+    return disp;
   }
 }

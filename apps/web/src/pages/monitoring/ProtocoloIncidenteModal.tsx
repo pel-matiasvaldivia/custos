@@ -8,6 +8,7 @@ import {
   IncidenteDetalle,
   BitacoraEntrada,
 } from '../../services/centroOperaciones.service';
+import { VideoPlayer } from './VideoPlayer';
 
 interface Props {
   incidenteId: string;
@@ -77,6 +78,7 @@ export const ProtocoloIncidenteModal = ({ incidenteId, onClose, onCambio }: Prop
   const [destino, setDestino] = useState('');
   const [disposicion, setDisposicion] = useState('');
   const [resumen, setResumen] = useState('');
+  const [verVideo, setVerVideo] = useState(false);
 
   const cargar = async () => {
     try {
@@ -151,6 +153,30 @@ export const ProtocoloIncidenteModal = ({ incidenteId, onClose, onCambio }: Prop
             </div>
           ))}
         </div>
+
+        {/* Video verificación: la cámara que disparó el evento, según la config */}
+        {inc.estado !== 'RESUELTO' && (
+          <div>
+            {verVideo ? (
+              <div className="space-y-2">
+                <VideoPlayer incidentId={inc.id} title={`Cámara · ${inc.tipo}`} />
+                <button
+                  onClick={() => setVerVideo(false)}
+                  className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white"
+                >
+                  Ocultar cámara
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setVerVideo(true)}
+                className="w-full py-3 rounded-2xl bg-white/5 border border-white/10 text-white/80 font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/10"
+              >
+                <Video size={15} /> Ver cámara que disparó
+              </button>
+            )}
+          </div>
+        )}
 
         {inc.estado !== 'RESUELTO' && (
           <div className="bg-brand-blue/10 border border-brand-blue/20 rounded-2xl p-4">

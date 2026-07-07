@@ -2,6 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -16,6 +19,13 @@ import {
   DespacharIncidentDto,
   NotaIncidentDto,
 } from './dto/protocolo-incident.dto';
+import {
+  CrearDispositivoDto,
+  ActualizarDispositivoDto,
+  ActualizarCanalDto,
+  ProbarDispositivoDto,
+  MapearZonaCanalDto,
+} from './dto/dispositivo.dto';
 
 @Controller('centro-operaciones')
 @UseGuards(JwtAuthGuard)
@@ -86,5 +96,67 @@ export class CentroOperacionesController {
   @Get('dispositivos')
   async getDevices(@Request() req: any) {
     return this.coService.getDevices(req.user.tenantId);
+  }
+
+  // === F1 · Onboarding ===
+  @Post('dispositivos/probar')
+  async probarDispositivo(@Body() dto: ProbarDispositivoDto) {
+    return this.coService.probarConexion(dto);
+  }
+
+  @Post('dispositivos')
+  async crearDispositivo(
+    @Body() dto: CrearDispositivoDto,
+    @Request() req: any,
+  ) {
+    return this.coService.crearDispositivo(req.user.tenantId, dto);
+  }
+
+  @Put('dispositivos/:id')
+  async actualizarDispositivo(
+    @Param('id') id: string,
+    @Body() dto: ActualizarDispositivoDto,
+    @Request() req: any,
+  ) {
+    return this.coService.actualizarDispositivo(req.user.tenantId, id, dto);
+  }
+
+  @Delete('dispositivos/:id')
+  async eliminarDispositivo(@Param('id') id: string, @Request() req: any) {
+    return this.coService.eliminarDispositivo(req.user.tenantId, id);
+  }
+
+  @Post('dispositivos/:id/descubrir')
+  async descubrirCanales(@Param('id') id: string, @Request() req: any) {
+    return this.coService.descubrirCanales(req.user.tenantId, id);
+  }
+
+  @Get('dispositivos/:id/canales')
+  async getCanales(@Param('id') id: string, @Request() req: any) {
+    return this.coService.getCanales(req.user.tenantId, id);
+  }
+
+  @Patch('canales/:id')
+  async actualizarCanal(
+    @Param('id') id: string,
+    @Body() dto: ActualizarCanalDto,
+    @Request() req: any,
+  ) {
+    return this.coService.actualizarCanal(req.user.tenantId, id, dto);
+  }
+
+  // === F4 · Mapeo zona → canal ===
+  @Get('dispositivos/:id/zonas')
+  async getZonas(@Param('id') id: string, @Request() req: any) {
+    return this.coService.getZonasDeDispositivo(req.user.tenantId, id);
+  }
+
+  @Post('zonas/mapear')
+  async mapearZonaCanal(@Body() dto: MapearZonaCanalDto, @Request() req: any) {
+    return this.coService.mapearZonaCanal(
+      req.user.tenantId,
+      dto.zona_id,
+      dto.canal_id ?? null,
+    );
   }
 }

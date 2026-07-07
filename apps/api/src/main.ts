@@ -20,6 +20,14 @@ async function bootstrap() {
   // Increase body size limit for contract/quote document HTML payloads
   app.use(require('express').json({ limit: '10mb' }));
   app.use(require('express').urlencoded({ extended: true, limit: '10mb' }));
+  // Cuerpos crudos de texto: SDP de la señalización WHEP (video verificación) y
+  // XML del Alarm Server de Hikvision cuando el equipo POSTea sin multipart.
+  app.use(
+    require('express').text({
+      type: ['application/sdp', 'text/plain', 'application/xml', 'text/xml'],
+      limit: '2mb',
+    }),
+  );
 
   // Global API prefix
   app.setGlobalPrefix('api/v1');
