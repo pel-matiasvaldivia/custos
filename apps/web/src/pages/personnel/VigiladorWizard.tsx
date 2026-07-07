@@ -56,7 +56,10 @@ export const VigiladorWizard = ({ onClose, onCreated }: Props) => {
         if (!data.nombre || !data.apellido || !data.documento || !data.legajo_nro) {
           return 'Completá nombre, apellido, documento y número de legajo para continuar.';
         }
-        if (data.cuil && !/^\d{11}$/.test(data.cuil.replace(/\D/g, ''))) {
+        if (!data.cuil.trim()) {
+          return 'El CUIL es obligatorio (es lo que ARCA usa para el alta y el LSD).';
+        }
+        if (!/^\d{11}$/.test(data.cuil.replace(/\D/g, ''))) {
           return 'El CUIL debe tener 11 dígitos (sin guiones).';
         }
         return null;
@@ -84,7 +87,7 @@ export const VigiladorWizard = ({ onClose, onCreated }: Props) => {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className={labelClase}>CUIL</label>
+              <label className={labelClase}>CUIL *</label>
               <input
                 placeholder="20123456789"
                 className={`${campoClase} font-mono`}
@@ -100,7 +103,7 @@ export const VigiladorWizard = ({ onClose, onCreated }: Props) => {
                   );
                 }}
               />
-              <p className="text-[10px] text-muted">Necesario para exportar a ARCA.</p>
+              <p className="text-[10px] text-muted">Obligatorio: ARCA lo usa para el alta y el LSD.</p>
             </div>
             <div className="space-y-1">
               <label className={labelClase}>Documento (DNI)</label>

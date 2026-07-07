@@ -24,13 +24,15 @@ export class CreateVigilanteDto {
   @IsNotEmpty()
   documento: string;
 
-  // CUIL completo (11 dígitos): lo que ARCA necesita para altas y LSD. Opcional
-  // en la carga rápida, pero requerido para exportar el legajo a ARCA.
-  @IsOptional()
+  // CUIL completo (11 dígitos): obligatorio en el alta manual, es lo que ARCA
+  // necesita para las altas y el LSD. Las importaciones masivas escriben directo
+  // en Prisma (no pasan por este DTO), así que no se ven afectadas.
+  @IsString()
+  @IsNotEmpty()
   @Matches(/^\d{11}$/, {
     message: 'El CUIL debe tener 11 dígitos, sin guiones.',
   })
-  cuil?: string;
+  cuil: string;
 
   @IsOptional()
   @IsDateString()
