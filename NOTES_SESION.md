@@ -303,3 +303,95 @@ y reproductor de audio (fetch autenticado a blob). ✅ APLICADO
   `cd apps/api && npx prisma generate` (necesario para typecheck sin errores).
 - Frontend NO tiene script `type-check`; usar `npx tsc --noEmit` directo.
 - Tests: `cd apps/api && npm run test` (jest).
+
+---
+
+## Integración ARCA (ex-AFIP) — Nómina/LSD + Facturación electrónica (2026-07-07)
+
+**Commits:** `3b84f6c` (módulo ARCA), `fdb4ebd` (CUIL/fecha en alta/edición),
+`5d781fd` (CUIL obligatorio en el alta).
+
+### Alcance
+Módulo nuevo `apps/api/src/modules/arca-integration/` + UI, cubriendo dos verticales:
+sincronización de personal por archivos planos y facturación electrónica WSFEv1
+con obtención de CAE en tiempo real.
+
+### Backend — Personal (nómina / LSD)
+- `POST /arca-integration/importar-nomina`: parsea el CSV de Simplificación
+  Registral / "Mis Empleados" (parser propio en `util/csv.util.ts`, sin
+  dependencias; autodetecta separador y BOM). Reconoce CUIL, apellido/nombre
+  (juntos o separados) y fecha de ingreso → alta de vigiladores; omite CUIL ya
+  cargados. Deriva el DNI de los 8 dígitos centrales del CUIL.
+- `GET /arca-integration/exportar-altas-txt?ids=`: `.txt` de altas en ancho fijo
+  (`util/ancho-fijo.util.ts`: alfa/num/importe/fechaAmd, normaliza ASCII sin
+  acentos/ñ). Valida pertenencia al tenant y que tengan CUIL de 11 dígitos.
+- `GET /arca-integration/exportar-lsd-txt?liquidacionId=`: Libro de Sueldos
+  Digital con registros F01 (cabecera del legajo: totales) y F02 (conceptos CCT
+  UPSRA 507/07). Como la liquidación guarda TOTALES por legajo, el remunerativo
+  se emite consolidado (importe = bruto) y las hs nocturnas/extra van como
+  cantidad informativa; reconcilia remun − descuentos − adelanto = neto.
+- `Vigilador` suma `cuil String?` y `fecha_ingreso DateTime? @db.Date`.
+
+### Backend — Facturación electrónica (WSFEv1)
+- `WsaaService`: arma el TRA, lo firma CMS/PKCS#7 con **openssl** (`openssl cms
+  -sign`, archivos temporales 0600 que se borran en `finally`) usando el
+  certificado y la clave de cada tenant; obtiene el Ticket de Acceso y lo
+  **cachea en Redis** (ioredis, key `arca:ta:{tenant}:{ambiente}`) con respaldo
+  en DB; renueva antes de las 12 h. Redis degradado a warning si no está.
+- `WsfeService`: `FECompUltimoAutorizado` + `FECAESolicitar`, tipado con
+  interfaces SOAP req/resp (`arca.types.ts`); parseo de CAE, `<Obs>` y `<Err>`
+  por regex tolerante a namespaces.
+- `FacturacionService`: numeración correlativa (último + 1), cálculo
+  neto/IVA(21%)/total (A y B discriminan IVA; C monotributo no), persiste la
+  `Factura` aprobada con su CAE; si ARCA rechaza → `400` con
+  `{rechazo, observaciones, errores}` y NO persiste (no rompe la correlatividad).
+- `FacturaPdfService`: comprobante legal en PDF (pdfmake, patrón singleton del
+  repo con `@ts-ignore` + `require('pdfmake')`) con letra, número, CAE y vto.
+- `ArcaConfigService`: cert/clave se guardan **cifrados** (AES-256-GCM vía
+  `SecretosService`, `common/crypto`); nunca vuelven al frontend.
+- `SolicitudCae` de servicios (Concepto 2/3) incluye FchServDesde/Hasta/VtoPago.
+
+### Modelos nuevos (RLS por tenant, migración `20260707010000_arca_integracion`)
+- `ConfiguracionArca` (tenant_id @unique): ambiente HOMOLOGACION|PRODUCCION,
+  cuit_emisor, condicion_iva, `puntos_venta Int[]`, certificado_cifrado,
+  clave_cifrada, ta_token/ta_sign/ta_expira (respaldo del TA).
+- `Factura`: tipo_comprobante, punto_venta, numero, doc_tipo/doc_nro, concepto,
+  importes, cae/cae_vencimiento, estado, fecha_emision, items Json,
+  observaciones Json. `@@unique([tenant_id, punto_venta, tipo_comprobante, numero])`.
+- La migración también agrega `vigiladores.cuil` y `vigiladores.fecha_ingreso`.
+
+### Frontend
+- `services/arca.service.ts`: cliente tipado (config multipart, probar-conexión,
+  importar-nómina, descargar altas/LSD/PDF por blob, facturar, listar).
+- `pages/settings/ConfiguracionArcaForm.tsx`: entorno, CUIT, condición IVA,
+  puntos de venta, carga de `.crt`/`.key`, botón "Probar conexión". Cert/clave
+  no vuelven: solo informa si ya están cargados.
+- `pages/billing/BotonFacturarElectronico.tsx`: modal de emisión reutilizable
+  con estados animados (Conectando/Solicitando CAE), número legal + CAE +
+  descarga del PDF; maneja rechazo de ARCA con detalle.
+- `pages/settings/FacturacionArcaTab.tsx`: nueva pestaña de Configuración
+  ("Facturación ARCA") = config + emisión + listado de comprobantes.
+- `pages/personnel/ImportarNominaModal.tsx` (drag & drop) y
+  `ExportarAltasButton.tsx` (por lote, checkboxes en la tabla de PersonnelPage).
+
+### Alta/edición de vigilador alineada al esquema de ARCA
+- `VigiladorWizard`: paso de datos básicos suma **CUIL** (obligatorio; autocompleta
+  el DNI con los 8 dígitos centrales) y **fecha de ingreso**.
+- `VigiladorEditForm`: agrega CUIL y fecha de ingreso (opcionales) para completar
+  legajos existentes.
+- DTOs `create` (cuil requerido, 11 dígitos) / `update` (opcional) de vigilante.
+  Las importaciones masivas escriben directo en Prisma → no las afecta el DTO.
+
+### Pendiente / limitaciones honestas
+- **No probado contra ARCA real** (requiere certificados + homologación en vivo).
+  Los layouts de ancho fijo (altas/LSD) son la mejor aproximación al formato
+  documentado; conviene validarlos con el aplicativo de ARCA antes de producción.
+  Están centralizados en `util/ancho-fijo.util.ts` para ajustar posiciones.
+- `exportar-lsd-txt` queda funcional pero SIN botón en la UI: necesita un
+  `liquidacionId` persistido (flujo "cerrar liquidación") a revisar.
+
+### Notas de entorno (ARCA)
+- Requiere `openssl` en el contenedor (firma CMS del TRA) — presente (3.0.13).
+- Redis: reusa `REDIS_URL`/`REDIS_HOST`/`REDIS_PORT`. `APP_SECRET_KEY` cifra
+  cert/clave (ya documentada). `ioredis` viene transitivo de bullmq.
+- Sin dependencias nuevas: SOAP por XML manual + axios; CSV por parser propio.
