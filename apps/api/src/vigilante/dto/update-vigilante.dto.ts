@@ -1,10 +1,28 @@
-import { IsString, IsOptional, IsIn, IsNumber, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsIn,
+  IsNumber,
+  Min,
+  IsDateString,
+  Matches,
+} from 'class-validator';
 import { VIGILADOR_ESTADOS_ACEPTADOS } from '../vigilador-estado';
 
 export class UpdateVigilanteDto {
   @IsOptional()
   @IsString()
   legajo_nro?: string;
+
+  @IsOptional()
+  @Matches(/^\d{11}$/, {
+    message: 'El CUIL debe tener 11 dígitos, sin guiones.',
+  })
+  cuil?: string;
+
+  @IsOptional()
+  @IsDateString()
+  fecha_ingreso?: string;
 
   // Liquidaciones: valor hora y categoría del Convenio 507.
   @IsOptional()

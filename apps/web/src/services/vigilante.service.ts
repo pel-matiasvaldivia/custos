@@ -30,6 +30,8 @@ export interface Vigilador {
   nombre: string;
   apellido: string;
   documento: string;
+  cuil?: string | null;
+  fecha_ingreso?: string | null;
   estado: string;
   foto_url?: string | null;
   domicilio?: string | null;
