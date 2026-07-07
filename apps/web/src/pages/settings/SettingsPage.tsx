@@ -7,6 +7,7 @@ import { UsuariosTab } from './UsuariosTab';
 import { CalculadoraHHTab } from './CalculadoraHHTab';
 import { TenantGeoTab } from './TenantGeoTab';
 import { EmpresaTab } from './EmpresaTab';
+import { FacturacionArcaTab } from './FacturacionArcaTab';
 
 const TABS = [
   { id: 'empresa', label: 'Empresa', render: () => <EmpresaTab /> },
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'ubicacion', label: 'Ubicación', render: () => <TenantGeoTab /> },
   { id: 'catalogos', label: 'Catálogos', render: () => <CatalogosTab /> },
   { id: 'contratos', label: 'Contratos', render: () => <ContratoConfigTab /> },
+  { id: 'facturacion', label: 'Facturación ARCA', render: () => <FacturacionArcaTab /> },
 ];
 
 export const SettingsPage = () => {

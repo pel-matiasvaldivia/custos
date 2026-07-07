@@ -5,7 +5,7 @@ import {
   ESTADOS_SELECCIONABLES,
   estadoMeta,
 } from '../../services/vigilante.service';
-import { UserPlus, Search, MoreVertical, Pencil, Upload } from 'lucide-react';
+import { UserPlus, Search, MoreVertical, Pencil, Upload, FileSpreadsheet } from 'lucide-react';
 import { PageHint } from '../../components/common/PageHint';
 
 const badgeClase = (badge: 'ok' | 'alert' | 'muted') =>
@@ -13,6 +13,8 @@ const badgeClase = (badge: 'ok' | 'alert' | 'muted') =>
 import { VigiladorWizard } from './VigiladorWizard';
 import { VigiladorEditForm } from './VigiladorEditForm';
 import { ImportarVigiladoresModal } from './ImportarVigiladoresModal';
+import { ImportarNominaModal } from './ImportarNominaModal';
+import { ExportarAltasButton } from './ExportarAltasButton';
 import { Link } from 'react-router-dom';
 
 export const PersonnelPage = () => {
@@ -20,6 +22,8 @@ export const PersonnelPage = () => {
   const [loading, setLoading] = useState(true);
   const [wizardAbierto, setWizardAbierto] = useState(false);
   const [importarAbierto, setImportarAbierto] = useState(false);
+  const [nominaAbierta, setNominaAbierta] = useState(false);
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [menuAbiertoId, setMenuAbiertoId] = useState<string | null>(null);
   const [vigiladorEditando, setVigiladorEditando] = useState<Vigilador | null>(null);
   const [busqueda, setBusqueda] = useState('');
@@ -64,6 +68,13 @@ export const PersonnelPage = () => {
           <p className="text-muted">Gestión de vigiladores y credenciales.</p>
         </div>
         <div className="flex items-center gap-2">
+          {seleccionados.length > 0 && <ExportarAltasButton ids={seleccionados} />}
+          <button
+            onClick={() => setNominaAbierta(true)}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <FileSpreadsheet size={16} /> Nómina ARCA
+          </button>
           <button
             onClick={() => setImportarAbierto(true)}
             className="btn-secondary flex items-center gap-2"
@@ -92,6 +103,13 @@ export const PersonnelPage = () => {
       {importarAbierto && (
         <ImportarVigiladoresModal
           onClose={() => setImportarAbierto(false)}
+          onImportado={fetchVigiladores}
+        />
+      )}
+
+      {nominaAbierta && (
+        <ImportarNominaModal
+          onClose={() => setNominaAbierta(false)}
           onImportado={fetchVigiladores}
         />
       )}
@@ -126,6 +144,21 @@ export const PersonnelPage = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-line text-muted text-sm font-medium">
+                <th className="pb-3 px-4 w-10">
+                  <input
+                    type="checkbox"
+                    aria-label="Seleccionar todos"
+                    checked={
+                      vigiladoresFiltrados.length > 0 &&
+                      seleccionados.length === vigiladoresFiltrados.length
+                    }
+                    onChange={(e) =>
+                      setSeleccionados(
+                        e.target.checked ? vigiladoresFiltrados.map((v) => v.id) : [],
+                      )
+                    }
+                  />
+                </th>
                 <th className="pb-3 px-4">Legajo</th>
                 <th className="pb-3 px-4">Nombre Completo</th>
                 <th className="pb-3 px-4">Documento</th>
@@ -136,11 +169,25 @@ export const PersonnelPage = () => {
             </thead>
             <tbody className="divide-y divide-line">
               {loading ? (
-                <tr><td colSpan={6} className="py-8 text-center text-muted">Cargando personal...</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-muted">Cargando personal...</td></tr>
               ) : vigiladoresFiltrados.length === 0 ? (
-                <tr><td colSpan={6} className="py-8 text-center text-muted">No se encontraron vigiladores.</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-muted">No se encontraron vigiladores.</td></tr>
               ) : vigiladoresFiltrados.map((v) => (
                 <tr key={v.id} className="hover:bg-canvas/50 transition-colors text-sm">
+                  <td className="py-4 px-4">
+                    <input
+                      type="checkbox"
+                      aria-label={`Seleccionar ${v.apellido}`}
+                      checked={seleccionados.includes(v.id)}
+                      onChange={(e) =>
+                        setSeleccionados((prev) =>
+                          e.target.checked
+                            ? [...prev, v.id]
+                            : prev.filter((id) => id !== v.id),
+                        )
+                      }
+                    />
+                  </td>
                   <td className="py-4 px-4 font-mono font-medium text-brand-blue">
                     <Link to={`/personnel/${v.id}`} className="hover:underline">{v.legajo_nro}</Link>
                   </td>
