@@ -21,6 +21,10 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
   const [nombre, setNombre] = useState(vigilador.nombre);
   const [apellido, setApellido] = useState(vigilador.apellido);
   const [documento, setDocumento] = useState(vigilador.documento);
+  const [cuil, setCuil] = useState(vigilador.cuil || '');
+  const [fechaIngreso, setFechaIngreso] = useState(
+    vigilador.fecha_ingreso ? vigilador.fecha_ingreso.slice(0, 10) : '',
+  );
   const [legajoNro, setLegajoNro] = useState(vigilador.legajo_nro);
   const [estado, setEstado] = useState(vigilador.estado || 'ACTIVO');
   const [telefono, setTelefono] = useState(vigilador.telefono || '');
@@ -39,10 +43,17 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
     setEnviando(true);
     setError(null);
     try {
+      if (cuil && !/^\d{11}$/.test(cuil.replace(/\D/g, ''))) {
+        setError('El CUIL debe tener 11 dígitos (sin guiones).');
+        setEnviando(false);
+        return;
+      }
       const actualizado = await vigilanteService.update(vigilador.id, {
         nombre,
         apellido,
         documento,
+        cuil: cuil.replace(/\D/g, '') || undefined,
+        fecha_ingreso: fechaIngreso || undefined,
         legajo_nro: legajoNro,
         estado,
         telefono: telefono || undefined,
@@ -55,8 +66,9 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
         contacto_emerg_vinculo: contactoEmergVinculo || undefined,
       });
       onSaved(actualizado);
-    } catch (err: any) {
-      setError(err?.response?.data?.message || 'No se pudo guardar los cambios.');
+    } catch (err) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'No se pudo guardar los cambios.');
     } finally {
       setEnviando(false);
     }
@@ -90,6 +102,27 @@ export const VigiladorEditForm = ({ vigilador, onClose, onSaved }: Props) => {
             <div className="space-y-1">
               <label className={labelClase}>Legajo</label>
               <input className={campoClase} value={legajoNro} onChange={(e) => setLegajoNro(e.target.value)} required />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className={labelClase}>CUIL</label>
+              <input
+                className={`${campoClase} font-mono`}
+                placeholder="20123456789"
+                value={cuil}
+                onChange={(e) => setCuil(e.target.value)}
+              />
+              <p className="text-[10px] text-muted">Necesario para exportar a ARCA.</p>
+            </div>
+            <div className="space-y-1">
+              <label className={labelClase}>Fecha de ingreso</label>
+              <input
+                type="date"
+                className={campoClase}
+                value={fechaIngreso}
+                onChange={(e) => setFechaIngreso(e.target.value)}
+              />
             </div>
           </div>
           <div className="space-y-1">

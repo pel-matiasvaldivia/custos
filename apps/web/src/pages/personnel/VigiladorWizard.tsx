@@ -7,6 +7,8 @@ interface VigiladorWizardData {
   nombre: string;
   apellido: string;
   documento: string;
+  cuil: string;
+  fecha_ingreso: string;
   domicilio: string;
   localidad: string;
   provincia: string;
@@ -23,6 +25,8 @@ const DATOS_INICIALES: VigiladorWizardData = {
   nombre: '',
   apellido: '',
   documento: '',
+  cuil: '',
+  fecha_ingreso: '',
   domicilio: '',
   localidad: '',
   provincia: '',
@@ -52,6 +56,9 @@ export const VigiladorWizard = ({ onClose, onCreated }: Props) => {
         if (!data.nombre || !data.apellido || !data.documento || !data.legajo_nro) {
           return 'Completá nombre, apellido, documento y número de legajo para continuar.';
         }
+        if (data.cuil && !/^\d{11}$/.test(data.cuil.replace(/\D/g, ''))) {
+          return 'El CUIL debe tener 11 dígitos (sin guiones).';
+        }
         return null;
       },
       render: (data, setData) => (
@@ -75,22 +82,54 @@ export const VigiladorWizard = ({ onClose, onCreated }: Props) => {
               />
             </div>
           </div>
-          <div className="space-y-1">
-            <label className={labelClase}>Documento (DNI)</label>
-            <input
-              className={campoClase}
-              value={data.documento}
-              onChange={(e) => setData({ documento: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className={labelClase}>CUIL</label>
+              <input
+                placeholder="20123456789"
+                className={`${campoClase} font-mono`}
+                value={data.cuil}
+                onChange={(e) => {
+                  const cuil = e.target.value;
+                  // Autocompleta el DNI con los 8 dígitos centrales del CUIL.
+                  const soloDigitos = cuil.replace(/\D/g, '');
+                  setData(
+                    soloDigitos.length === 11 && !data.documento
+                      ? { cuil, documento: soloDigitos.slice(2, 10) }
+                      : { cuil },
+                  );
+                }}
+              />
+              <p className="text-[10px] text-muted">Necesario para exportar a ARCA.</p>
+            </div>
+            <div className="space-y-1">
+              <label className={labelClase}>Documento (DNI)</label>
+              <input
+                className={campoClase}
+                value={data.documento}
+                onChange={(e) => setData({ documento: e.target.value })}
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <label className={labelClase}>Nro. Legajo</label>
-            <input
-              placeholder="Ej: V-001"
-              className={`${campoClase} font-mono`}
-              value={data.legajo_nro}
-              onChange={(e) => setData({ legajo_nro: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className={labelClase}>Nro. Legajo</label>
+              <input
+                placeholder="Ej: V-001"
+                className={`${campoClase} font-mono`}
+                value={data.legajo_nro}
+                onChange={(e) => setData({ legajo_nro: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClase}>Fecha de ingreso</label>
+              <input
+                type="date"
+                className={campoClase}
+                value={data.fecha_ingreso}
+                onChange={(e) => setData({ fecha_ingreso: e.target.value })}
+              />
+            </div>
           </div>
         </div>
       ),
@@ -239,6 +278,8 @@ export const VigiladorWizard = ({ onClose, onCreated }: Props) => {
           nombre: data.nombre,
           apellido: data.apellido,
           documento: data.documento,
+          cuil: data.cuil.replace(/\D/g, '') || undefined,
+          fecha_ingreso: data.fecha_ingreso || undefined,
           domicilio: data.domicilio || undefined,
           localidad: data.localidad || undefined,
           provincia: data.provincia || undefined,
