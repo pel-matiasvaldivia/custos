@@ -1,0 +1,36 @@
+{
+  "Login": [
+    "button-name",
+    "color-contrast"
+  ],
+  "Dashboard": [
+    "button-name",
+    "color-contrast"
+  ],
+  "Clientes": [
+    "color-contrast"
+  ],
+  "Personal": [
+    "button-name",
+    "color-contrast",
+    "select-name"
+  ],
+  "Cuadrante": [
+    "button-name",
+    "color-contrast"
+  ],
+  "Novedades": [
+    "color-contrast",
+    "label",
+    "select-name"
+  ],
+  "Liquidaciones": [
+    "color-contrast",
+    "label",
+    "select-name"
+  ],
+  "Configuración": [
+    "color-contrast",
+    "select-name"
+  ]
+}
