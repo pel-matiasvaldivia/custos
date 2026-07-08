@@ -70,6 +70,7 @@ export const BienvenidaModal = () => {
             <button
               key={idx}
               onClick={() => setI(idx)}
+              aria-label={`Ir al paso ${idx + 1}`}
               className={`h-1.5 rounded-full transition-all ${idx === i ? 'w-6 bg-brand-blue' : 'w-1.5 bg-line'}`}
             />
           ))}

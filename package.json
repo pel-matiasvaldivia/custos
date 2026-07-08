@@ -18,7 +18,8 @@
   "license": "ISC",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "qa"
   ],
   "prisma": {
     "seed": "ts-node --transpile-only --compiler-options {\"module\":\"commonjs\",\"moduleResolution\":\"node\"} apps/api/prisma/seed.ts"

@@ -102,24 +102,24 @@ export const LiquidacionesPage = () => {
       <div className="card space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
-            <label className="label text-xs uppercase font-black">Modo de cálculo</label>
-            <select className="input" value={modoConfig} onChange={(e) => guardarModo(e.target.value)}>
+            <label htmlFor="liq-modo" className="label text-xs uppercase font-black">Modo de cálculo</label>
+            <select id="liq-modo" className="input" value={modoConfig} onChange={(e) => guardarModo(e.target.value)}>
               <option value="VALOR_HORA_MANUAL">Valor hora manual</option>
               <option value="BASICO_507">Básico Convenio 507</option>
               <option value="SOLO_HORAS">Sólo horas</option>
             </select>
           </div>
           <div>
-            <label className="label text-xs uppercase font-black">Desde</label>
-            <input type="date" className="input" value={desde} onChange={(e) => setDesde(e.target.value)} />
+            <label htmlFor="liq-desde" className="label text-xs uppercase font-black">Desde</label>
+            <input id="liq-desde" type="date" className="input" value={desde} onChange={(e) => setDesde(e.target.value)} />
           </div>
           <div>
-            <label className="label text-xs uppercase font-black">Hasta</label>
-            <input type="date" className="input" value={hasta} onChange={(e) => setHasta(e.target.value)} />
+            <label htmlFor="liq-hasta" className="label text-xs uppercase font-black">Hasta</label>
+            <input id="liq-hasta" type="date" className="input" value={hasta} onChange={(e) => setHasta(e.target.value)} />
           </div>
           <div>
-            <label className="label text-xs uppercase font-black">Valor hora por defecto</label>
-            <input type="number" className="input" value={valorHora} onChange={(e) => setValorHora(Number(e.target.value))} />
+            <label htmlFor="liq-valor-hora" className="label text-xs uppercase font-black">Valor hora por defecto</label>
+            <input id="liq-valor-hora" type="number" className="input" value={valorHora} onChange={(e) => setValorHora(Number(e.target.value))} />
           </div>
           <div className="flex items-end">
             <button onClick={calcular} disabled={loading} className="btn btn-primary w-full flex items-center justify-center gap-2 disabled:opacity-50">

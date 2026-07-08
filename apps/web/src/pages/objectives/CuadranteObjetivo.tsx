@@ -69,6 +69,7 @@ export const CuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setSemanaInicio(sumarDias(semanaInicio, -7))}
+          aria-label="Semana anterior"
           className="p-1 hover:bg-canvas rounded transition-colors text-muted hover:text-navy"
         >
           <ChevronLeft size={18} />
@@ -79,6 +80,7 @@ export const CuadranteObjetivo = ({ objetivoId, puestos }: Props) => {
         </span>
         <button
           onClick={() => setSemanaInicio(sumarDias(semanaInicio, 7))}
+          aria-label="Semana siguiente"
           className="p-1 hover:bg-canvas rounded transition-colors text-muted hover:text-navy"
         >
           <ChevronRight size={18} />
@@ -376,7 +378,7 @@ const TurnoModal = ({ puesto, fecha, asignacion, onClose, onGuardado }: TurnoMod
             <h3 className="text-lg font-display font-bold text-navy">{puesto.nombre}</h3>
             <p className="text-xs text-muted">{fecha.toLocaleDateString('es-AR', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
           </div>
-          <button onClick={onClose} className="text-muted hover:text-navy transition-colors">
+          <button onClick={onClose} aria-label="Cerrar" className="text-muted hover:text-navy transition-colors">
             <X size={20} />
           </button>
         </div>
@@ -459,6 +461,7 @@ const TurnoModal = ({ puesto, fecha, asignacion, onClose, onGuardado }: TurnoMod
                     disabled={enviando}
                     className="px-3 py-2 border border-line text-muted hover:text-amber rounded-md transition-colors disabled:opacity-60"
                     title="Eliminar turno"
+                    aria-label="Eliminar turno"
                   >
                     <Trash2 size={16} />
                   </button>

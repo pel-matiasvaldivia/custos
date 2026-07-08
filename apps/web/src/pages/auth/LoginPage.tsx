@@ -61,7 +61,7 @@ export default function LoginPage() {
           <h1 className="text-white text-3xl font-black italic uppercase tracking-tighter mb-2">
             Centro de Operaciones
           </h1>
-          <p className="text-white/40 font-bold uppercase tracking-widest text-xs">
+          <p className="text-white/60 font-bold uppercase tracking-widest text-xs">
             Ingresá con tus credenciales de operador
           </p>
         </div>
@@ -79,10 +79,11 @@ export default function LoginPage() {
 
             {/* Email */}
             <div className="space-y-2">
-              <label className="text-white/50 text-[10px] font-black uppercase tracking-widest block">
+              <label htmlFor="login-email" className="text-white/70 text-[10px] font-black uppercase tracking-widest block">
                 Email / Usuario
               </label>
               <input
+                id="login-email"
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -95,11 +96,12 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="space-y-2">
-              <label className="text-white/50 text-[10px] font-black uppercase tracking-widest block">
+              <label htmlFor="login-password" className="text-white/70 text-[10px] font-black uppercase tracking-widest block">
                 Contraseña
               </label>
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -110,7 +112,8 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/60 hover:text-white/80 transition-colors"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -135,10 +138,10 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-white/20 text-xs font-bold uppercase tracking-widest mt-6">
+        <p className="text-center text-white/50 text-xs font-bold uppercase tracking-widest mt-6">
           Acceso restringido · Solo personal autorizado
         </p>
-        <p className="text-center text-white/30 text-xs mt-3">
+        <p className="text-center text-white/60 text-xs mt-3">
           ¿No tenés cuenta?{' '}
           <Link to="/registro" className="text-[#1B57D6] hover:text-[#4a7fe8] transition-colors font-semibold">
             Crear cuenta gratis

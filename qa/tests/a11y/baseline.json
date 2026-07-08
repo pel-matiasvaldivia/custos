@@ -1,0 +1,10 @@
+{
+  "Login": ["color-contrast"],
+  "Dashboard": ["color-contrast"],
+  "Clientes": ["color-contrast"],
+  "Personal": ["color-contrast"],
+  "Cuadrante": ["color-contrast"],
+  "Novedades": ["color-contrast"],
+  "Liquidaciones": ["color-contrast"],
+  "Configuración": ["color-contrast"]
+}

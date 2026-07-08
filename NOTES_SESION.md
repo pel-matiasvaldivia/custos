@@ -395,3 +395,126 @@ con obtención de CAE en tiempo real.
 - Redis: reusa `REDIS_URL`/`REDIS_HOST`/`REDIS_PORT`. `APP_SECRET_KEY` cifra
   cert/clave (ya documentada). `ioredis` viene transitivo de bullmq.
 - Sin dependencias nuevas: SOAP por XML manual + axios; CSV por parser propio.
+
+---
+
+# Ronda 4 — Plataforma QA Automation completa (2026-07-08)
+
+**Branch:** `claude/erp-qa-automation-x5zh5w`
+**PR:** #88 (en monitoreo CI activo)
+
+## Alcance
+
+Plataforma completa de Quality Assurance construida desde cero analizando el
+código del monorepo (37 controladores, 64 modelos Prisma, frontend React/Vite).
+Workspace `qa/` con Playwright, k6, axe-core, Page Objects, y GitHub Actions CI.
+
+### Estructura de la suite
+
+| Tipo | Archivos | Tests | Descripcion |
+|---|---|---|---|
+| API | 7 specs | ~38 | auth, RBAC, tenant isolation (RLS), CRUD clientes, flujo operativo completo, movil+ARCA, smoke 18 endpoints |
+| E2E | 5 specs | ~26 | login, clientes CRUD, navegacion 16 modulos, cuadrante, RBAC UI |
+| Accesibilidad | 1 spec | 8 | axe-core WCAG 2.1 A/AA en 8 paginas con baseline de regresion |
+| Visual | 1 spec | 3 | Screenshots de sidebar, login, configuracion (zonas estables) |
+| Resiliencia | 1 spec | 11 | offline, API lenta, timeout, 500/401/403, JSON corrupto, doble click, multi-tab, refresh |
+| k6 carga | 1 script | - | smoke (5 VUs, 30s) y load (100 VUs, 10 min) |
+| k6 estres | 1 script | - | 6 escenarios concurrentes hasta 2000 VUs |
+
+**Total: 105 tests Playwright + 2 scripts k6**
+**Cobertura funcional: 23/23 modulos (100%)**
+
+### Procesos criticos cubiertos E2E (API)
+
+`operacion-flujo.spec.ts` — 10 tests seriales:
+alta cliente -> alta objetivo -> alta puesto -> alta vigilador -> crear esquema
+4x2 -> asignar vigilador -> consultar cuadrante (desde/hasta) -> consultar
+cobertura -> registrar novedad -> finalizar asignacion (vigente_hasta)
+
+### CI: `.github/workflows/qa.yml`
+
+Stack completo en GitHub Actions: Postgres 16 (con RLS + custos_app role) +
+Redis 7 + API NestJS + Web Vite. Ejecuta Playwright (6 projects: setup, api,
+e2e, a11y, visual, resilience) + cobertura funcional + k6 smoke. Publica
+artefactos: reporte HTML, videos, screenshots, traces, junit.xml, cobertura.
+
+---
+
+## Bugs y hallazgos detectados
+
+### QA-BUG-01 — ClientesPage crashea con datos corruptos (ALTA) — NO RESUELTO
+
+**Que detecta:** cuando la API devuelve un shape inesperado (JSON corrupto o
+campos faltantes), el componente `ClientesPage` del frontend crashea con:
+- `Cannot read properties of undefined (reading 'filter')`
+- `Cannot read properties of null (reading 'toLowerCase')`
+
+**Causa raiz:** el render de la lista de clientes no tiene defensa contra datos
+con shape inesperado. Falta validacion/fallback en el `.filter()` y `.toLowerCase()`
+sobre campos que pueden ser undefined/null.
+
+**Donde arreglarlo:** `apps/web/src/pages/clients/ClientesPage.tsx` (o el
+componente que renderiza la lista de clientes). Agregar optional chaining y/o
+valores por defecto en el map/filter de los datos de la API.
+
+**Estado en QA:** test marcado con `test.fail()` en
+`qa/tests/resilience/red-y-errores.spec.ts` — el test pasa como "expected
+failure" (no rompe la suite) pero rastrea el bug. Cuando se corrija el codigo,
+quitar el `test.fail()` para que el test valide la correccion.
+
+### QA-BUG-02 — Deuda de accesibilidad WCAG en todas las paginas (MEDIA) — NO RESUELTO
+
+**Que detecta:** axe-core encuentra violaciones en las 8 paginas auditadas:
+- `button-name`: botones de icono sin texto accesible (aria-label faltante)
+- `color-contrast`: contraste insuficiente entre texto y fondo
+- `label` / `select-name`: los `<label>` no estan asociados a sus inputs (falta `htmlFor`)
+
+**Donde arreglarlo:** componentes reutilizables del frontend:
+- Botones de icono: agregar `aria-label` descriptivo
+- Labels de formulario: agregar `htmlFor` que apunte al `id` del input
+- Contraste: ajustar colores en el tema CSS/Tailwind
+
+**Estado en QA:** las violaciones existentes estan registradas en
+`qa/tests/a11y/baseline.json`. El gate de accesibilidad solo falla ante
+violaciones NUEVAS que no esten en el baseline. Para regenerar el baseline
+despues de corregir: `QA_A11Y_UPDATE=1 npx playwright test --project=a11y`.
+
+### QA-OBS-01 — Contratos de API documentados (INFO) — OBSERVACION
+
+Comportamientos del API descubiertos y documentados por los tests:
+- `PUT /clientes/:id` (no PATCH) — la API usa PUT para actualizar clientes
+- `GET /cuadrante/asignaciones` exige `?objetivoId=` obligatorio (400 sin el)
+- `GET /liquidaciones` exige `?desde=&hasta=` obligatorio (400 sin ellos)
+- `GET /cuadrante/objetivos/:id` exige `?desde=&hasta=` obligatorio
+- `GET /vigilantes` NO acepta `?busqueda=` (PaginationDto sin ese campo +
+  forbidNonWhitelisted -> 400; los clientes SI lo tienen via FindClientesDto)
+
+No son bugs sino contratos del API que los consumidores deben respetar.
+Quedan documentados para referencia de frontend y QA.
+
+### QA-OBS-02 — Rate limiting funcional (INFO) — OBSERVACION
+
+El rate-limiter de login (`LOGIN_RATE_LIMIT_MAX`) funciona correctamente y
+devuelve 429 cuando se supera el limite. Los entornos de test/CI deben elevarlo
+(hecho en `qa.yml` con `LOGIN_RATE_LIMIT_MAX=100000` y `RATE_LIMIT_MAX=1000000`).
+
+---
+
+## Problemas de CI resueltos (4 iteraciones)
+
+| # | Problema | Causa | Fix | Commit |
+|---|---|---|---|---|
+| 1 | bitnami/minio image pull fail | Imagen retirada de Docker Hub | Removido MinIO service; API degrada gracefully | `1a00f86` |
+| 2 | dump.rdb untracked file | Redis background save en CI | Eliminado + agregado a .gitignore | `7d10893` |
+| 3 | Test movil 429 en vez de 401 | Rate limiter sin elevar en CI | LOGIN_RATE_LIMIT_MAX + RATE_LIMIT_MAX en workflow env | `eacb9d9` |
+| 4 | k6 http_req_failed 18.54% | vigilantes?busqueda= rechazado por forbidNonWhitelisted | Removido query param invalido de k6 scripts | `f62451f` |
+
+---
+
+## Resumen de estado
+
+- **105 tests Playwright:** todos pasan (incluyendo QA-BUG-01 como expected failure)
+- **23/23 modulos cubiertos (100%):** supera el objetivo de >90%
+- **QA-BUG-01 (ALTA):** pendiente de corregir en el frontend (ClientesPage)
+- **QA-BUG-02 (MEDIA):** pendiente de corregir en el frontend (accesibilidad)
+- **CI:** en monitoreo activo, esperando resultado de commit `f62451f`

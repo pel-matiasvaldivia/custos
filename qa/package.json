@@ -1,0 +1,27 @@
+{
+  "name": "@custos/qa",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Plataforma de Quality Assurance del ERP CustOS: E2E, API, regresión, accesibilidad, visual, resiliencia, carga (k6) y cobertura funcional.",
+  "scripts": {
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=e2e",
+    "test:a11y": "playwright test --project=a11y",
+    "test:visual": "playwright test --project=visual",
+    "test:resilience": "playwright test --project=resilience",
+    "test:regression": "playwright test --grep @regression",
+    "test:smoke": "playwright test --grep @smoke",
+    "coverage:funcional": "ts-node --transpile-only scripts/coverage-funcional.ts",
+    "report": "playwright show-report reports/html",
+    "k6:smoke": "k6 run -e PROFILE=smoke k6/carga.js",
+    "k6:load": "k6 run -e PROFILE=load k6/carga.js",
+    "k6:stress": "k6 run -e PROFILE=stress k6/estres.js"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@playwright/test": "^1.49.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

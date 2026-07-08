@@ -289,6 +289,7 @@ export const QuadrantPage = () => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMes(new Date(mes.getFullYear(), mes.getMonth() - 1, 1))}
+              aria-label="Mes anterior"
               className="p-1 hover:bg-canvas rounded transition-colors text-muted hover:text-navy"
             >
               <ChevronLeft size={20} />
@@ -298,6 +299,7 @@ export const QuadrantPage = () => {
             </span>
             <button
               onClick={() => setMes(new Date(mes.getFullYear(), mes.getMonth() + 1, 1))}
+              aria-label="Mes siguiente"
               className="p-1 hover:bg-canvas rounded transition-colors text-muted hover:text-navy"
             >
               <ChevronRight size={20} />

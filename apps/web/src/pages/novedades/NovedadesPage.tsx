@@ -163,8 +163,9 @@ export const NovedadesPage = () => {
             <h3 className="text-2xl font-bold text-navy mb-6">Reportar Novedad</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="label text-xs uppercase font-black">Tipo de Novedad</label>
+                <label htmlFor="nov-tipo" className="label text-xs uppercase font-black">Tipo de Novedad</label>
                 <select
+                  id="nov-tipo"
                   className="input"
                   value={formData.tipo}
                   onChange={e => setFormData({...formData, tipo: e.target.value})}
@@ -196,8 +197,9 @@ export const NovedadesPage = () => {
               {esAdelanto && (
                 <div className="grid grid-cols-2 gap-3 p-3 bg-brand-tint/50 border border-brand-blue/20 rounded-xl">
                   <div>
-                    <label className="label text-xs uppercase font-black">Monto del adelanto</label>
+                    <label htmlFor="nov-adelanto-monto" className="label text-xs uppercase font-black">Monto del adelanto</label>
                     <input
+                      id="nov-adelanto-monto"
                       type="number"
                       className="input"
                       placeholder="50000"
@@ -207,8 +209,8 @@ export const NovedadesPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="label text-xs uppercase font-black">Devolución en cuotas</label>
-                    <select className="input" value={adelantoCuotas} onChange={e => setAdelantoCuotas(Number(e.target.value))}>
+                    <label htmlFor="nov-adelanto-cuotas" className="label text-xs uppercase font-black">Devolución en cuotas</label>
+                    <select id="nov-adelanto-cuotas" className="input" value={adelantoCuotas} onChange={e => setAdelantoCuotas(Number(e.target.value))}>
                       {[1, 2, 3, 4, 5, 6].map(n => (
                         <option key={n} value={n}>{n} {n === 1 ? 'cuota' : 'cuotas'}</option>
                       ))}
@@ -249,9 +251,10 @@ export const NovedadesPage = () => {
       <div className="card space-y-4">
         <div className="flex flex-wrap gap-3 items-end">
           <div className="relative flex-1 min-w-[200px]">
-            <label className="label text-[10px] uppercase font-black">Buscar</label>
+            <label htmlFor="nov-buscar" className="label text-[10px] uppercase font-black">Buscar</label>
             <Search className="absolute left-3 top-[34px] text-muted" size={16} />
             <input
+              id="nov-buscar"
               type="text"
               placeholder="Texto en la descripción..."
               className="input pl-9"
@@ -260,22 +263,22 @@ export const NovedadesPage = () => {
             />
           </div>
           <div className="min-w-[160px]">
-            <label className="label text-[10px] uppercase font-black">Objetivo</label>
-            <select className="input" value={filtros.objetivoId} onChange={(e) => setF('objetivoId', e.target.value)}>
+            <label htmlFor="nov-f-objetivo" className="label text-[10px] uppercase font-black">Objetivo</label>
+            <select id="nov-f-objetivo" className="input" value={filtros.objetivoId} onChange={(e) => setF('objetivoId', e.target.value)}>
               <option value="">Todos</option>
               {objetivos.map((o) => <option key={o.id} value={o.id}>{o.nombre}</option>)}
             </select>
           </div>
           <div className="min-w-[150px]">
-            <label className="label text-[10px] uppercase font-black">Puesto</label>
-            <select className="input" value={filtros.puestoId} onChange={(e) => setF('puestoId', e.target.value)}>
+            <label htmlFor="nov-f-puesto" className="label text-[10px] uppercase font-black">Puesto</label>
+            <select id="nov-f-puesto" className="input" value={filtros.puestoId} onChange={(e) => setF('puestoId', e.target.value)}>
               <option value="">Todos</option>
               {puestosFiltrados.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
           </div>
           <div className="min-w-[160px]">
-            <label className="label text-[10px] uppercase font-black">Vigilador</label>
-            <select className="input" value={filtros.vigiladorId} onChange={(e) => setF('vigiladorId', e.target.value)}>
+            <label htmlFor="nov-f-vigilador" className="label text-[10px] uppercase font-black">Vigilador</label>
+            <select id="nov-f-vigilador" className="input" value={filtros.vigiladorId} onChange={(e) => setF('vigiladorId', e.target.value)}>
               <option value="">Todos</option>
               {vigiladores.map((v) => <option key={v.id} value={v.id}>{v.apellido}, {v.nombre}</option>)}
             </select>
@@ -283,26 +286,26 @@ export const NovedadesPage = () => {
         </div>
         <div className="flex flex-wrap gap-3 items-end">
           <div className="min-w-[130px]">
-            <label className="label text-[10px] uppercase font-black">Tipo</label>
-            <select className="input" value={filtros.tipo} onChange={(e) => setF('tipo', e.target.value)}>
+            <label htmlFor="nov-f-tipo" className="label text-[10px] uppercase font-black">Tipo</label>
+            <select id="nov-f-tipo" className="input" value={filtros.tipo} onChange={(e) => setF('tipo', e.target.value)}>
               <option value="">Todos</option>
               {tiposNovedad.map((t) => <option key={t.codigo} value={t.codigo}>{t.etiqueta}</option>)}
             </select>
           </div>
           <div className="min-w-[130px]">
-            <label className="label text-[10px] uppercase font-black">Prioridad</label>
-            <select className="input" value={filtros.prioridad} onChange={(e) => setF('prioridad', e.target.value)}>
+            <label htmlFor="nov-f-prioridad" className="label text-[10px] uppercase font-black">Prioridad</label>
+            <select id="nov-f-prioridad" className="input" value={filtros.prioridad} onChange={(e) => setF('prioridad', e.target.value)}>
               <option value="">Todas</option>
               {['NORMAL', 'ALTA', 'CRITICA'].map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
           <div>
-            <label className="label text-[10px] uppercase font-black">Desde</label>
-            <input type="date" className="input" value={filtros.desde} onChange={(e) => setF('desde', e.target.value)} />
+            <label htmlFor="nov-f-desde" className="label text-[10px] uppercase font-black">Desde</label>
+            <input id="nov-f-desde" type="date" className="input" value={filtros.desde} onChange={(e) => setF('desde', e.target.value)} />
           </div>
           <div>
-            <label className="label text-[10px] uppercase font-black">Hasta</label>
-            <input type="date" className="input" value={filtros.hasta} onChange={(e) => setF('hasta', e.target.value)} />
+            <label htmlFor="nov-f-hasta" className="label text-[10px] uppercase font-black">Hasta</label>
+            <input id="nov-f-hasta" type="date" className="input" value={filtros.hasta} onChange={(e) => setF('hasta', e.target.value)} />
           </div>
           <div className="flex-1" />
           {hayFiltros && (
