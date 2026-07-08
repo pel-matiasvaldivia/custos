@@ -80,7 +80,7 @@ export const ImportarNominaModal = ({
           ) : (
             <>
               <p className="text-sm text-muted">
-                Subí el archivo CSV que exporta ARCA desde Simplificación Registral / "Mis Empleados".
+                Subí el archivo CSV o Excel (.xlsx) que exporta ARCA desde Simplificación Registral / "Mis Empleados".
                 Reconocemos las columnas CUIL, apellido, nombre y fecha de ingreso.
               </p>
               <div
@@ -98,7 +98,9 @@ export const ImportarNominaModal = ({
                 ) : (
                   <p className="text-sm text-muted">Arrastrá el archivo acá o hacé clic para elegirlo</p>
                 )}
-                <input ref={inputRef} type="file" accept=".csv,.txt,text/csv" className="hidden"
+                <input ref={inputRef} type="file"
+                  accept=".csv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="hidden"
                   onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} />
               </div>
 
