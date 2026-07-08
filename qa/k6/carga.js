@@ -46,7 +46,7 @@ export default function ({ token }) {
     get(token, 'cuadrante/esquemas', 'GET cuadrante');
   } else if (dado < 0.65) {
     get(token, `clientes?busqueda=se`, 'GET busqueda clientes');
-    get(token, `vigilantes?busqueda=pe`, 'GET busqueda vigiladores');
+    get(token, `vigilantes`, 'GET listado vigiladores');
   } else if (dado < 0.8) {
     get(token, 'contratos', 'GET contratos');
   } else if (dado < 0.9) {

@@ -155,6 +155,6 @@ export function escenarioBusquedas(data) {
   const letras = 'aeiourstln';
   const q = letras[Math.floor(Math.random() * letras.length)] + letras[Math.floor(Math.random() * letras.length)];
   get(data.token, `clientes?busqueda=${q}`, 'GET busqueda clientes');
-  get(data.token, `vigilantes?busqueda=${q}`, 'GET busqueda vigiladores');
+  get(data.token, `vigilantes`, 'GET listado vigiladores');
   sleep(Math.random() * 1.5 + 0.5);
 }
