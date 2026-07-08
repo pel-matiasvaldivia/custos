@@ -43,6 +43,11 @@ jobs:
       DATABASE_URL: postgresql://custos_app:app_pass@localhost:5432/custos
       MIGRATE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/custos
       JWT_SECRET: qa-ci-secret-0123456789abcdef
+      # La suite hace decenas de logins (setup por rol + tests de auth + k6):
+      # sin esto el rate-limiter de login responde 429 y rompe tests que
+      # esperan 401 (visto en el primer run real del workflow).
+      LOGIN_RATE_LIMIT_MAX: "100000"
+      RATE_LIMIT_MAX: "1000000"
       APP_SECRET_KEY: qa-ci-app-secret-key-32-chars!!!
       REDIS_HOST: localhost
       REDIS_PORT: "6379"
