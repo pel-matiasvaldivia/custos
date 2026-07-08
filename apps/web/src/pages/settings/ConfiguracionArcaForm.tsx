@@ -111,23 +111,23 @@ export const ConfiguracionArcaForm = ({
 
       <div className="card space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Campo label="Entorno">
-            <select value={ambiente} onChange={(e) => setAmbiente(e.target.value)} className="inp bg-white">
+          <Campo label="Entorno" htmlFor="arca-ambiente">
+            <select id="arca-ambiente" value={ambiente} onChange={(e) => setAmbiente(e.target.value)} className="inp bg-white">
               <option value="HOMOLOGACION">Homologación (pruebas)</option>
               <option value="PRODUCCION">Producción</option>
             </select>
           </Campo>
-          <Campo label="CUIT del emisor" requerido>
-            <input value={cuit} onChange={(e) => setCuit(e.target.value)} className="inp font-mono" placeholder="30123456789" />
+          <Campo label="CUIT del emisor" requerido htmlFor="arca-cuit">
+            <input id="arca-cuit" value={cuit} onChange={(e) => setCuit(e.target.value)} className="inp font-mono" placeholder="30123456789" />
           </Campo>
-          <Campo label="Condición frente al IVA" requerido>
-            <select value={condicion} onChange={(e) => setCondicion(e.target.value)} className="inp bg-white">
+          <Campo label="Condición frente al IVA" requerido htmlFor="arca-condicion">
+            <select id="arca-condicion" value={condicion} onChange={(e) => setCondicion(e.target.value)} className="inp bg-white">
               <option value="">Elegí…</option>
               {CONDICIONES.map((c) => <option key={c.v} value={c.v}>{c.label}</option>)}
             </select>
           </Campo>
-          <Campo label="Puntos de venta (separados por coma)">
-            <input value={puntos} onChange={(e) => setPuntos(e.target.value)} className="inp font-mono" placeholder="1, 2" />
+          <Campo label="Puntos de venta (separados por coma)" htmlFor="arca-puntos">
+            <input id="arca-puntos" value={puntos} onChange={(e) => setPuntos(e.target.value)} className="inp font-mono" placeholder="1, 2" />
           </Campo>
         </div>
 
@@ -205,10 +205,10 @@ function FileBox({
   );
 }
 
-function Campo({ label, requerido, children }: { label: string; requerido?: boolean; children: React.ReactNode }) {
+function Campo({ label, requerido, htmlFor, children }: { label: string; requerido?: boolean; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[10px] font-black uppercase tracking-widest text-muted mb-1 block">
+      <label htmlFor={htmlFor} className="text-[10px] font-black uppercase tracking-widest text-muted mb-1 block">
         {label}{requerido && <span className="text-amber ml-0.5">*</span>}
       </label>
       {children}

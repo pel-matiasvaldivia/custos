@@ -129,6 +129,7 @@ export const PersonnelPage = () => {
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
+            aria-label="Filtrar por estado"
             className="px-3 py-2 bg-canvas border border-line rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
           >
             <option value="TODOS">Todos los estados</option>
@@ -206,6 +207,7 @@ export const PersonnelPage = () => {
                   <td className="py-4 px-4 text-right relative">
                     <button
                       onClick={() => setMenuAbiertoId(menuAbiertoId === v.id ? null : v.id)}
+                      aria-label="Opciones"
                       className="text-muted hover:text-navy transition-colors"
                     >
                       <MoreVertical size={18} />

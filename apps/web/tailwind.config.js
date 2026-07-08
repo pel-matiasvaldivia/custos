@@ -16,7 +16,7 @@ export default {
         emerald: '#0e9f6e',
         amber: '#e8a33d',
         line: '#e2e8f2',
-        muted: '#5c6b86',
+        muted: '#546178',
       },
       fontFamily: {
         display: ["Space Grotesk", "sans-serif"],

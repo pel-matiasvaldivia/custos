@@ -89,12 +89,6 @@ test.describe('@mod:resiliencia Red y errores HTTP', () => {
   });
 
   test('datos corruptos (JSON inválido y shape inesperado): sin crash', async ({ page }) => {
-    // BUG DETECTADO (QA-BUG-01): ClientesPage revienta con shapes inesperados:
-    // "Cannot read properties of undefined (reading 'filter')" y
-    // "Cannot read properties of null (reading 'toLowerCase')".
-    // El render asume lista y razon_social no-nula sin defensa. Cuando se
-    // corrija el frontend, este test.fail() empezará a fallar y hay que quitarlo.
-    test.fail();
     const errores: string[] = [];
     page.on('pageerror', (e) => errores.push(e.message));
 

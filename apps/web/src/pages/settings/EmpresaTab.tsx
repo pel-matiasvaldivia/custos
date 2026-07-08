@@ -132,31 +132,31 @@ export const EmpresaTab = () => {
       <div className="card space-y-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-muted">Facturación</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Campo label="Razón social" requerido>
-            <input value={form.razon_social ?? ''} onChange={(e) => set('razon_social', e.target.value)}
+          <Campo label="Razón social" requerido htmlFor="emp-razon-social">
+            <input id="emp-razon-social" value={form.razon_social ?? ''} onChange={(e) => set('razon_social', e.target.value)}
               className="inp" placeholder="Seguridad S.R.L." />
           </Campo>
-          <Campo label="CUIT" requerido>
-            <input value={form.cuit ?? ''} onChange={(e) => set('cuit', e.target.value)}
+          <Campo label="CUIT" requerido htmlFor="emp-cuit">
+            <input id="emp-cuit" value={form.cuit ?? ''} onChange={(e) => set('cuit', e.target.value)}
               className="inp font-mono" placeholder="30-12345678-9" />
           </Campo>
-          <Campo label="Condición frente al IVA" requerido>
-            <select value={form.condicion_iva ?? ''} onChange={(e) => set('condicion_iva', e.target.value)}
+          <Campo label="Condición frente al IVA" requerido htmlFor="emp-condicion-iva">
+            <select id="emp-condicion-iva" value={form.condicion_iva ?? ''} onChange={(e) => set('condicion_iva', e.target.value)}
               className="inp bg-white">
               <option value="">Elegí…</option>
               {CONDICIONES.map((c) => <option key={c.v} value={c.v}>{c.label}</option>)}
             </select>
           </Campo>
-          <Campo label="Dirección fiscal" requerido>
-            <input value={form.direccion ?? ''} onChange={(e) => set('direccion', e.target.value)}
+          <Campo label="Dirección fiscal" requerido htmlFor="emp-direccion">
+            <input id="emp-direccion" value={form.direccion ?? ''} onChange={(e) => set('direccion', e.target.value)}
               className="inp" placeholder="Av. Siempreviva 742" />
           </Campo>
-          <Campo label="Email de contacto">
-            <input value={form.email_contacto ?? ''} onChange={(e) => set('email_contacto', e.target.value)}
+          <Campo label="Email de contacto" htmlFor="emp-email">
+            <input id="emp-email" value={form.email_contacto ?? ''} onChange={(e) => set('email_contacto', e.target.value)}
               className="inp" placeholder="admin@empresa.com" />
           </Campo>
-          <Campo label="Teléfono">
-            <input value={form.telefono_contacto ?? ''} onChange={(e) => set('telefono_contacto', e.target.value)}
+          <Campo label="Teléfono" htmlFor="emp-telefono">
+            <input id="emp-telefono" value={form.telefono_contacto ?? ''} onChange={(e) => set('telefono_contacto', e.target.value)}
               className="inp" placeholder="+54 9 11 …" />
           </Campo>
         </div>
@@ -221,10 +221,10 @@ export const EmpresaTab = () => {
   );
 };
 
-function Campo({ label, requerido, children }: { label: string; requerido?: boolean; children: React.ReactNode }) {
+function Campo({ label, requerido, htmlFor, children }: { label: string; requerido?: boolean; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[10px] font-black uppercase tracking-widest text-muted mb-1 block">
+      <label htmlFor={htmlFor} className="text-[10px] font-black uppercase tracking-widest text-muted mb-1 block">
         {label}{requerido && <span className="text-amber ml-0.5">*</span>}
       </label>
       {children}
