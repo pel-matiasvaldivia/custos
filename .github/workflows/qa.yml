@@ -33,12 +33,11 @@ jobs:
       redis:
         image: redis:7
         ports: [ "6379:6379" ]
-      minio:
-        image: bitnami/minio:latest
-        env:
-          MINIO_ROOT_USER: minio
-          MINIO_ROOT_PASSWORD: minio12345
-        ports: [ "9000:9000" ]
+      # Sin MinIO: bitnami/minio fue retirado de Docker Hub y la imagen oficial
+      # minio/minio no puede usarse como service (exige el comando `server /data`,
+      # que los service containers de Actions no permiten pasar). La API degrada
+      # con un warning y toda la suite pasa sin object storage; los flujos de
+      # adjuntos se cubren en el entorno local/staging con MinIO real.
 
     env:
       DATABASE_URL: postgresql://custos_app:app_pass@localhost:5432/custos
