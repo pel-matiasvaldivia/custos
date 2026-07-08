@@ -127,6 +127,34 @@ export function horasSemanaEsquema(esquema: Pick<EsquemaTurno, 'definicion'>): n
   return Math.round((totalTrabajo / dias_ciclo) * 7);
 }
 
+export interface BandaPuestoInput {
+  label: string;
+  hora_inicio: string;
+  duracion_horas: number;
+  dotacion?: number;
+  tipo_bloque?: string;
+  vigilador_ids: string[];
+}
+
+export interface AsistentePuestoInput {
+  objetivo_id: string;
+  puesto_id?: string;
+  puesto_nombre?: string;
+  vigente_desde: string;
+  fecha_ancla?: string;
+  generar_hasta?: string;
+  bandas: BandaPuestoInput[];
+}
+
+export interface AsistentePuestoResultado {
+  puestoId: string;
+  puestoNombre: string;
+  bandas: { label: string; esquemaId: string; personas: number; fijos: number; franqueros: number }[];
+  totalPersonas: number;
+  generacion: { creados: number; rechazados: { inicio_plan: string; errores: string[] }[] };
+  huecos: number;
+}
+
 export const cuadranteService = {
   crearEsquema: async (data: CreateEsquemaTurnoData): Promise<EsquemaTurno> => {
     const response = await api.post<EsquemaTurno>('/cuadrante/esquemas', data);
@@ -190,6 +218,14 @@ export const cuadranteService = {
     hasta: string,
   ): Promise<GeneracionResultado & { asignaciones: number }> => {
     const response = await api.post('/cuadrante/generar-mes', { desde, hasta });
+    return response.data;
+  },
+
+  /** Arma un puesto entero (bandas + franqueros) con rotación garantizada. */
+  asistentePuesto: async (
+    data: AsistentePuestoInput,
+  ): Promise<AsistentePuestoResultado> => {
+    const response = await api.post('/cuadrante/asistente-puesto', data);
     return response.data;
   },
 };
