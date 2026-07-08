@@ -511,10 +511,97 @@ devuelve 429 cuando se supera el limite. Los entornos de test/CI deben elevarlo
 
 ---
 
-## Resumen de estado
+## Resumen de estado (post Ronda 4)
 
-- **105 tests Playwright:** todos pasan (incluyendo QA-BUG-01 como expected failure)
+- **105 tests Playwright:** todos pasan (97 ejecutados, 8 skipped por entorno)
 - **23/23 modulos cubiertos (100%):** supera el objetivo de >90%
 - **QA-BUG-01 (ALTA):** pendiente de corregir en el frontend (ClientesPage)
 - **QA-BUG-02 (MEDIA):** pendiente de corregir en el frontend (accesibilidad)
 - **CI:** en monitoreo activo, esperando resultado de commit `f62451f`
+
+---
+
+# Ronda 5 — Fix de QA-BUG-01 y QA-BUG-02 (2026-07-08)
+
+**Branch:** `claude/erp-qa-automation-x5zh5w`
+**PR:** #88 — MERGEADO
+
+## QA-BUG-01 — ClientesPage crash con datos corruptos (ALTA) — RESUELTO
+
+**Fix:** Agregado `Array.isArray()` guard y filtro null-safe en `ClientesPage.tsx`.
+Cuando la API devuelve datos con shape inesperado (JSON invalido, campos null,
+objeto en vez de array), la pagina degrada sin crash en lugar de pantalla blanca.
+
+**Archivo:** `apps/web/src/pages/clients/ClientesPage.tsx`
+**Test:** Removido `test.fail()` de `qa/tests/resilience/red-y-errores.spec.ts`
+(el test ahora pasa normalmente validando que no hay crash JS).
+
+## QA-BUG-02 — Deuda de accesibilidad WCAG (MEDIA) — RESUELTO (parcial)
+
+Corregidas todas las violaciones de `button-name`, `select-name` y `label`.
+Queda pendiente `color-contrast` (requiere revision integral del sistema de
+colores Tailwind — utilities como `text-amber` y clases con opacidad generan
+contraste insuficiente en multiples contextos).
+
+### Archivos modificados
+
+| Archivo | Cambio |
+|---|---|
+| `apps/web/tailwind.config.js` | color muted #5c6b86 -> #546178 (mejor contraste) |
+| `apps/web/src/pages/auth/LoginPage.tsx` | labels con htmlFor/id, aria-labels, contraste |
+| `apps/web/src/pages/clients/ClientesPage.tsx` | Array.isArray guard + null-safe filter |
+| `apps/web/src/pages/personnel/PersonnelPage.tsx` | aria-labels en select y botones |
+| `apps/web/src/pages/novedades/NovedadesPage.tsx` | htmlFor/id en todos los controles |
+| `apps/web/src/pages/liquidaciones/LiquidacionesPage.tsx` | htmlFor/id en controles |
+| `apps/web/src/pages/settings/UsuariosTab.tsx` | htmlFor/id y aria-labels |
+| `apps/web/src/pages/settings/ConfiguracionArcaForm.tsx` | Campo con htmlFor, ids en inputs/selects |
+| `apps/web/src/pages/settings/EmpresaTab.tsx` | htmlFor/id en todos los campos |
+| `apps/web/src/pages/dashboard/BienvenidaModal.tsx` | aria-label en botones dot navigation |
+| `apps/web/src/pages/objectives/CuadranteObjetivo.tsx` | aria-labels en botones icono |
+| `apps/web/src/pages/quadrant/QuadrantPage.tsx` | aria-labels en navegacion de mes |
+| `qa/tests/resilience/red-y-errores.spec.ts` | Removido test.fail() de datos corruptos |
+| `qa/tests/a11y/baseline.json` | Solo queda color-contrast (button-name/select-name/label eliminados) |
+
+### Baseline de accesibilidad actualizado
+
+```json
+{
+  "Login": ["color-contrast"],
+  "Dashboard": ["color-contrast"],
+  "Clientes": ["color-contrast"],
+  "Personal": ["color-contrast"],
+  "Cuadrante": ["color-contrast"],
+  "Novedades": ["color-contrast"],
+  "Liquidaciones": ["color-contrast"],
+  "Configuracion": ["color-contrast"]
+}
+```
+
+Violaciones eliminadas del baseline (verificadas como corregidas en CI):
+- `button-name` — todos los botones de icono tienen aria-label
+- `select-name` — todos los selects tienen label asociado
+- `label` — todos los inputs tienen label con htmlFor/id
+
+## Problemas de CI resueltos (Ronda 5)
+
+| # | Problema | Causa | Fix | Commit |
+|---|---|---|---|---|
+| 5 | 8 tests a11y fallaron | Baseline vaciado prematuramente (color-contrast persiste) | Restaurado color-contrast en baseline de todas las paginas | `630ca9f` |
+
+## Commits
+
+- `e04b70f` — fix: resolve QA-BUG-01 (ClientesPage crash) and QA-BUG-02 (WCAG a11y debt)
+- `630ca9f` — fix(qa): restore color-contrast in a11y baseline
+
+## Resultado final
+
+- **PR #88:** MERGEADO exitosamente
+- **CI verde:** typecheck OK, qa OK (105 tests, 97 passed)
+- **QA-BUG-01:** RESUELTO
+- **QA-BUG-02:** RESUELTO (parcial — queda color-contrast como deuda tecnica)
+
+### Deuda tecnica pendiente
+
+- `color-contrast` en baseline de 8 paginas: Tailwind utilities (`text-amber`,
+  clases con opacidad) generan contraste insuficiente. Requiere revision integral
+  del sistema de colores para cumplir WCAG AA en todos los contextos.
