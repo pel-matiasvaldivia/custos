@@ -518,3 +518,52 @@ devuelve 429 cuando se supera el limite. Los entornos de test/CI deben elevarlo
 - **QA-BUG-01 (ALTA):** pendiente de corregir en el frontend (ClientesPage)
 - **QA-BUG-02 (MEDIA):** pendiente de corregir en el frontend (accesibilidad)
 - **CI:** en monitoreo activo, esperando resultado de commit `f62451f`
+
+---
+
+# Ronda 5 — Importación de nómina ARCA rota con CSV/XLSX reales (2026-07-08)
+
+**Branch:** `claude/arca-watcher-csv-import-a0tw7h`
+
+## Bug reportado
+Al importar la nómina exportada desde ARCA ("Consulta Nómina",
+`Nomina_30717284638_202605_000.csv/.xlsx`), el modal devolvía
+"0 vigiladores importados" con "Fila N: sin CUIL o nombre válidos" para
+TODAS las filas.
+
+## Causas raíz (verificadas con los archivos reales del usuario)
+1. **Preámbulo del export:** el archivo real trae 4 líneas antes de la
+   cabecera (`CUIT:`, `Período`, `Secuencia:`, `Contribuyente:`); la cabecera
+   real ("CUIL,Apellido y Nombre,…") está en la fila 5. `parsearCsv` tomaba la
+   fila 1 como cabecera → ninguna fila de datos encontraba la columna CUIL.
+2. **XLSX sin soporte:** el controller hacía `buffer.toString('utf8')` sobre
+   el binario (un xlsx es un ZIP) y el input del modal ni aceptaba `.xlsx`.
+3. **Orden del nombre:** en el export real "Apellido y Nombre" viene como
+   "NOMBRES APELLIDO" (`CLAUDIO WALTER MENDOZA`); la heurística sin coma
+   tomaba el PRIMER token como apellido → quedaba "CLAUDIO, WALTER MENDOZA".
+
+## Fix
+- `util/csv.util.ts`: nueva `filasDesdeMatriz` (compartida CSV/XLSX) que
+  detecta la fila de cabecera buscando la columna CUIL (fallback: columnas de
+  nombre, y si no, fila 1 como antes); devuelve `FilaConLinea` con el número
+  de línea ORIGINAL del archivo para mensajes de error útiles. El separador
+  se autodetecta sobre la línea de cabecera (contar sobre todo el archivo
+  engaña: los decimales usan coma, "834975,75").
+- `services/nomina.service.ts`: `importarNomina` recibe el Buffer + nombre;
+  detecta xlsx por magia ZIP (`PK`) o extensión y lo parsea con **exceljs**
+  (ya era dependencia; celdas numéricas/fecha/richText → texto); `.xls` viejo
+  (BIFF) se rechaza con mensaje claro. Split sin coma corregido: último token
+  = apellido.
+- `arca-integration.controller.ts`: pasa `archivo.buffer` + `originalname`.
+- `ImportarNominaModal.tsx`: `accept` suma `.xlsx` y el texto menciona Excel.
+
+## Verificación
+- Specs nuevos: `csv.util.spec.ts` + `nomina.service.spec.ts` (13 tests, con
+  la estructura real del export, xlsx generado con exceljs, `.xls` rechazado,
+  duplicados omitidos, número de fila en errores) → 13/13 passing.
+- Corrida real contra los DOS archivos subidos por el usuario (CSV y XLSX,
+  prisma mockeado): **13/13 vigiladores importados, 0 errores**, apellidos y
+  DNI derivados correctos en ambos.
+- `tsc --noEmit` API y web → 0 errores. Suite completa API: solo falla el
+  preexistente `vigilante.service.spec.ts › update` (documentado en Ronda 1,
+  ya fallaba en main).

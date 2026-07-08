@@ -3,8 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { parsearCsv, FilaCsv } from '../util/csv.util';
+import {
+  parsearCsv,
+  filasDesdeMatriz,
+  FilaCsv,
+  FilaConLinea,
+} from '../util/csv.util';
 import { alfa, num, importe, fechaAmd } from '../util/ancho-fijo.util';
 
 interface FilaNomina {
@@ -24,24 +30,26 @@ export interface ResultadoImportacion {
 export class NominaService {
   constructor(private prisma: PrismaService) {}
 
-  // ─── Importación desde CSV de Simplificación Registral ─────────────────────
+  // ─── Importación desde CSV/XLSX de Simplificación Registral ────────────────
   async importarNomina(
     tenantId: string,
-    contenido: string,
+    archivo: Buffer,
+    nombreArchivo = '',
   ): Promise<ResultadoImportacion> {
-    const filas = parsearCsv(contenido);
+    const filas = await this.extraerFilas(archivo, nombreArchivo);
     if (!filas.length) {
       throw new BadRequestException(
-        'El archivo está vacío o no tiene un formato de CSV reconocible.',
+        'El archivo está vacío o no tiene un formato reconocible. ' +
+          'Subí el CSV o XLSX tal como lo exporta ARCA.',
       );
     }
 
     const parseadas: FilaNomina[] = [];
     const errores: string[] = [];
-    filas.forEach((fila, i) => {
-      const parsed = this.mapearFila(fila);
+    filas.forEach((fila) => {
+      const parsed = this.mapearFila(fila.datos);
       if (!parsed) {
-        errores.push(`Fila ${i + 2}: sin CUIL o nombre válidos, se omite.`);
+        errores.push(`Fila ${fila.linea}: sin CUIL o nombre válidos, se omite.`);
         return;
       }
       parseadas.push(parsed);
@@ -90,6 +98,53 @@ export class NominaService {
     return { importados, omitidos, errores };
   }
 
+  /**
+   * Obtiene las filas de datos según el formato del archivo. ARCA exporta la
+   * nómina tanto en CSV como en XLSX; ambos con líneas de preámbulo (CUIT,
+   * Período, Secuencia, Contribuyente) antes de la cabecera real, que
+   * `filasDesdeMatriz` detecta por la columna CUIL.
+   */
+  private async extraerFilas(
+    archivo: Buffer,
+    nombreArchivo: string,
+  ): Promise<FilaConLinea[]> {
+    // Un .xlsx es un ZIP: magia "PK". Un .xls viejo (BIFF) empieza con D0 CF.
+    const esZip = archivo.length > 3 && archivo[0] === 0x50 && archivo[1] === 0x4b;
+    const esXlsBiff = archivo.length > 3 && archivo[0] === 0xd0 && archivo[1] === 0xcf;
+    if (esXlsBiff || (!esZip && /\.xls$/i.test(nombreArchivo))) {
+      throw new BadRequestException(
+        'El formato .xls (Excel 97-2003) no está soportado: exportá desde ARCA como .xlsx o .csv.',
+      );
+    }
+    if (esZip || /\.xlsx$/i.test(nombreArchivo)) {
+      return this.filasDesdeXlsx(archivo);
+    }
+    return parsearCsv(archivo.toString('utf8'));
+  }
+
+  private async filasDesdeXlsx(archivo: Buffer): Promise<FilaConLinea[]> {
+    const workbook = new ExcelJS.Workbook();
+    try {
+      await workbook.xlsx.load(archivo as any);
+    } catch {
+      throw new BadRequestException(
+        'No se pudo leer la planilla: el archivo no es un XLSX válido.',
+      );
+    }
+    const hoja = workbook.worksheets[0];
+    if (!hoja) return [];
+
+    const matriz: string[][] = [];
+    const numeros: number[] = [];
+    hoja.eachRow({ includeEmpty: false }, (row, numeroFila) => {
+      // row.values es 1-indexado (la posición 0 viene vacía).
+      const celdas = (row.values as ExcelJS.CellValue[]).slice(1);
+      matriz.push(celdas.map(celdaATexto));
+      numeros.push(numeroFila);
+    });
+    return filasDesdeMatriz(matriz, numeros);
+  }
+
   private mapearFila(fila: FilaCsv): FilaNomina | null {
     const cuilRaw =
       fila['cuil'] ??
@@ -114,9 +169,12 @@ export class NominaService {
         apellido = apellido || partes[0].trim();
         nombre = nombre || partes.slice(1).join(',').trim();
       } else {
+        // Sin coma, la nómina de ARCA lista "NOMBRES APELLIDO" (verificado con
+        // exports reales, p. ej. "CLAUDIO WALTER MENDOZA"): el último token es
+        // el apellido.
         const tokens = junto.trim().split(/\s+/);
-        apellido = (apellido || tokens[0]) ?? '';
-        nombre = nombre || tokens.slice(1).join(' ');
+        apellido = (apellido || tokens[tokens.length - 1]) ?? '';
+        nombre = nombre || tokens.slice(0, -1).join(' ');
       }
     }
     if (!apellido && !nombre) return null;
@@ -322,6 +380,26 @@ export class NominaService {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+/**
+ * Convierte una celda de exceljs a texto plano: los CUIL vienen como número,
+ * las fechas como Date y puede haber texto enriquecido, hipervínculos o
+ * fórmulas. Las fechas se emiten como aaaa-mm-dd, que `parsearFecha` entiende.
+ */
+function celdaATexto(valor: ExcelJS.CellValue): string {
+  if (valor === null || valor === undefined) return '';
+  if (valor instanceof Date) return valor.toISOString().slice(0, 10);
+  if (typeof valor === 'object') {
+    if ('richText' in valor) {
+      return valor.richText.map((r) => r.text).join('');
+    }
+    if ('text' in valor) return celdaATexto(valor.text);
+    if ('result' in valor) return celdaATexto(valor.result);
+    if ('error' in valor) return '';
+    return '';
+  }
+  return String(valor).trim();
+}
+
 /** DNI a partir del CUIL: los 8 dígitos centrales (posiciones 3 a 10). */
 function dniDeCuil(cuil: string): string {
   return cuil.slice(2, 10);
