@@ -1,0 +1,116 @@
+name: QA Automation Platform CI
+
+on:
+  push:
+    branches:
+      - main
+      - '*rls*'
+      - '*qa*'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    name: Run Complete QA Test Suite
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: power_user
+          POSTGRES_DB: custos_db
+          POSTGRES_PASSWORD: supersecreto
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://power_user:supersecreto@localhost:5432/custos_db?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: super_jwt_secret_key_2026!
+      MOBILE_JWT_SECRET: super_mobile_jwt_secret_key_2026!
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      PORT: 3000
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-style: true
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Monorepo Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: |
+          cd apps/api
+          npx prisma generate
+
+      - name: Run Prisma Migrations and Seed Database
+        run: |
+          cd apps/api
+          npx prisma migrate deploy
+          npx prisma db seed
+
+      - name: Setup QA Platform Workspace
+        run: |
+          cd qa
+          npm ci
+
+      - name: Install Playwright Browsers
+        run: |
+          cd qa
+          npx playwright install chromium --with-deps
+
+      - name: Start CustOS ERP Monorepo Server
+        run: |
+          npm run dev &
+          sleep 10 # Allow background boot time
+
+      - name: Run Playwright Tests (E2E, API, Visual/A11y, Resilience)
+        run: |
+          cd qa
+          npx playwright test
+
+      - name: Setup k6 CLI
+        run: |
+          curl -s https://dl.k6.io/key.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/k6-archive-keyring.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Run k6 Load & Stress Tests
+        run: |
+          cd qa
+          k6 run load/stress.js
+
+      - name: Upload Playwright Execution Reports & Videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-execution-report
+          path: qa/playwright-report/
+          retries-on-error: true
