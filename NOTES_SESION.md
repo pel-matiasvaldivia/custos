@@ -395,3 +395,46 @@ con obtención de CAE en tiempo real.
 - Redis: reusa `REDIS_URL`/`REDIS_HOST`/`REDIS_PORT`. `APP_SECRET_KEY` cifra
   cert/clave (ya documentada). `ioredis` viene transitivo de bullmq.
 - Sin dependencias nuevas: SOAP por XML manual + axios; CSV por parser propio.
+
+---
+
+## Cuadrante: vista por vigilador + asistente de armado de puesto 24h (commit `eabcb43`)
+
+Origen: se compararon las planillas manuales de horarios (Excel: grillas M/T/N +
+franquero, variantes de sólo-noche y de 12 h) con el motor de turnos de la
+plataforma. Conclusión: el `EsquemaTurno` cíclico + el desfasaje por
+`posicion_ciclo` de `AsignacionEsquema` ya modela lo mismo (factor de cobertura
+~4.2). Se cerraron dos brechas de usabilidad.
+
+### 1. Vista "por vigilador" con totales de horas (`QuadrantPage.tsx`)
+- Toggle arriba del cuadrante: **Por puesto** (la existente) / **Por vigilador** (nueva).
+- Regla `filasVigilador` reagrupa los turnos de todos los puestos por
+  `vigiladorId`; por día muestra **letra M/T/N** (derivada de la hora de inicio:
+  `<12`→M, `<19`→T, resto→N) + **horas** del día.
+- Columna **TOTAL HS** mensual por persona; fila **TOTAL DE HORAS** por día +
+  gran total. El export CSV respeta la vista activa (replica el Excel).
+
+### 2. Asistente "Armar puesto" 24h con franquero automático
+- Backend: `POST /cuadrante/asistente-puesto` (`asistente-puesto.dto.ts`,
+  `CuadranteService.asistentePuesto`), roles ADMIN/GERENCIA/SUPERVISOR.
+- Resuelve/crea el puesto; **rechaza** si ya tiene asignaciones activas (evita
+  duplicar turnos). Valida vigiladores no duplicados y todos ACTIVO.
+- Por banda arma un esquema de ciclo `dias_ciclo = P` (P = personas asignadas)
+  con la dotación como bloque de trabajo y el resto FRANCO, y crea P asignaciones
+  en `posicion_ciclo = 0..P-1`. **Garantía matemática**: los desfases recorren
+  todos los residuos mód P → cada día trabaja exactamente la dotación pedida
+  (verificado en runtime: 0 huecos, régimen permanente).
+- `upsertCobertura` + `generarTurnosDesdeEsquema`; el chequeo de cobertura
+  arranca en `vigenteDesde + 1 día` para saltear el arranque (ramp-up).
+- Devuelve por banda `{personas, fijos, franqueros}` + total + huecos.
+- Frontend `AsistentePuestoModal.tsx`: wizard con presets sacados de las
+  planillas (**24h 3×8**, **24h 2×12**, **solo noche 8h**, **solo noche 12h**),
+  selector de quién rota en cada banda, sugerencia de dotación y panel de éxito.
+
+### Decisión de diseño (franquero)
+- El asistente reparte los francos **parejo** priorizando cumplimiento legal
+  (nadie supera 48 h/semana), lo que puede requerir una persona más por banda
+  que el esquema tradicional de "1 fijo + franquero compartido" (que ronda las
+  ~50 h/semana). El usuario controla cuántas personas pone por banda.
+- Pendiente ofrecido (sin confirmar): preset "1 fijo + franquero compartido" que
+  imite exactamente la planilla; semáforo de horas >48h en la vista por vigilador.
