@@ -16,6 +16,7 @@ import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateEsquemaTurnoDto } from './dto/create-esquema-turno.dto';
 import { CreateAsignacionEsquemaDto } from './dto/create-asignacion-esquema.dto';
 import { UpsertPuestoCoberturaDto } from './dto/upsert-puesto-cobertura.dto';
+import { AsistentePuestoDto } from './dto/asistente-puesto.dto';
 import {
   estaDisponibleParaAsignacion,
   VIGILADOR_ESTADO_LABEL,
@@ -23,6 +24,12 @@ import {
 
 function horaNum(hhmm: string): number {
   return parseInt(hhmm.split(':')[0], 10);
+}
+
+/** Clasifica un bloque como DIURNO/NOCTURNO según su hora de inicio. */
+function inferirTipoBloque(hhmm: string): string {
+  const h = horaNum(hhmm);
+  return h >= 6 && h < 21 ? 'DIURNO' : 'NOCTURNO';
 }
 
 @Injectable()
@@ -177,13 +184,23 @@ export class CuadranteService {
       const desdeAsig = a.vigente_desde > desde ? a.vigente_desde : desde;
       const hastaAsig =
         a.vigente_hasta && a.vigente_hasta < hasta ? a.vigente_hasta : hasta;
-      const r = await this.generarCuadrante(tenantId, a.id, desdeAsig, hastaAsig);
+      const r = await this.generarCuadrante(
+        tenantId,
+        a.id,
+        desdeAsig,
+        hastaAsig,
+      );
       generados += r.generados;
       creados += r.creados;
       rechazados.push(...r.rechazados);
     }
 
-    return { asignaciones: asignaciones.length, generados, creados, rechazados };
+    return {
+      asignaciones: asignaciones.length,
+      generados,
+      creados,
+      rechazados,
+    };
   }
 
   /**
@@ -256,7 +273,11 @@ export class CuadranteService {
     const snapshots = [];
     for (const contrato of contratos) {
       const puestos = await this.prisma.puesto.findMany({
-        where: { tenant_id: tenantId, objetivo_id: contrato.objetivo_id, deleted_at: null },
+        where: {
+          tenant_id: tenantId,
+          objetivo_id: contrato.objetivo_id,
+          deleted_at: null,
+        },
         select: { id: true },
       });
       if (puestos.length === 0) continue;
@@ -455,7 +476,8 @@ export class CuadranteService {
     // Solo el personal ACTIVO puede afectarse a un puesto. Si está de parte de
     // enfermo, vacaciones, licencia, suspendido o dado de baja, no está disponible.
     if (!estaDisponibleParaAsignacion(vigilador.estado)) {
-      const label = VIGILADOR_ESTADO_LABEL[vigilador.estado] ?? vigilador.estado;
+      const label =
+        VIGILADOR_ESTADO_LABEL[vigilador.estado] ?? vigilador.estado;
       throw new BadRequestException(
         `El vigilador no está disponible para asignación (estado: ${label}). Solo se puede afectar personal Activo.`,
       );
@@ -560,6 +582,220 @@ export class CuadranteService {
       ]);
 
     return { ...asignacionActualizada, turnosBorrados };
+  }
+
+  // ─── Asistente: armado de un puesto (24h u otro) con franquero automático ───
+
+  /**
+   * Arma un puesto completo en un paso: crea (o toma) el puesto, y por cada banda
+   * horaria genera un esquema de rotación con las personas desfasadas de modo que
+   * la banda quede SIEMPRE cubierta y los francos repartidos. Las personas que
+   * exceden la dotación simultánea de la banda son los franqueros. Deja la
+   * cobertura configurada, genera los turnos del rango y devuelve si quedaron huecos.
+   */
+  async asistentePuesto(tenantId: string, dto: AsistentePuestoDto) {
+    // 1. Resolver o crear el puesto.
+    let puestoId = dto.puesto_id;
+    let puestoNombre: string;
+    if (puestoId) {
+      const p = await this.prisma.puesto.findFirst({
+        where: { id: puestoId, tenant_id: tenantId, deleted_at: null },
+        select: { id: true, nombre: true },
+      });
+      if (!p) throw new NotFoundException('Puesto no encontrado');
+      puestoNombre = p.nombre;
+    } else {
+      if (!dto.puesto_nombre) {
+        throw new BadRequestException(
+          'Indicá un puesto existente o un nombre para crear uno nuevo.',
+        );
+      }
+      const objetivo = await this.prisma.objetivo.findFirst({
+        where: { id: dto.objetivo_id, tenant_id: tenantId },
+        select: { id: true },
+      });
+      if (!objetivo) throw new NotFoundException('Objetivo no encontrado');
+      const nuevo = await this.prisma.puesto.create({
+        data: {
+          tenant_id: tenantId,
+          objetivo_id: dto.objetivo_id,
+          nombre: dto.puesto_nombre,
+        },
+      });
+      puestoId = nuevo.id;
+      puestoNombre = nuevo.nombre;
+    }
+
+    // No re-armar sobre un puesto que ya tiene rotación activa (duplicaría turnos).
+    const activas = await this.prisma.asignacionEsquema.count({
+      where: { tenant_id: tenantId, puesto_id: puestoId, vigente_hasta: null },
+    });
+    if (activas > 0) {
+      throw new BadRequestException(
+        'Este puesto ya tiene asignaciones activas. Finalizalas antes de volver a armarlo con el asistente.',
+      );
+    }
+
+    // 2. Validar bandas y pool de vigiladores (nadie repetido; todos disponibles).
+    const usados = new Set<string>();
+    for (const banda of dto.bandas) {
+      const dotacion = banda.dotacion ?? 1;
+      if (banda.vigilador_ids.length < dotacion) {
+        throw new BadRequestException(
+          `La banda "${banda.label}" necesita al menos ${dotacion} vigilador(es) (tiene ${banda.vigilador_ids.length}).`,
+        );
+      }
+      for (const vid of banda.vigilador_ids) {
+        if (usados.has(vid)) {
+          throw new BadRequestException(
+            'Un vigilador no puede estar en dos bandas o posiciones del mismo puesto.',
+          );
+        }
+        usados.add(vid);
+      }
+    }
+
+    const vigiladores = await this.prisma.vigilador.findMany({
+      where: { tenant_id: tenantId, id: { in: [...usados] } },
+      select: { id: true, estado: true, nombre: true, apellido: true },
+    });
+    const vigPorId = new Map(vigiladores.map((v) => [v.id, v]));
+    for (const vid of usados) {
+      const v = vigPorId.get(vid);
+      if (!v)
+        throw new NotFoundException(
+          'Uno de los vigiladores seleccionados no existe.',
+        );
+      if (!estaDisponibleParaAsignacion(v.estado)) {
+        const label = VIGILADOR_ESTADO_LABEL[v.estado] ?? v.estado;
+        throw new BadRequestException(
+          `${v.apellido}, ${v.nombre} no está disponible (estado: ${label}). Solo se puede afectar personal Activo.`,
+        );
+      }
+    }
+
+    // 3. Rango de generación y ancla del ciclo.
+    const vigenteDesde = new Date(dto.vigente_desde);
+    const fechaAncla = dto.fecha_ancla
+      ? new Date(dto.fecha_ancla)
+      : vigenteDesde;
+    const generarHasta = dto.generar_hasta
+      ? new Date(dto.generar_hasta)
+      : new Date(vigenteDesde.getTime() + 35 * 86_400_000);
+
+    // 4. Por banda: esquema de rotación + asignaciones desfasadas.
+    const resumenBandas: {
+      label: string;
+      esquemaId: string;
+      personas: number;
+      fijos: number;
+      franqueros: number;
+    }[] = [];
+    const asignacionIds: string[] = [];
+    let horasDiaCobertura = 0;
+
+    for (const banda of dto.bandas) {
+      const dotacion = banda.dotacion ?? 1;
+      const P = banda.vigilador_ids.length;
+      horasDiaCobertura += banda.duracion_horas * dotacion;
+
+      // Ciclo de largo P: `dotacion` días de TRABAJO (el bloque de la banda) y el
+      // resto FRANCO. Con las P personas en las posiciones 0..P-1, cada día hay
+      // EXACTAMENTE `dotacion` trabajando (los offsets recorren todos los residuos
+      // mod P), así la banda queda siempre cubierta y los francos quedan repartidos.
+      const dias = Array.from({ length: P }, (_, i) =>
+        i < dotacion
+          ? {
+              tipo: 'TRABAJO' as const,
+              bloques: [
+                {
+                  hora_inicio: banda.hora_inicio,
+                  duracion_horas: banda.duracion_horas,
+                  tipo_bloque:
+                    banda.tipo_bloque ?? inferirTipoBloque(banda.hora_inicio),
+                },
+              ],
+            }
+          : { tipo: 'FRANCO' as const },
+      );
+
+      const esquema = await this.prisma.esquemaTurno.create({
+        data: {
+          tenant_id: tenantId,
+          nombre: `Auto · ${puestoNombre} · ${banda.label}`,
+          dias_ciclo: P,
+          definicion: { dias_ciclo: P, dias } as any,
+        },
+      });
+
+      for (let i = 0; i < P; i++) {
+        const asig = await this.prisma.asignacionEsquema.create({
+          data: {
+            tenant_id: tenantId,
+            puesto_id: puestoId,
+            vigilador_id: banda.vigilador_ids[i],
+            esquema_id: esquema.id,
+            posicion_ciclo: i,
+            fecha_ancla: fechaAncla,
+            vigente_desde: vigenteDesde,
+          },
+        });
+        asignacionIds.push(asig.id);
+      }
+
+      resumenBandas.push({
+        label: banda.label,
+        esquemaId: esquema.id,
+        personas: P,
+        fijos: dotacion,
+        franqueros: P - dotacion,
+      });
+    }
+
+    // 5. Cobertura (al menos 1 presente siempre) + generación de turnos.
+    await this.upsertCobertura(tenantId, puestoId, {
+      ventana: {
+        horas_dia: Math.min(24, horasDiaCobertura),
+        dias: [1, 2, 3, 4, 5, 6, 7],
+      },
+      dotacion_requerida: 1,
+    });
+
+    let creados = 0;
+    const rechazados: { inicio_plan: string; errores: string[] }[] = [];
+    for (const id of asignacionIds) {
+      const r = await this.generarCuadrante(
+        tenantId,
+        id,
+        vigenteDesde,
+        generarHasta,
+      );
+      creados += r.creados;
+      rechazados.push(...r.rechazados);
+    }
+
+    // Chequeamos la cobertura desde el 2° día: el primer tramo 00:00–06:00 lo
+    // cubriría el turno nocturno del día anterior, que no existe al arrancar la
+    // rotación (ramp-up). Medir el régimen permanente evita un "hueco" espurio.
+    const chequeoDesde = new Date(vigenteDesde.getTime() + 86_400_000);
+    const cobertura =
+      chequeoDesde < generarHasta
+        ? await this.detectarCoberturaPuesto(
+            tenantId,
+            puestoId,
+            chequeoDesde,
+            generarHasta,
+          )
+        : { huecos: [] as unknown[] };
+
+    return {
+      puestoId,
+      puestoNombre,
+      bandas: resumenBandas,
+      totalPersonas: usados.size,
+      generacion: { creados, rechazados },
+      huecos: cobertura.huecos.length,
+    };
   }
 
   // ─── Cobertura por puesto ───

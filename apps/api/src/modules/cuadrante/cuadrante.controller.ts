@@ -18,6 +18,7 @@ import { Roles } from '../../auth/roles.decorator';
 import { CreateEsquemaTurnoDto } from './dto/create-esquema-turno.dto';
 import { CreateAsignacionEsquemaDto } from './dto/create-asignacion-esquema.dto';
 import { UpsertPuestoCoberturaDto } from './dto/upsert-puesto-cobertura.dto';
+import { AsistentePuestoDto } from './dto/asistente-puesto.dto';
 
 @Controller('cuadrante')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -45,7 +46,10 @@ export class CuadranteController {
   // los turnos de cada una con la misma lógica idempotente de generarCuadrante.
   @Post('generar-mes')
   @Roles('ADMIN', 'GERENCIA', 'SUPERVISOR')
-  generarMes(@Request() req: any, @Body() body: { desde: string; hasta: string }) {
+  generarMes(
+    @Request() req: any,
+    @Body() body: { desde: string; hasta: string },
+  ) {
     if (!body?.desde || !body?.hasta) {
       throw new BadRequestException('Campos "desde" y "hasta" obligatorios');
     }
@@ -150,6 +154,13 @@ export class CuadranteController {
       id,
       new Date(body.vigente_hasta),
     );
+  }
+
+  // Asistente: arma un puesto entero (bandas + franqueros) en un solo paso.
+  @Post('asistente-puesto')
+  @Roles('ADMIN', 'GERENCIA', 'SUPERVISOR')
+  asistentePuesto(@Request() req: any, @Body() dto: AsistentePuestoDto) {
+    return this.cuadranteService.asistentePuesto(req.user.tenantId, dto);
   }
 
   // ─── Cobertura por puesto ───

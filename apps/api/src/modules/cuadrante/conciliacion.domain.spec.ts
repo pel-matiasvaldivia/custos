@@ -42,15 +42,15 @@ describe('conciliacion.domain', () => {
       // Caso que la versión de liquidaciones (tramos anclados al inicio del
       // turno) calculaba mal: el tramo 20:30–21:30 arrancaba en h=20 y perdía
       // la media hora 21:00–21:30.
-      expect(
-        horasNocturnas(D('2026-06-01T20:30'), D('2026-06-01T21:30')),
-      ).toBe(0.5);
+      expect(horasNocturnas(D('2026-06-01T20:30'), D('2026-06-01T21:30'))).toBe(
+        0.5,
+      );
     });
 
     it('relevo real 20:30→06:00 → 9 nocturnas (21→06)', () => {
-      expect(
-        horasNocturnas(D('2026-06-01T20:30'), D('2026-06-02T06:00')),
-      ).toBe(9);
+      expect(horasNocturnas(D('2026-06-01T20:30'), D('2026-06-02T06:00'))).toBe(
+        9,
+      );
     });
   });
 
