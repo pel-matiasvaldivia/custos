@@ -188,6 +188,12 @@ export const AfectarVigiladorModal = ({ puesto, onClose, onAfectado }: Props) =>
             </div>
           </div>
 
+          <p className="text-[11px] text-muted">
+            La posición dentro del ciclo se calcula sola: cada vigilador que afectás al puesto
+            arranca desfasado respecto de los anteriores, para cubrir las horas del servicio
+            sin repetir horarios ni superponer francos.
+          </p>
+
           {error && <div className="p-3 bg-amber/10 border border-amber/30 rounded-md text-sm text-amber">{error}</div>}
 
           <div className="pt-2 flex gap-3">

@@ -567,3 +567,49 @@ TODAS las filas.
 - `tsc --noEmit` API y web → 0 errores. Suite completa API: solo falla el
   preexistente `vigilante.service.spec.ts › update` (documentado en Ronda 1,
   ya fallaba en main).
+
+---
+
+# Ronda 6 — Asignación automática de turnos repetidos en el cuadrante (2026-07-10)
+
+**Branch:** `claude/arca-watcher-csv-import-a0tw7h` (continuación de la sesión ARCA)
+
+## Bug reportado
+En el Cuadrante Operativo todos los vigiladores del puesto tenían el MISMO
+horario (mañanas juntas, tardes juntas y francos superpuestos): los turnos se
+"repintaban" y quedaban bandas del servicio sin cubrir.
+
+## Causa raíz
+El modal "Afectar vigilador" (`AfectarVigiladorModal.tsx`) crea las
+asignaciones sin `posicion_ciclo`, y `crearAsignacionEsquema` aplicaba
+`dto.posicion_ciclo ?? 0`: con la misma fecha ancla, TODOS los vigiladores
+del puesto arrancaban el ciclo en el mismo día → idéntica rotación. (El
+asistente "Armar puesto" ya desfasaba bien con `posicion_ciclo: i`; el flujo
+manual no.)
+
+## Fix
+- `cuadrante.domain.ts`: nueva función pura `elegirPosicionCiclo(nuevo,
+  existentes, desde)`: genera los turnos concretos de cada posición candidata
+  del ciclo sobre un horizonte que cubre el patrón combinado (mcm de los
+  ciclos, acotado a 84 días) y elige la de MENOR superposición horaria con
+  las asignaciones ya activas del puesto (a igualdad, la menor posición).
+  Con un ciclo 2M-2T-2F elige 0/2/4 → cada día queda 1 mañana + 1 tarde y
+  los francos repartidos. Determinística.
+- `cuadrante.service.ts` (`crearAsignacionEsquema`): si el DTO no trae
+  `posicion_ciclo`, lo calcula con las asignaciones activas del puesto
+  (cualquier esquema). Una posición explícita se respeta igual que antes.
+- `AfectarVigiladorModal.tsx`: leyenda explicando que la posición del ciclo
+  se calcula sola para cubrir el servicio sin repetir horarios.
+
+## Verificación
+- Specs nuevos: 5 en `cuadrante.domain.spec.ts` (segundo vigilador → pos 2,
+  tercero → pos 4 con cobertura M+T diaria comprobada, ciclo lleno,
+  esquema 12×12) y 3 en `cuadrante.service.spec.ts` (primera asignación → 0,
+  segunda desfasada, posición explícita respetada). Suite cuadrante:
+  45/45 passing, también con `TZ=America/Argentina/Buenos_Aires`.
+- `tsc --noEmit` API y web → 0 errores.
+
+## Nota operativa
+Las asignaciones YA creadas con el horario duplicado no se corrigen solas:
+hay que finalizarlas (borra los turnos futuros PLANIFICADA) y volver a
+afectar a los vigiladores, o rearmar el puesto con "Armar puesto".
