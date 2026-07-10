@@ -4,7 +4,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { generarTurnosDesdeEsquema, EsquemaDef } from './cuadrante.domain';
+import {
+  generarTurnosDesdeEsquema,
+  elegirPosicionCiclo,
+  EsquemaDef,
+} from './cuadrante.domain';
 import {
   conciliarHH,
   TurnoConciliable,
@@ -483,15 +487,46 @@ export class CuadranteService {
       );
     }
 
+    // Posición de ciclo: si no viene explícita, se elige automáticamente para
+    // desfasar al nuevo vigilador respecto de los ya afectados al puesto (que
+    // no repitan el mismo horario ni coincidan los francos: el objetivo es
+    // cubrir las horas del servicio, no duplicarlas).
+    const vigenteDesde = new Date(dto.vigente_desde);
+    let posicionCiclo = dto.posicion_ciclo;
+    if (posicionCiclo == null) {
+      const activas = await this.prisma.asignacionEsquema.findMany({
+        where: {
+          tenant_id: tenantId,
+          puesto_id: dto.puesto_id,
+          vigente_hasta: null,
+        },
+        include: { esquema: true },
+      });
+      posicionCiclo = elegirPosicionCiclo(
+        {
+          definicion: esquema.definicion as unknown as EsquemaDef,
+          diasCiclo: esquema.dias_ciclo,
+          fechaAncla: new Date(dto.fecha_ancla),
+        },
+        activas.map((a) => ({
+          definicion: a.esquema.definicion as unknown as EsquemaDef,
+          diasCiclo: a.esquema.dias_ciclo,
+          posicionCiclo: a.posicion_ciclo,
+          fechaAncla: a.fecha_ancla,
+        })),
+        vigenteDesde,
+      );
+    }
+
     const asignacion = await this.prisma.asignacionEsquema.create({
       data: {
         tenant_id: tenantId,
         puesto_id: dto.puesto_id,
         vigilador_id: dto.vigilador_id,
         esquema_id: dto.esquema_id,
-        posicion_ciclo: dto.posicion_ciclo ?? 0,
+        posicion_ciclo: posicionCiclo,
         fecha_ancla: new Date(dto.fecha_ancla),
-        vigente_desde: new Date(dto.vigente_desde),
+        vigente_desde: vigenteDesde,
       },
     });
 

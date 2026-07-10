@@ -102,3 +102,96 @@ export function generarTurnosDesdeEsquema(
   }
   return turnos;
 }
+
+// ─── Elección automática de la posición de ciclo ─────────────────────────────
+
+export interface AsignacionExistente {
+  definicion: EsquemaDef;
+  diasCiclo: number;
+  posicionCiclo: number;
+  fechaAncla: Date;
+}
+
+function mcd(a: number, b: number): number {
+  return b === 0 ? a : mcd(b, a % b);
+}
+
+function solapamientoMs(
+  a: { inicio_plan: Date; fin_plan: Date }[],
+  b: { inicio_plan: Date; fin_plan: Date }[],
+): number {
+  let total = 0;
+  for (const x of a) {
+    for (const y of b) {
+      const ini = Math.max(x.inicio_plan.getTime(), y.inicio_plan.getTime());
+      const fin = Math.min(x.fin_plan.getTime(), y.fin_plan.getTime());
+      if (fin > ini) total += fin - ini;
+    }
+  }
+  return total;
+}
+
+/**
+ * Elige la posición de ciclo para una NUEVA asignación de modo que sus turnos
+ * se superpongan lo menos posible con los de las asignaciones ya activas del
+ * puesto: así las personas quedan desfasadas dentro de la rotación (una cubre
+ * la mañana cuando la otra cubre la tarde, francos repartidos) en vez de
+ * repetir todas el mismo horario.
+ *
+ * Compara los turnos concretos que generaría cada posición candidata contra
+ * los de las asignaciones existentes sobre un horizonte que cubre el patrón
+ * combinado (mcm de los ciclos, acotado), y devuelve la posición con MENOR
+ * tiempo superpuesto; a igualdad, la menor posición. Determinística.
+ */
+export function elegirPosicionCiclo(
+  nuevo: { definicion: EsquemaDef; diasCiclo: number; fechaAncla: Date },
+  existentes: AsignacionExistente[],
+  desde: Date,
+): number {
+  const N = nuevo.diasCiclo;
+  if (N <= 1 || existentes.length === 0) return 0;
+
+  // Horizonte: el patrón conjunto se repite cada mcm(ciclos); acotamos a 84
+  // días para mantener el costo bajo (sobra para comparar posiciones).
+  let horizonte = N;
+  for (const e of existentes) {
+    horizonte = (horizonte * e.diasCiclo) / mcd(horizonte, e.diasCiclo);
+    if (horizonte >= 84) break;
+  }
+  horizonte = Math.min(84, Math.max(horizonte, N));
+  const hasta = new Date(desde.getTime() + (horizonte - 1) * MS_DIA);
+
+  const turnosExistentes = existentes.map((e) =>
+    generarTurnosDesdeEsquema({
+      definicion: e.definicion,
+      diasCiclo: e.diasCiclo,
+      posicionCiclo: e.posicionCiclo,
+      fechaAncla: e.fechaAncla,
+      desde,
+      hasta,
+    }),
+  );
+
+  let mejor = 0;
+  let mejorSolape = Infinity;
+  for (let p = 0; p < N; p++) {
+    const candidatos = generarTurnosDesdeEsquema({
+      definicion: nuevo.definicion,
+      diasCiclo: N,
+      posicionCiclo: p,
+      fechaAncla: nuevo.fechaAncla,
+      desde,
+      hasta,
+    });
+    let solape = 0;
+    for (const t of turnosExistentes) {
+      solape += solapamientoMs(candidatos, t);
+    }
+    if (solape < mejorSolape) {
+      mejorSolape = solape;
+      mejor = p;
+      if (solape === 0) break; // p más chico con solape cero: no hay mejor
+    }
+  }
+  return mejor;
+}
