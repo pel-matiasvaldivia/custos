@@ -347,6 +347,42 @@ export const NovedadesPage = () => {
 
               <p className="text-navy leading-relaxed">{nov.descripcion}</p>
 
+              {/* Solicitud de adelanto desde el móvil: la oficina la aprueba o rechaza acá. */}
+              {typeof nov.descripcion === 'string' && nov.descripcion.includes('[SOLICITUD ADELANTO') && (
+                <div className="flex items-center gap-3 bg-amber/5 border border-amber/20 rounded-lg px-4 py-3">
+                  <span className="text-xs font-bold text-amber uppercase tracking-wider flex-1">
+                    Solicitud de adelanto pendiente de aprobación
+                  </span>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await api.post(`/novedades/${nov.id}/adelanto/aprobar`);
+                        fetchData();
+                      } catch (e) {
+                        alert((e as any)?.response?.data?.message || 'No se pudo aprobar la solicitud.');
+                      }
+                    }}
+                    className="btn btn-primary text-xs px-3 py-1.5"
+                  >
+                    Aprobar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!confirm('¿Rechazar la solicitud de adelanto?')) return;
+                      try {
+                        await api.post(`/novedades/${nov.id}/adelanto/rechazar`);
+                        fetchData();
+                      } catch (e) {
+                        alert((e as any)?.response?.data?.message || 'No se pudo rechazar la solicitud.');
+                      }
+                    }}
+                    className="btn btn-secondary text-xs px-3 py-1.5"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              )}
+
               {Array.isArray(nov.adjuntos) && nov.adjuntos.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3">
                   {nov.adjuntos.map((key: string, i: number) => (

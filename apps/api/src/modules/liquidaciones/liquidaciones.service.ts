@@ -64,6 +64,8 @@ export class LiquidacionesService {
           ventana_nocturna_fin: true,
           recargo_nocturno_pct: true,
           recargo_extra_pct: true,
+          recargo_feriado_pct: true,
+          pagar_recargo_feriado: true,
         },
       }),
     ]);
@@ -74,8 +76,12 @@ export class LiquidacionesService {
     const noctFin = parseInt((regla?.ventana_nocturna_fin ?? '06:00').split(':')[0], 10);
     const recNoct = (regla?.recargo_nocturno_pct ?? 20) / 100;
     const recExtra = (regla?.recargo_extra_pct ?? 50) / 100;
+    // Recargo por feriado trabajado: solo se PAGA si el tenant lo habilitó en
+    // la configuración; las horas de feriado se computan e informan igual.
+    const pagaFeriado = regla?.pagar_recargo_feriado ?? false;
+    const recFeriado = (regla?.recargo_feriado_pct ?? 100) / 100;
 
-    const [vigiladores, turnos, adelantos] = await Promise.all([
+    const [vigiladores, turnos, adelantos, feriados] = await Promise.all([
       this.prisma.vigilador.findMany({
         where: { tenant_id: tenantId, estado: 'ACTIVO', deleted_at: null },
         select: {
@@ -95,9 +101,26 @@ export class LiquidacionesService {
         where: { tenant_id: tenantId, estado: 'VIGENTE' },
         select: { vigilador_id: true, monto: true, cuotas: true, saldo: true },
       }),
+      this.prisma.feriado.findMany({
+        where: { tenant_id: tenantId, fecha: { gte: desde, lte: hasta } },
+        select: { fecha: true },
+      }),
     ]);
 
-    const acc = this.agregarTurnos(vigiladores.map((v) => v.id), turnos, noctIni, noctFin);
+    // Mismo criterio que la conciliación (facturación): el turno es de feriado
+    // si la FECHA de su inicio planificado es feriado — así lo que se factura
+    // y lo que se paga clasifican igual.
+    const feriadoSet = new Set(
+      feriados.map((f) => f.fecha.toISOString().slice(0, 10)),
+    );
+
+    const acc = this.agregarTurnos(
+      vigiladores.map((v) => v.id),
+      turnos,
+      noctIni,
+      noctFin,
+      feriadoSet,
+    );
 
     // Suspensiones desde novedades
     const susp = await this.prisma.novedad.findMany({
@@ -124,11 +147,15 @@ export class LiquidacionesService {
     return {
       modo,
       con_montos: conMontos,
+      paga_feriado: pagaFeriado,
       items: vigiladores.map((v) => {
         const a = acc[v.id];
         const vh = conMontos ? Number(v.valor_hora ?? 0) || valorHoraDefault : 0;
         const bruto =
-          vh * a.hh_trabajadas + vh * recNoct * a.hh_nocturnas + vh * recExtra * a.hh_extra;
+          vh * a.hh_trabajadas +
+          vh * recNoct * a.hh_nocturnas +
+          vh * recExtra * a.hh_extra +
+          (pagaFeriado ? vh * recFeriado * a.hh_feriado : 0);
         const descSuspension = vh * a.suspension_dias * 8;
         const adelanto = round(cuotaPorVig[v.id] ?? 0);
         const neto = Math.max(0, bruto - descSuspension - adelanto);
@@ -144,6 +171,7 @@ export class LiquidacionesService {
           hh_ausentes: round(a.hh_ausentes),
           hh_nocturnas: round(a.hh_nocturnas),
           hh_extra: round(a.hh_extra),
+          hh_feriado: round(a.hh_feriado),
           llegadas_tarde: a.llegadas_tarde_count,
           llegadas_tarde_min: a.llegadas_tarde_min,
           suspension_dias: a.suspension_dias,
@@ -190,6 +218,7 @@ export class LiquidacionesService {
             hh_trabajadas: it.hh_trabajadas,
             hh_nocturnas: it.hh_nocturnas,
             hh_extra: it.hh_extra,
+            hh_feriado: it.hh_feriado,
             hh_ausentes: it.hh_ausentes,
             llegadas_tarde: it.llegadas_tarde,
             suspension_dias: it.suspension_dias,
@@ -300,6 +329,7 @@ export class LiquidacionesService {
       { text: 'HH TRAB.', style: 'th', alignment: 'right' },
       { text: 'HH NOCT.', style: 'th', alignment: 'right' },
       { text: 'HH EXTRA', style: 'th', alignment: 'right' },
+      { text: 'HH FER.', style: 'th', alignment: 'right' },
       { text: 'AUSENTES', style: 'th', alignment: 'right' },
       ...(conMontos
         ? [
@@ -316,6 +346,7 @@ export class LiquidacionesService {
       { text: i.hh_trabajadas.toFixed(1), alignment: 'right' },
       { text: i.hh_nocturnas.toFixed(1), alignment: 'right' },
       { text: i.hh_extra.toFixed(1), alignment: 'right' },
+      { text: i.hh_feriado.toFixed(1), alignment: 'right' },
       { text: i.hh_ausentes.toFixed(1), alignment: 'right' },
       ...(conMontos
         ? [
@@ -340,8 +371,8 @@ export class LiquidacionesService {
           table: {
             headerRows: 1,
             widths: conMontos
-              ? ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto']
-              : ['auto', '*', 'auto', 'auto', 'auto', 'auto'],
+              ? ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto', 'auto']
+              : ['auto', '*', 'auto', 'auto', 'auto', 'auto', 'auto'],
             body: [header, ...body],
           },
           layout: {
@@ -394,15 +425,17 @@ export class LiquidacionesService {
     }>,
     noctIni: number,
     noctFin: number,
+    feriadoSet: Set<string> = new Set(),
   ) {
     type Acc = {
       hh_planificadas: number; hh_trabajadas: number; hh_ausentes: number;
-      hh_nocturnas: number; hh_extra: number; llegadas_tarde_count: number;
-      llegadas_tarde_min: number; suspension_dias: number; turnos_count: number;
+      hh_nocturnas: number; hh_extra: number; hh_feriado: number;
+      llegadas_tarde_count: number; llegadas_tarde_min: number;
+      suspension_dias: number; turnos_count: number;
     };
     const base = (): Acc => ({
       hh_planificadas: 0, hh_trabajadas: 0, hh_ausentes: 0, hh_nocturnas: 0,
-      hh_extra: 0, llegadas_tarde_count: 0, llegadas_tarde_min: 0,
+      hh_extra: 0, hh_feriado: 0, llegadas_tarde_count: 0, llegadas_tarde_min: 0,
       suspension_dias: 0, turnos_count: 0,
     });
     const acc: Record<string, Acc> = {};
@@ -424,6 +457,9 @@ export class LiquidacionesService {
       const hhReal = this.horasEntre(t.inicio_real, t.fin_real);
       a.hh_trabajadas += hhReal;
       a.hh_nocturnas += horasNocturnas(t.inicio_real, t.fin_real, noctIni, noctFin);
+      if (feriadoSet.has(t.inicio_plan.toISOString().slice(0, 10))) {
+        a.hh_feriado += hhReal;
+      }
       if (hhReal > hhPlan + 0.02) a.hh_extra += hhReal - hhPlan;
 
       const tardeMin = (t.inicio_real.getTime() - t.inicio_plan.getTime()) / 60_000;

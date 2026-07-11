@@ -24,15 +24,21 @@ export class VigilanciaMovilService {
   /**
    * Tipos de novedad predefinidos (catálogo NOVEDAD_TIPO del tenant).
    *
-   * ADELANTO_SUELDO se excluye del móvil: crear esa novedad por la web
-   * (NovedadService.create) genera una fila en el ledger `adelanto` que
-   * Liquidaciones descuenta del recibo — es un acto administrativo que
-   * registra la oficina cuando aprueba y entrega el dinero, no algo que el
-   * vigilador se auto-registre desde el teléfono. Desde el móvil, el pedido
-   * se hace como novedad GENERAL y la oficina lo formaliza en Novedades.
+   * ADELANTO_SUELDO solo aparece si el tenant habilitó la solicitud de
+   * adelanto desde el móvil (config/reglas-laborales). Aun habilitado, el
+   * teléfono crea una SOLICITUD (novedad `[SOLICITUD ADELANTO ...]`) que NO
+   * toca el ledger `adelantos`: la oficina la aprueba o rechaza en Novedades
+   * y recién al aprobar se crea el adelanto que Liquidaciones descuenta.
    */
   async listarNovedadTipos(tenantId: string) {
-    const tipos = await this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO');
+    const [tipos, regla] = await Promise.all([
+      this.catalogo.findAll(tenantId, 'NOVEDAD_TIPO'),
+      this.prisma.reglaLaboral.findUnique({
+        where: { tenant_id: tenantId },
+        select: { adelanto_movil_habilitado: true },
+      }),
+    ]);
+    if (regla?.adelanto_movil_habilitado) return tipos;
     return tipos.filter((t) => t.codigo !== 'ADELANTO_SUELDO');
   }
 
@@ -46,6 +52,8 @@ export class VigilanciaMovilService {
       prioridad?: string;
       clientEventId?: string;
       ts?: string;
+      monto?: string | number;
+      cuotas?: string | number;
     },
     archivos: Array<{
       buffer: Buffer;
@@ -53,16 +61,35 @@ export class VigilanciaMovilService {
       mimetype: string;
     }> = [],
   ) {
-    // No alcanza con ocultar el tipo en listarNovedadTipos: un request armado
-    // a mano igual crearía la novedad SIN pasar por el ledger de adelantos
-    // (eso solo lo hace NovedadService.create, el camino de la web) y quedaría
-    // un "adelanto" que Liquidaciones nunca descuenta.
+    // ADELANTO_SUELDO desde el móvil es una SOLICITUD, nunca un adelanto
+    // otorgado: acá no se toca el ledger (eso solo lo hace la oficina al
+    // aprobar, vía NovedadService.aprobarAdelanto). Se valida server-side
+    // porque ocultar el tipo en el catálogo no frena un request armado a mano.
     if (data.tipo === 'ADELANTO_SUELDO') {
-      throw new BadRequestException({
-        code: 'ADELANTO_SOLO_OFICINA',
-        message:
-          'El adelanto de sueldo se registra desde la oficina (módulo Novedades). Pedilo con una novedad general.',
+      const regla = await this.prisma.reglaLaboral.findUnique({
+        where: { tenant_id: tenantId },
+        select: { adelanto_movil_habilitado: true },
       });
+      if (!regla?.adelanto_movil_habilitado) {
+        throw new BadRequestException({
+          code: 'ADELANTO_SOLO_OFICINA',
+          message:
+            'El adelanto de sueldo se registra desde la oficina (módulo Novedades). Pedilo con una novedad general.',
+        });
+      }
+      const monto = Number(data.monto ?? 0);
+      const cuotas = Math.min(Math.max(Number(data.cuotas ?? 1) || 1, 1), 6);
+      if (!Number.isFinite(monto) || monto <= 0) {
+        throw new BadRequestException({
+          code: 'ADELANTO_MONTO_INVALIDO',
+          message: 'Indicá el monto del adelanto que querés solicitar.',
+        });
+      }
+      // El marcador es el contrato con la aprobación de la oficina.
+      data.descripcion = `[SOLICITUD ADELANTO monto=${monto} cuotas=${cuotas}] ${
+        data.descripcion?.trim() || ''
+      }`.trim();
+      data.prioridad = data.prioridad ?? 'ALTA';
     }
 
     if (await this.yaProcesado(tenantId, data.clientEventId)) {

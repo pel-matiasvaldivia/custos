@@ -8,11 +8,13 @@ import { CalculadoraHHTab } from './CalculadoraHHTab';
 import { TenantGeoTab } from './TenantGeoTab';
 import { EmpresaTab } from './EmpresaTab';
 import { FacturacionArcaTab } from './FacturacionArcaTab';
+import { ReglasLiquidacionTab } from './ReglasLiquidacionTab';
 
 const TABS = [
   { id: 'empresa', label: 'Empresa', render: () => <EmpresaTab /> },
   { id: 'usuarios', label: 'Usuarios', render: () => <UsuariosTab /> },
   { id: 'costos', label: 'Costos', render: () => <CostConfigPage /> },
+  { id: 'liquidacion', label: 'Liquidación', render: () => <ReglasLiquidacionTab /> },
   { id: 'calculadora', label: 'Calculadora HH', render: () => <CalculadoraHHTab /> },
   { id: 'ubicacion', label: 'Ubicación', render: () => <TenantGeoTab /> },
   { id: 'catalogos', label: 'Catálogos', render: () => <CatalogosTab /> },

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Search, Clock, AlertTriangle, Lock, CheckCircle2, Download } from 'lucide-react';
-import { liquidacionService, LiquidacionItem } from '../../services/liquidacion.service';
+import { Calculator, Search, Clock, AlertTriangle, Lock, CheckCircle2, Download, FileText } from 'lucide-react';
+import { liquidacionService, LiquidacionItem, LiquidacionResumen } from '../../services/liquidacion.service';
+import { arcaService } from '../../services/arca.service';
 import { PageHint } from '../../components/common/PageHint';
 
 const hoy = new Date();
@@ -23,9 +24,16 @@ export const LiquidacionesPage = () => {
   const [buscado, setBuscado] = useState(false);
   const [msg, setMsg] = useState('');
   const [modoConfig, setModoConfig] = useState('VALOR_HORA_MANUAL');
+  const [pagaFeriado, setPagaFeriado] = useState(false);
+  const [historial, setHistorial] = useState<LiquidacionResumen[]>([]);
+  const [descargandoLsd, setDescargandoLsd] = useState<string | null>(null);
+
+  const cargarHistorial = () =>
+    liquidacionService.historial().then(setHistorial).catch(() => {});
 
   useEffect(() => {
     liquidacionService.getConfig().then((c) => { setModoConfig(c.modo); setModo(c.modo); }).catch(() => {});
+    cargarHistorial();
   }, []);
 
   const guardarModo = async (nuevo: string) => {
@@ -41,6 +49,7 @@ export const LiquidacionesPage = () => {
       setItems(data.items);
       setModo(data.modo);
       setConMontos(data.con_montos);
+      setPagaFeriado(data.paga_feriado);
       setBuscado(true);
     } catch {
       setItems([]);
@@ -56,6 +65,7 @@ export const LiquidacionesPage = () => {
     try {
       await liquidacionService.cerrar(desde, hasta, valorHora);
       setMsg('Liquidación cerrada. Los adelantos del período fueron descontados.');
+      cargarHistorial();
     } catch (e: any) {
       setMsg(e?.response?.data?.message || 'No se pudo cerrar la liquidación.');
     } finally {
@@ -178,6 +188,9 @@ export const LiquidacionesPage = () => {
               <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Trab.</th>
               <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Noct.</th>
               <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Extra</th>
+              <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">
+                Feriado{buscado && !pagaFeriado ? ' *' : ''}
+              </th>
               <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Ausente</th>
               <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Tarde</th>
               <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Susp.</th>
@@ -187,9 +200,9 @@ export const LiquidacionesPage = () => {
           </thead>
           <tbody className="divide-y divide-line">
             {!buscado ? (
-              <tr><td colSpan={conMontos ? 9 : 7} className="px-4 py-10 text-center text-muted italic">Elegí un período y presioná Calcular.</td></tr>
+              <tr><td colSpan={conMontos ? 10 : 8} className="px-4 py-10 text-center text-muted italic">Elegí un período y presioná Calcular.</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={conMontos ? 9 : 7} className="px-4 py-10 text-center text-muted italic">Sin datos de asistencia en el período.</td></tr>
+              <tr><td colSpan={conMontos ? 10 : 8} className="px-4 py-10 text-center text-muted italic">Sin datos de asistencia en el período.</td></tr>
             ) : items.map((i) => (
               <tr key={i.vigilador_id} className="hover:bg-canvas/50">
                 <td className="px-4 py-3">
@@ -199,6 +212,7 @@ export const LiquidacionesPage = () => {
                 <td className="px-4 py-3 text-right font-mono font-bold text-navy">{hh(i.hh_trabajadas)}</td>
                 <td className="px-4 py-3 text-right font-mono text-muted">{hh(i.hh_nocturnas)}</td>
                 <td className="px-4 py-3 text-right font-mono text-brand-blue">{hh(i.hh_extra)}</td>
+                <td className="px-4 py-3 text-right font-mono text-violet-600">{i.hh_feriado > 0 ? hh(i.hh_feriado) : '—'}</td>
                 <td className="px-4 py-3 text-right font-mono text-muted">{i.hh_ausentes > 0 ? hh(i.hh_ausentes) : '—'}</td>
                 <td className="px-4 py-3 text-right font-mono">
                   {i.llegadas_tarde > 0 ? (
@@ -223,7 +237,65 @@ export const LiquidacionesPage = () => {
       <p className="flex items-center gap-2 text-xs text-muted">
         <AlertTriangle size={13} className="text-amber" />
         El cómputo surge de la asistencia real (check-in/out) y las novedades del período. Verificá los datos antes de cerrar la liquidación.
+        {buscado && !pagaFeriado && (
+          <span>* Las horas de feriado se informan pero no se pagan con recargo (activalo en Configuración → Liquidación).</span>
+        )}
       </p>
+
+      {/* Historial de liquidaciones cerradas + export LSD (ARCA) */}
+      {historial.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-lg font-display font-bold text-navy">Liquidaciones cerradas</h3>
+          <div className="card p-0 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-canvas border-b border-line">
+                <tr>
+                  <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider">Período</th>
+                  <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider">Modo</th>
+                  <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Total neto</th>
+                  <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider">Cerrada el</th>
+                  <th className="px-4 py-3 text-xs font-bold text-muted uppercase tracking-wider text-right">Libro de Sueldos</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {historial.map((l) => (
+                  <tr key={l.id} className="hover:bg-canvas/50">
+                    <td className="px-4 py-3 font-mono text-navy">
+                      {new Date(l.periodo_desde).toLocaleDateString('es-AR')} → {new Date(l.periodo_hasta).toLocaleDateString('es-AR')}
+                    </td>
+                    <td className="px-4 py-3 text-muted text-xs">{modoLabel[l.modo] ?? l.modo}</td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-emerald">{money(Number(l.total_neto))}</td>
+                    <td className="px-4 py-3 text-muted text-xs">{new Date(l.created_at).toLocaleDateString('es-AR')}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={async () => {
+                          setDescargandoLsd(l.id);
+                          setMsg('');
+                          try {
+                            await arcaService.descargarLsd(l.id);
+                          } catch {
+                            setMsg('No se pudo generar el archivo LSD.');
+                          } finally {
+                            setDescargandoLsd(null);
+                          }
+                        }}
+                        disabled={descargandoLsd === l.id}
+                        className="btn btn-secondary inline-flex items-center gap-1.5 text-xs disabled:opacity-50"
+                      >
+                        <FileText size={13} />
+                        {descargandoLsd === l.id ? 'Generando…' : 'LSD (ARCA)'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted">
+            El archivo LSD (Libro de Sueldos Digital) se importa en el aplicativo de ARCA. Validá el layout en homologación antes de presentarlo.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
