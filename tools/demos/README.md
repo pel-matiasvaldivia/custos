@@ -45,6 +45,31 @@ Los capítulos cuentan una historia continua (el adelanto que se pide en el 5 se
 aprueba en el 6 y se descuenta en el 7), así el conjunto funciona como manual
 de operaciones además de material de venta.
 
+## Voz en off
+
+Cada subtítulo se locuta con una voz femenina en español y se mezcla en el
+MP4 en el instante exacto en que aparece en pantalla (el ritmo del video se
+adapta a la duración de cada línea). El motor por defecto es
+`espeak-ng + MBROLA es3` (100 % offline, paquetes de Ubuntu:
+`apt-get install espeak-ng mbrola mbrola-es3`), con ecualización y loudness
+parejo vía ffmpeg.
+
+**Para una voz premium** (recomendado para publicar): seteá `VOZ_CMD` con
+cualquier CLI que reciba `{texto}` y `{salida}` — se borra el caché
+`salida/voz/` y se regraba. Ejemplos:
+
+```bash
+# Microsoft Edge TTS (gratis, requiere salida a internet):
+VOZ_CMD='edge-tts --voice es-AR-ElenaNeural --text {texto} --write-media {salida}' \
+  node tools/demos/grabar-reels.mjs
+
+# Piper (local, con un modelo descargado):
+VOZ_CMD='sh -c "echo {texto} | piper -m es_MX-claude-high.onnx -f {salida}"' ...
+```
+
+La pronunciación de siglas y marcas (CustOS, LSD, QR, 24/7…) se ajusta en el
+mapa `PRONUNCIACION` de `grabar-reels.mjs`.
+
 ## Notas
 
 - Los datos son 100 % ficticios (`Custodia Andina S.R.L.`, nóminas

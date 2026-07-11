@@ -275,14 +275,98 @@ const OVERLAY = `
 })();
 `;
 
+// ─── Locución (voz en off femenina) ──────────────────────────────────────────
+// Motor por defecto: espeak-ng + MBROLA es3 (voz femenina en español, 100 %
+// offline, paquetes de Ubuntu). Para una voz premium, seteá VOZ_CMD con un
+// comando que reciba {texto} y {salida}: se usa tal cual.
+//   VOZ_CMD='edge-tts --voice es-AR-ElenaNeural --text {texto} --write-media {salida}'
+import crypto from 'node:crypto';
+const VOZ_DIR = path.join(SALIDA, 'voz');
+fs.mkdirSync(VOZ_DIR, { recursive: true });
+const vozInfo = {}; // texto -> { archivo, dur }
+
+// Cómo se pronuncian las siglas y marcas (solo para el audio, no para el texto).
+const PRONUNCIACION = [
+  [/CustOS GO/g, 'custós gou'],
+  [/CustOS/g, 'custós'],
+  [/ARCA/g, 'arca'],
+  [/LSD/g, 'ele ese dé'],
+  [/SOC/g, 'soc'],
+  [/QR/g, 'cu erre'],
+  [/CUIL/g, 'cuil'],
+  [/PIN/g, 'pin'],
+  [/24\/7/g, 'veinticuatro siete'],
+  [/hora-hombre/g, 'hora hombre'],
+];
+
+function textoParaVoz(texto) {
+  let t = texto;
+  for (const [de, a] of PRONUNCIACION) t = t.replace(de, a);
+  return t.replace(/[""]/g, '').replace(/…/g, '.');
+}
+
+function generarVoz(texto) {
+  const hash = crypto.createHash('sha1').update(texto).digest('hex').slice(0, 12);
+  const archivo = path.join(VOZ_DIR, `${hash}.wav`);
+  if (!fs.existsSync(archivo)) {
+    const crudo = path.join(VOZ_DIR, `${hash}.raw.wav`);
+    const dicho = textoParaVoz(texto);
+    if (process.env.VOZ_CMD) {
+      const cmd = process.env.VOZ_CMD
+        .replace('{texto}', JSON.stringify(dicho))
+        .replace('{salida}', JSON.stringify(crudo));
+      execSync(cmd, { stdio: 'pipe' });
+    } else {
+      execSync(
+        `espeak-ng -v mb-es3 -s 145 -a 190 -w ${JSON.stringify(crudo)} ${JSON.stringify(dicho)}`,
+        { stdio: 'pipe' },
+      );
+    }
+    // Suavizado: ecualización, compresión suave y nivel de loudness parejo.
+    execSync(
+      `ffmpeg -hide_banner -loglevel error -y -i ${JSON.stringify(crudo)} ` +
+        `-af "highpass=f=90,lowpass=f=7500,acompressor=threshold=-18dB:ratio=2.5,loudnorm=I=-17:TP=-1.5" ` +
+        `-ar 44100 -ac 1 ${JSON.stringify(archivo)}`,
+      { stdio: 'pipe' },
+    );
+    fs.rmSync(crudo, { force: true });
+  }
+  const dur = parseFloat(
+    execSync(
+      `ffprobe -v error -show_entries format=duration -of csv=p=0 ${JSON.stringify(archivo)}`,
+    ).toString(),
+  );
+  vozInfo[texto] = { archivo: path.basename(archivo), dur };
+  return vozInfo[texto];
+}
+
+/** Pre-genera la locución de TODOS los subtítulos (literales en este archivo). */
+function pregenerarVoces() {
+  const fuente = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
+  const textos = [...fuente.matchAll(/cap\(page,\s*R,\s*'((?:[^'\\]|\\.)*)'/g)]
+    .map((m) => m[1].replace(/\\'/g, "'"));
+  console.log(`· Generando locución (${textos.length} líneas)…`);
+  for (const t of textos) generarVoz(t);
+}
+
 // ─── Acciones a velocidad humana ─────────────────────────────────────────────
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 const guiones = {}; // reel -> [captions] (para el manual)
+const tiempos = {}; // reel -> [{texto, inicio, archivo, dur}] (para la mezcla)
+let t0Reel = 0;
 
 async function cap(page, reel, texto, ms = 2800) {
   (guiones[reel] ??= []).push(texto);
+  const voz = vozInfo[texto] ?? generarVoz(texto);
+  (tiempos[reel] ??= []).push({
+    texto,
+    inicio: Math.round((Date.now() - t0Reel)) / 1000,
+    archivo: voz.archivo,
+    dur: voz.dur,
+  });
   await page.evaluate((t) => window.__demoCap?.(t), texto).catch(() => {});
-  await pausa(ms);
+  // El subtítulo queda en pantalla al menos lo que dura su locución.
+  await pausa(Math.max(ms, voz.dur * 1000 + 700));
 }
 
 async function mover(page, locator) {
@@ -340,6 +424,7 @@ async function grabarReel(nombre, opts, fn) {
   // Timeout corto: un selector que falla no debe congelar medio minuto de video.
   context.setDefaultTimeout(8000);
   const page = await context.newPage();
+  t0Reel = Date.now(); // el video arranca (aprox.) con la primera página
   page.on('dialog', (d) => d.accept().catch(() => {}));
   console.log(`· Grabando ${nombre}…`);
   try {
@@ -599,6 +684,7 @@ const soloEstos = process.argv.slice(2).map(Number).filter(Boolean);
 
 (async () => {
   await sembrar();
+  pregenerarVoces();
   browser = await chromium.launch({ executablePath: CHROMIUM, headless: true });
 
   // El reel 1 genera la sesión (storageState) que reutilizan los demás.
@@ -621,6 +707,7 @@ const soloEstos = process.argv.slice(2).map(Number).filter(Boolean);
   await browser.close();
 
   fs.writeFileSync(path.join(SALIDA, 'guiones.json'), JSON.stringify(guiones, null, 2));
-  console.log('· Guiones (texto de cada reel) en salida/guiones.json');
+  fs.writeFileSync(path.join(SALIDA, 'tiempos.json'), JSON.stringify(tiempos, null, 2));
+  console.log('· Guiones en salida/guiones.json · tiempos de locución en salida/tiempos.json');
   console.log('· Ahora: bash tools/demos/componer.sh');
 })().catch((e) => { console.error(e); process.exit(1); });
