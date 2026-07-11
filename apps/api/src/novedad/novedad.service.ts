@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
 import { CreateNovedadDto } from './dto/create-novedad.dto';
@@ -52,7 +56,13 @@ export class NovedadService {
 
     // Adelanto de sueldo: la descripción trae "[ADELANTO monto=NNN cuotas=N]".
     // Se registra en el ledger de adelantos para que Liquidaciones lo descuente.
-    if (data.tipo === 'ADELANTO_SUELDO' && data.vigilador_id) {
+    // Una "[SOLICITUD ADELANTO ...]" (pedida desde el móvil) NO entra al
+    // ledger: queda pendiente hasta que la oficina la apruebe (aprobarAdelanto).
+    if (
+      data.tipo === 'ADELANTO_SUELDO' &&
+      data.vigilador_id &&
+      !(data.descripcion || '').includes('[SOLICITUD ADELANTO')
+    ) {
       const monto = parseFloat(/monto=(\d+(?:\.\d+)?)/.exec(data.descripcion || '')?.[1] ?? '0');
       const cuotas = parseInt(/cuotas=(\d+)/.exec(data.descripcion || '')?.[1] ?? '1', 10);
       if (monto > 0) {
@@ -70,6 +80,90 @@ export class NovedadService {
       }
     }
 
+    return novedad;
+  }
+
+  /**
+   * Aprueba una solicitud de adelanto pedida desde el móvil: crea la fila del
+   * ledger `adelantos` (que Liquidaciones descuenta al cerrar el período) y
+   * marca la novedad como aprobada. Idempotente: si el adelanto ya existe
+   * para esa novedad, no lo duplica.
+   */
+  async aprobarAdelanto(tenantId: string, novedadId: string) {
+    const novedad = await this.buscarSolicitudAdelanto(tenantId, novedadId);
+
+    const yaCreado = await this.prisma.adelanto.findFirst({
+      where: { tenant_id: tenantId, novedad_id: novedadId },
+      select: { id: true },
+    });
+    if (yaCreado) {
+      throw new BadRequestException('Esta solicitud ya fue aprobada.');
+    }
+
+    const monto = parseFloat(
+      /monto=(\d+(?:\.\d+)?)/.exec(novedad.descripcion)?.[1] ?? '0',
+    );
+    const cuotas = parseInt(
+      /cuotas=(\d+)/.exec(novedad.descripcion)?.[1] ?? '1',
+      10,
+    );
+    if (!(monto > 0) || !novedad.vigilador_id) {
+      throw new BadRequestException(
+        'La solicitud no tiene un monto o vigilador válidos.',
+      );
+    }
+
+    await this.prisma.adelanto.create({
+      data: {
+        tenant_id: tenantId,
+        vigilador_id: novedad.vigilador_id,
+        novedad_id: novedad.id,
+        monto,
+        cuotas: Math.min(Math.max(cuotas, 1), 6),
+        saldo: monto,
+        estado: 'VIGENTE',
+      },
+    });
+
+    return this.prisma.novedad.update({
+      where: { id: novedad.id },
+      data: {
+        descripcion: novedad.descripcion.replace(
+          '[SOLICITUD ADELANTO',
+          '[ADELANTO APROBADO',
+        ),
+      },
+      include: { puesto: true, vigilador: true },
+    });
+  }
+
+  /** Rechaza una solicitud de adelanto pedida desde el móvil (sin tocar el ledger). */
+  async rechazarAdelanto(tenantId: string, novedadId: string) {
+    const novedad = await this.buscarSolicitudAdelanto(tenantId, novedadId);
+    return this.prisma.novedad.update({
+      where: { id: novedad.id },
+      data: {
+        descripcion: novedad.descripcion.replace(
+          '[SOLICITUD ADELANTO',
+          '[ADELANTO RECHAZADO',
+        ),
+      },
+      include: { puesto: true, vigilador: true },
+    });
+  }
+
+  private async buscarSolicitudAdelanto(tenantId: string, novedadId: string) {
+    const novedad = await this.prisma.novedad.findFirst({
+      where: { id: novedadId, tenant_id: tenantId, tipo: 'ADELANTO_SUELDO' },
+    });
+    if (!novedad) {
+      throw new NotFoundException('Solicitud de adelanto no encontrada.');
+    }
+    if (!novedad.descripcion.includes('[SOLICITUD ADELANTO')) {
+      throw new BadRequestException(
+        'La novedad no es una solicitud de adelanto pendiente.',
+      );
+    }
     return novedad;
   }
 

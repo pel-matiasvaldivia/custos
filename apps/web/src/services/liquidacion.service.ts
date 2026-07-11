@@ -12,6 +12,7 @@ export interface LiquidacionItem {
   hh_ausentes: number;
   hh_nocturnas: number;
   hh_extra: number;
+  hh_feriado: number;
   llegadas_tarde: number;
   llegadas_tarde_min: number;
   suspension_dias: number;
@@ -24,7 +25,16 @@ export interface LiquidacionItem {
 export interface LiquidacionComputo {
   modo: string;
   con_montos: boolean;
+  paga_feriado: boolean;
   items: LiquidacionItem[];
+}
+
+export interface ReglasLiquidacion {
+  pagar_recargo_feriado: boolean;
+  recargo_feriado_pct: number;
+  adelanto_movil_habilitado: boolean;
+  recargo_nocturno_pct: number;
+  recargo_extra_pct: number;
 }
 
 export interface LiquidacionResumen {
@@ -74,6 +84,14 @@ export const liquidacionService = {
   },
   setModo: async (modo: string): Promise<{ modo: string }> => {
     const res = await api.post<{ modo: string }>('/liquidaciones/config', { modo });
+    return res.data;
+  },
+  getReglas: async (): Promise<ReglasLiquidacion> => {
+    const res = await api.get<ReglasLiquidacion>('/config/reglas-laborales');
+    return res.data;
+  },
+  setReglas: async (reglas: Partial<ReglasLiquidacion>): Promise<ReglasLiquidacion> => {
+    const res = await api.put<ReglasLiquidacion>('/config/reglas-laborales', reglas);
     return res.data;
   },
 };

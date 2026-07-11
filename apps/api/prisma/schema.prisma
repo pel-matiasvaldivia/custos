@@ -1122,6 +1122,11 @@ model ReglaLaboral {
   recargo_nocturno_pct          Int      @default(20)
   recargo_extra_pct             Int      @default(50)
   recargo_feriado_pct           Int      @default(100)
+  // Si el tenant paga el recargo por feriado trabajado en la liquidación.
+  pagar_recargo_feriado         Boolean  @default(false)
+  // Si los vigiladores pueden SOLICITAR un adelanto desde la app móvil
+  // (la oficina lo aprueba desde Novedades; recién ahí entra al ledger).
+  adelanto_movil_habilitado     Boolean  @default(false)
   created_at                    DateTime @default(now()) @db.Timestamptz
   updated_at                    DateTime @default(now()) @db.Timestamptz
 
@@ -1158,6 +1163,7 @@ model LiquidacionItem {
   hh_trabajadas   Decimal @default(0) @db.Decimal(8, 2)
   hh_nocturnas    Decimal @default(0) @db.Decimal(8, 2)
   hh_extra        Decimal @default(0) @db.Decimal(8, 2)
+  hh_feriado      Decimal @default(0) @db.Decimal(8, 2)
   hh_ausentes     Decimal @default(0) @db.Decimal(8, 2)
   llegadas_tarde  Int     @default(0)
   suspension_dias Int     @default(0)

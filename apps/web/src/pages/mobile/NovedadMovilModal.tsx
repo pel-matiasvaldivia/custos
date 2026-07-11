@@ -29,6 +29,10 @@ export const NovedadMovilModal = ({ onClose, onCreada }: Props) => {
   const [enviando, setEnviando] = useState(false);
   const [grabando, setGrabando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [montoAdelanto, setMontoAdelanto] = useState('');
+  const [cuotasAdelanto, setCuotasAdelanto] = useState(1);
+
+  const esAdelanto = tipo === 'ADELANTO_SUELDO';
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -94,7 +98,12 @@ export const NovedadMovilModal = ({ onClose, onCreada }: Props) => {
       setError('Elegí un tipo de novedad.');
       return;
     }
-    if (!descripcion.trim() && adjuntos.length === 0) {
+    if (esAdelanto) {
+      if (!(Number(montoAdelanto) > 0)) {
+        setError('Indicá el monto del adelanto que querés solicitar.');
+        return;
+      }
+    } else if (!descripcion.trim() && adjuntos.length === 0) {
       setError('Escribí una descripción o adjuntá una foto/audio.');
       return;
     }
@@ -103,9 +112,10 @@ export const NovedadMovilModal = ({ onClose, onCreada }: Props) => {
     try {
       await vigilanciaMovilService.crearNovedad(
         tipo,
-        descripcion.trim() || `[${tipo}]`,
+        descripcion.trim() || (esAdelanto ? '' : `[${tipo}]`),
         prioridad,
         adjuntos.map((a) => ({ blob: a.blob, filename: a.filename })),
+        esAdelanto ? { monto: Number(montoAdelanto), cuotas: cuotasAdelanto } : undefined,
       );
       onCreada();
     } catch {
@@ -169,6 +179,44 @@ export const NovedadMovilModal = ({ onClose, onCreada }: Props) => {
           </div>
         </div>
 
+        {/* Solicitud de adelanto: monto y cuotas */}
+        {esAdelanto && (
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Adelanto solicitado</p>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label htmlFor="monto-adelanto" className="text-[10px] text-white/50 block mb-1">Monto ($)</label>
+                <input
+                  id="monto-adelanto"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  value={montoAdelanto}
+                  onChange={(e) => setMontoAdelanto(e.target.value)}
+                  placeholder="50000"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-white/30 outline-none focus:border-brand-blue/50"
+                />
+              </div>
+              <div className="w-32">
+                <label htmlFor="cuotas-adelanto" className="text-[10px] text-white/50 block mb-1">Cuotas</label>
+                <select
+                  id="cuotas-adelanto"
+                  value={cuotasAdelanto}
+                  onChange={(e) => setCuotasAdelanto(Number(e.target.value))}
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white outline-none focus:border-brand-blue/50"
+                >
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <option key={n} value={n} className="bg-slate-900">{n}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-[11px] text-white/40">
+              Es una solicitud: la oficina la revisa y, si la aprueba, el descuento se aplica en la próxima liquidación.
+            </p>
+          </div>
+        )}
+
         {/* Descripción */}
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Descripción</p>
@@ -176,7 +224,7 @@ export const NovedadMovilModal = ({ onClose, onCreada }: Props) => {
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             rows={4}
-            placeholder="Contá qué pasó..."
+            placeholder={esAdelanto ? 'Motivo del pedido (opcional)...' : 'Contá qué pasó...'}
             className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-white/30 outline-none focus:border-brand-blue/50"
           />
         </div>

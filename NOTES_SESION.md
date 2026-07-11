@@ -613,3 +613,61 @@ manual no.)
 Las asignaciones YA creadas con el horario duplicado no se corrigen solas:
 hay que finalizarlas (borra los turnos futuros PLANIFICADA) y volver a
 afectar a los vigiladores, o rearmar el puesto con "Armar puesto".
+
+---
+
+# Ronda 7 — Feriados pagables, flujo LSD completo y adelanto móvil opcional (2026-07-11)
+
+Decisiones del usuario sobre el informe del recap:
+punto 1 → toggle de configuración; punto 2 → resolver completo;
+punto 3 (homologación ARCA real) → nada por ahora; punto 4 → toggle IDEM punto 1.
+
+## 1. Recargo por feriado trabajado (opcional por tenant)
+- `ReglaLaboral.pagar_recargo_feriado` (default false) +
+  `LiquidacionItem.hh_feriado` (migración `20260711100000`).
+- `LiquidacionesService.computar`: cruza los turnos con la tabla `feriados`
+  por la fecha de `inicio_plan` (mismo criterio que la conciliación, así lo
+  facturado y lo pagado clasifican igual); `hh_feriado` SIEMPRE se computa e
+  informa; el recargo (`recargo_feriado_pct`, default 100%) solo suma al bruto
+  si el toggle está activo. Persistido en `cerrar`; columna en el PDF y en la
+  tabla de la página (con asterisco si no se paga).
+- LSD: concepto informativo `HS FERIADO` (código 100030) en los F02.
+- Config: nuevo `GET/PUT config/reglas-laborales`
+  (`tenant/reglas-laborales.controller.ts`) + pestaña **Configuración →
+  Liquidación** (`ReglasLiquidacionTab.tsx`) con el toggle y el %.
+
+## 2. Flujo LSD completo
+- El backend YA tenía cerrar/historial/obtener (la nota de la Ronda ARCA
+  estaba desactualizada); lo que faltaba era la UI: `LiquidacionesPage` ahora
+  muestra **Liquidaciones cerradas** (período, modo, total, fecha) con botón
+  **LSD (ARCA)** por fila (usa `arcaService.descargarLsd`, que ya existía).
+  El historial se refresca al cerrar un período.
+
+## 3. Homologación ARCA — sin cambios (decisión del usuario).
+
+## 4. Solicitud de adelanto desde el móvil (opcional por tenant)
+- `ReglaLaboral.adelanto_movil_habilitado` (default false), editable en la
+  misma pestaña de configuración.
+- Móvil: con el toggle activo, `listarNovedadTipos` vuelve a incluir
+  ADELANTO_SUELDO y el modal pide **monto y cuotas (1-6)**; `crearNovedad`
+  valida server-side y crea la novedad marcada
+  `[SOLICITUD ADELANTO monto=X cuotas=N]` — **sin tocar el ledger**.
+- Oficina: `POST novedades/:id/adelanto/aprobar|rechazar` (ADMIN/GERENCIA).
+  Aprobar crea la fila `adelantos` VIGENTE (novedad_id) y marca la novedad
+  `[ADELANTO APROBADO ...]`; idempotente (re-aprobar → 400). Rechazar solo
+  marca `[ADELANTO RECHAZADO ...]`. `NovedadesPage` muestra el banner
+  "Solicitud pendiente" con ambos botones.
+- `NovedadService.create` (web) ahora IGNORA las descripciones
+  `[SOLICITUD ADELANTO...]` para el ledger (solo `[ADELANTO ...]` directo de
+  oficina lo crea, como antes).
+
+## Verificación
+- Unit: `liquidaciones.service.spec.ts` nuevo (3 tests: toggle on/off y día
+  común; horarios TZ-safe). Suite API: 108 passed + el preexistente de
+  vigilante.
+- E2E live (stack completo local): PUT/GET reglas OK; computar devuelve
+  `paga_feriado` y `hh_feriado`; cerrar persiste; `exportar-lsd-txt` del ID
+  cerrado genera F01/F02 OK; solicitud de adelanto NO toca ledger, aprobar
+  crea el adelanto (50000/2 cuotas VIGENTE), re-aprobar da 400.
+- QA Playwright: 105/105 (baseline visual de Configuración regenerado por la
+  pestaña nueva). `tsc --noEmit` API y web → 0 errores.

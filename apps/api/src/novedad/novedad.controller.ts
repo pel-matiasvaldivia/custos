@@ -13,6 +13,8 @@ import {
 import { Response } from 'express';
 import { NovedadService } from './novedad.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 import { CreateNovedadDto } from './dto/create-novedad.dto';
 import { FiltrarNovedadesDto } from './dto/filtrar-novedades.dto';
 
@@ -24,6 +26,22 @@ export class NovedadController {
   @Post()
   create(@Request() req: any, @Body() body: CreateNovedadDto) {
     return this.novedadService.create(req.user.tenantId, body);
+  }
+
+  /** Aprueba una solicitud de adelanto hecha desde el móvil → crea el adelanto. */
+  @Post(':id/adelanto/aprobar')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'GERENCIA', 'SUPERADMIN')
+  aprobarAdelanto(@Request() req: any, @Param('id') id: string) {
+    return this.novedadService.aprobarAdelanto(req.user.tenantId, id);
+  }
+
+  /** Rechaza una solicitud de adelanto hecha desde el móvil. */
+  @Post(':id/adelanto/rechazar')
+  @UseGuards(RolesGuard)
+  @Roles('ADMIN', 'GERENCIA', 'SUPERADMIN')
+  rechazarAdelanto(@Request() req: any, @Param('id') id: string) {
+    return this.novedadService.rechazarAdelanto(req.user.tenantId, id);
   }
 
   @Get()

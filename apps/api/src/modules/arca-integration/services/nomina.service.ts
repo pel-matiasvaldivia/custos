@@ -346,6 +346,15 @@ export class NominaService {
         tipo: 'R',
       });
     }
+    if (Number(item.hh_feriado ?? 0) > 0) {
+      conceptos.push({
+        codigo: '100030',
+        desc: 'HS FERIADO (INFORMATIVO)',
+        cantidad: Number(item.hh_feriado),
+        importe: 0,
+        tipo: 'R',
+      });
+    }
     if (Number(item.descuentos) > 0) {
       conceptos.push({
         codigo: '900001',

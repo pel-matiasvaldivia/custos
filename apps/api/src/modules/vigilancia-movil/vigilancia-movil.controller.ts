@@ -219,6 +219,8 @@ export class VigilanciaMovilController {
       clientEventId?: string;
       ts?: string;
       vigiladorId?: string;
+      monto?: string;
+      cuotas?: string;
     },
     @Request() req: any,
   ) {
