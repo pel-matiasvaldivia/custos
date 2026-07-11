@@ -138,3 +138,4 @@ Thumbs.db
 /apps/api/prisma/*.db
 /apps/api/prisma/*.db-journal
 dump.rdb
+tools/demos/salida/
