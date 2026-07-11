@@ -212,6 +212,37 @@ async function sembrar() {
       descripcion: 'Camión de proveedor sin autorización previa en Acceso Principal; se retuvo en portería y se avisó al supervisor.',
     });
   }
+
+  // Credenciales con vencimiento próximo → alimentan la campana de
+  // notificaciones y el KPI del dashboard ("CustOS te avisa solo").
+  const [c1, c2] = todosList;
+  const creds = (await req('GET', `/vigilantes/${c1.id}/credenciales`, undefined, { tolerar: true })).data;
+  if (!Array.isArray(creds) || creds.length === 0) {
+    const dias = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+    await req('POST', `/vigilantes/${c1.id}/credenciales`, {
+      tipo: 'PSICOFISICO', numero: 'PSF-30412', vence_el: dias(9),
+    }, { tolerar: true });
+    await req('POST', `/vigilantes/${c2.id}/credenciales`, {
+      tipo: 'CREDENCIAL RNS', numero: 'RNS-118220', vence_el: dias(21),
+    }, { tolerar: true });
+  }
+
+  // Turno de HOY para el vigilador con PIN: el reel de la app marca la
+  // entrada en cámara (control de asistencia real, con hora y ubicación).
+  sql(`INSERT INTO turnos_planificados
+         (tenant_id, puesto_id, vigilador_id, inicio_plan, fin_plan, tipo_bloque, estado)
+       SELECT '${miTenant.id}', p.id, v.id,
+              NOW() - interval '20 minutes', NOW() + interval '11 hours',
+              'DIURNO', 'PLANIFICADA'
+       FROM puestos p, vigiladores v
+       WHERE p.tenant_id = '${miTenant.id}' AND p.nombre = 'Acceso Principal'
+         AND v.tenant_id = '${miTenant.id}' AND v.id = '${conPin.id}'
+         AND NOT EXISTS (
+           SELECT 1 FROM turnos_planificados tp
+           WHERE tp.tenant_id = '${miTenant.id}' AND tp.vigilador_id = v.id
+             AND tp.inicio_plan > NOW() - interval '2 hours'
+             AND tp.inicio_plan < NOW() + interval '2 hours'
+         );`);
   console.log('· Siembra lista.');
 }
 
@@ -295,7 +326,15 @@ async function grabarReel(nombre, opts, fn) {
     viewport: size,
     recordVideo: { dir: TMP, size },
     storageState: opts.conSesion ? estadoAdmin : undefined,
-    ...(opts.movil ? { hasTouch: true, isMobile: true } : {}),
+    ...(opts.movil
+      ? {
+          hasTouch: true,
+          isMobile: true,
+          // Check-in con ubicación real: la posición simulada es el objetivo demo.
+          geolocation: { latitude: -33.045, longitude: -68.878 },
+          permissions: ['geolocation'],
+        }
+      : {}),
   });
   await context.addInitScript(OVERLAY);
   // Timeout corto: un selector que falla no debe congelar medio minuto de video.
@@ -376,7 +415,25 @@ const REELS = {
         await pausa(2000);
         await foto(page, 'r2-wizard');
       });
-      await cap(page, R, 'Costos, cargas sociales y rentabilidad calculados por CustOS. Sin planillas.', 2600);
+      await cap(page, R, '¿Cuánto sale de verdad una hora-hombre? La Calculadora lo resuelve con la paritaria vigente.', 2600);
+      await page.goto(`${WEB}/settings?tab=calculadora`);
+      await pausa(2200);
+      await foto(page, 'r2-calculadora');
+      await paso('scroll calculadora', async () => {
+        await page.mouse.wheel(0, 420); await pausa(2000);
+        await foto(page, 'r2-calculadora-resultado');
+        await page.mouse.wheel(0, -420); await pausa(600);
+      });
+      await cap(page, R, 'Básico, cargas sociales, puesto 24/7 con dotación real: costo y precio con tu margen objetivo.', 3000);
+      await page.goto(`${WEB}/settings?tab=contratos`);
+      await pausa(2200);
+      await foto(page, 'r2-contrato');
+      await cap(page, R, 'Y el modelo de contrato es TUYO: editás la plantilla y cada contrato sale con tu texto y tu firma.', 3000);
+      await paso('scroll contrato', async () => {
+        await page.mouse.wheel(0, 400); await pausa(1800);
+        await foto(page, 'r2-contrato-plantilla');
+      });
+      await cap(page, R, 'De la cotización al contrato firmado, sin salir de CustOS.', 2400);
     }),
 
   3: async () =>
@@ -404,7 +461,13 @@ const REELS = {
       await cap(page, R, 'Listo: cada CUIL del archivo se convierte en un legajo. Sin tipear nada.', 2800);
       await paso('cerrar modal', () => click(page, page.getByRole('button', { name: /^Listo$/i })));
       await pausa(1200);
-      await cap(page, R, 'También podés exportar las altas en el formato de ARCA, para el camino inverso.', 2600);
+      await cap(page, R, 'Y CustOS vigila los vencimientos por vos: psicofísico, credencial, lo que cargues…', 2400);
+      await paso('campana de vencimientos', async () => {
+        await click(page, page.getByRole('button', { name: /Notificaciones de credenciales/i }));
+        await pausa(2200);
+        await foto(page, 'r3-vencimientos');
+      });
+      await cap(page, R, 'Te avisa ANTES de que venzan. Nada de enterarte con el vigilador en el puesto.', 2800);
       await foto(page, 'r3-tabla');
     }),
 
@@ -451,26 +514,20 @@ const REELS = {
       await click(page, page.getByRole('button', { name: /^Ingresar/i }));
       await pausa(3000);
       await foto(page, 'r5-dashboard');
-      await cap(page, R, 'Su turno del día, check-in con geolocalización, rondas QR y botón de pánico.', 3000);
+      await cap(page, R, 'Su turno de hoy ya lo espera, con puesto y horario. Nada que adivinar.', 2600);
+      await paso('marcar entrada', async () => {
+        await click(page, page.getByRole('button', { name: /Marcar entrada/i }));
+        await pausa(2600);
+        await foto(page, 'r5-en-servicio');
+      });
+      await cap(page, R, 'Un toque y la entrada queda registrada con hora y ubicación reales.', 2800);
+      await cap(page, R, 'Ese registro ES la asistencia: alimenta el cuadrante y la liquidación, solo.', 2800);
       await paso('scroll movil', async () => {
-        await page.mouse.wheel(0, 350); await pausa(1200);
+        await page.mouse.wheel(0, 350); await pausa(1400);
+        await foto(page, 'r5-acciones');
         await page.mouse.wheel(0, -350); await pausa(600);
       });
-      await cap(page, R, 'Desde "Novedad" reporta con foto y audio. Y puede pedir un adelanto de sueldo…', 2400);
-      await paso('novedad adelanto', async () => {
-        await click(page, page.getByRole('button', { name: /Novedad/i }).first());
-        await pausa(1500);
-        await foto(page, 'r5-novedad');
-        await paso('elegir adelanto', async () => {
-          await click(page, page.getByRole('button', { name: /Adelanto de sueldo/i }));
-          await pausa(600);
-          await tipear(page, page.locator('#monto-adelanto'), '80000');
-          await foto(page, 'r5-adelanto');
-          await cap(page, R, 'Indica monto y cuotas. La oficina lo aprueba antes de que toque el recibo.', 2600);
-          await click(page, page.getByRole('button', { name: /Enviar|Registrar/i }).last());
-          await pausa(2000);
-        });
-      });
+      await cap(page, R, 'Rondas con QR, novedades con foto y audio, y botón de pánico directo al SOC.', 3000);
       await cap(page, R, 'Todo funciona aún sin señal: la app sincroniza cuando vuelve la conexión.', 2800);
     }),
 
@@ -492,17 +549,12 @@ const REELS = {
       await pausa(2000);
       await cap(page, R, 'En Novedades queda el registro vivo de los puestos: partes, fotos y audios del móvil.');
       await foto(page, 'r6-novedades');
-      await paso('aprobar adelanto', async () => {
-        const banner = page.getByText(/Solicitud de adelanto pendiente/i).first();
-        await banner.scrollIntoViewIfNeeded();
-        await pausa(800);
-        await foto(page, 'r6-solicitud');
-        await cap(page, R, 'La solicitud de adelanto del vigilador espera acá. Un clic y queda aprobada…', 2400);
-        await click(page, page.getByRole('button', { name: /^Aprobar$/i }).first());
-        await pausa(2000);
-        await foto(page, 'r6-aprobada');
+      await paso('scroll novedades', async () => {
+        await page.mouse.wheel(0, 420); await pausa(1800);
+        await foto(page, 'r6-novedades-detalle');
       });
-      await cap(page, R, '…y el descuento se aplica solo en la próxima liquidación.', 2600);
+      await cap(page, R, 'Cada entrada del móvil quedó acá: con hora real, puesto y quién la reportó.', 2800);
+      await cap(page, R, 'Control total de la operación, sin llamar a nadie para preguntar "¿está el vigilador?".', 2800);
     }),
 
   7: async () =>
@@ -510,17 +562,17 @@ const REELS = {
       const R = 'reel-07-liquidaciones';
       await page.goto(`${WEB}/settings?tab=liquidacion`);
       await pausa(2000);
-      await cap(page, R, 'Vos decidís las reglas: feriados con recargo y adelantos desde la app, con un switch.');
+      await cap(page, R, 'Vos decidís las reglas de pago: feriados con recargo, con un switch.');
       await foto(page, 'r7-config');
       await page.goto(`${WEB}/liquidaciones`);
       await pausa(1500);
-      await cap(page, R, 'Liquidaciones calcula las horas exactas de cada vigilador según la asistencia real.', 2400);
+      await cap(page, R, 'La asistencia que marcó cada vigilador en la app se convierte en horas a pagar. Sola.', 2600);
       await click(page, page.getByRole('button', { name: /Calcular/i }));
       await pausa(2500);
       await foto(page, 'r7-computo');
-      await cap(page, R, 'Trabajadas, nocturnas, extras y feriados. Adelantos descontados. Neto listo.', 3000);
+      await cap(page, R, 'Trabajadas, nocturnas, extras y feriados: las horas EXACTAS de cada legajo. Neto listo.', 3000);
       await paso('scroll tabla', async () => { await page.mouse.wheel(0, 350); await pausa(1500); });
-      await cap(page, R, 'Cerrás el período y queda auditado: los adelantos se descuentan solos.', 2400);
+      await cap(page, R, 'Cerrás el período y queda auditado, con historial.', 2400);
       await paso('cerrar liquidacion', async () => {
         await click(page, page.getByRole('button', { name: /Cerrar liquidación/i }));
         await pausa(2500);
