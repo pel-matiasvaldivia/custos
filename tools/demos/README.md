@@ -47,24 +47,31 @@ de operaciones además de material de venta.
 
 ## Voz en off
 
-Cada subtítulo se locuta con una voz femenina en español y se mezcla en el
+Cada subtítulo se locuta con una **voz femenina argentina** y se mezcla en el
 MP4 en el instante exacto en que aparece en pantalla (el ritmo del video se
-adapta a la duración de cada línea). El motor por defecto es
-`espeak-ng + MBROLA es3` (100 % offline, paquetes de Ubuntu:
-`apt-get install espeak-ng mbrola mbrola-es3`), con ecualización y loudness
-parejo vía ffmpeg.
+adapta a la duración de cada línea).
 
-**Para una voz premium** (recomendado para publicar): seteá `VOZ_CMD` con
-cualquier CLI que reciba `{texto}` y `{salida}` — se borra el caché
-`salida/voz/` y se regraba. Ejemplos:
+El motor se resuelve automáticamente, en este orden:
+
+1. **`VOZ_CMD`** (si está seteada) → se usa tal cual, cualquier TTS.
+2. **`edge-tts` instalado** → voz femenina argentina **Elena** (`es-AR-ElenaNeural`),
+   sin configurar nada. Este es el default recomendado para publicar.
+3. **Si no hay ninguno** → `espeak-ng + MBROLA es3` (offline, robótica;
+   `apt-get install espeak-ng mbrola mbrola-es3`).
+
+Todos pasan por ecualización y loudness parejo vía ffmpeg.
 
 ```bash
-# Microsoft Edge TTS (gratis, requiere salida a internet):
-VOZ_CMD='edge-tts --voice es-AR-ElenaNeural --text {texto} --write-media {salida}' \
-  node tools/demos/grabar-reels.mjs
+# Voz Elena por defecto — basta con tener edge-tts instalado:
+pip install edge-tts
+node tools/demos/grabar-reels.mjs
 
-# Piper (local, con un modelo descargado):
-VOZ_CMD='sh -c "echo {texto} | piper -m es_MX-claude-high.onnx -f {salida}"' ...
+# Cambiar de voz argentina (ej: masculina) sin tocar código:
+VOZ_EDGE='es-AR-TomasNeural' node tools/demos/grabar-reels.mjs
+
+# Forzar otro motor por completo (Piper local, ElevenLabs, etc.):
+VOZ_CMD='sh -c "echo {texto} | piper -m es_MX-claude-high.onnx -f {salida}"' \
+  node tools/demos/grabar-reels.mjs
 ```
 
 La pronunciación de siglas y marcas (CustOS, LSD, QR, 24/7…) se ajusta en el

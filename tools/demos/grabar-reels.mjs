@@ -275,11 +275,12 @@ const OVERLAY = `
 })();
 `;
 
-// ─── Locución (voz en off femenina) ──────────────────────────────────────────
-// Motor por defecto: espeak-ng + MBROLA es3 (voz femenina en español, 100 %
-// offline, paquetes de Ubuntu). Para una voz premium, seteá VOZ_CMD con un
-// comando que reciba {texto} y {salida}: se usa tal cual.
-//   VOZ_CMD='edge-tts --voice es-AR-ElenaNeural --text {texto} --write-media {salida}'
+// ─── Locución (voz en off femenina argentina) ────────────────────────────────
+// Orden de resolución del motor de voz:
+//   1. VOZ_CMD (si está seteada) → se usa tal cual (cualquier TTS: Piper, etc.).
+//   2. edge-tts instalado        → voz femenina argentina Elena, automático.
+//   3. si no                     → espeak-ng + MBROLA es3 (offline, robótica).
+// Elegí otra voz de edge-tts con VOZ_EDGE (ej: es-AR-TomasNeural, masculina).
 import crypto from 'node:crypto';
 const VOZ_DIR = path.join(SALIDA, 'voz');
 fs.mkdirSync(VOZ_DIR, { recursive: true });
@@ -305,14 +306,30 @@ function textoParaVoz(texto) {
   return t.replace(/[""]/g, '').replace(/…/g, '.');
 }
 
+// Voz femenina argentina (Elena) como default cuando edge-tts está disponible.
+const VOZ_EDGE = process.env.VOZ_EDGE || 'es-AR-ElenaNeural';
+const HAY_EDGE_TTS = (() => {
+  try { execSync('command -v edge-tts', { stdio: 'ignore' }); return true; }
+  catch { return false; }
+})();
+const VOZ_CMD_EFECTIVO = process.env.VOZ_CMD
+  || (HAY_EDGE_TTS
+    ? `edge-tts --voice ${VOZ_EDGE} --text {texto} --write-media {salida}`
+    : null);
+console.log(`· Motor de voz: ${
+  process.env.VOZ_CMD ? 'VOZ_CMD (personalizado)'
+    : HAY_EDGE_TTS ? `edge-tts ${VOZ_EDGE} (femenina argentina)`
+      : 'espeak-ng mb-es3 (offline — instalá edge-tts para la voz argentina)'
+}`);
+
 function generarVoz(texto) {
   const hash = crypto.createHash('sha1').update(texto).digest('hex').slice(0, 12);
   const archivo = path.join(VOZ_DIR, `${hash}.wav`);
   if (!fs.existsSync(archivo)) {
     const crudo = path.join(VOZ_DIR, `${hash}.raw.wav`);
     const dicho = textoParaVoz(texto);
-    if (process.env.VOZ_CMD) {
-      const cmd = process.env.VOZ_CMD
+    if (VOZ_CMD_EFECTIVO) {
+      const cmd = VOZ_CMD_EFECTIVO
         .replace('{texto}', JSON.stringify(dicho))
         .replace('{salida}', JSON.stringify(crudo));
       execSync(cmd, { stdio: 'pipe' });
