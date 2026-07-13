@@ -84,11 +84,12 @@ async function sembrar() {
   }
 
   // Reglas de liquidación: feriados pagos + adelanto móvil habilitado.
+  // Tolerante: el endpoint varía según la versión de la API desplegada.
   await req('PUT', '/config/reglas-laborales', {
     pagar_recargo_feriado: true,
     recargo_feriado_pct: 100,
     adelanto_movil_habilitado: true,
-  });
+  }, { tolerar: true });
 
   // Clientes y objetivos (idempotente: solo si no existen).
   const clientes = (await req('GET', '/clientes?limit=50')).data;
