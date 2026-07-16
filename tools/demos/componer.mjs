@@ -29,24 +29,17 @@ const tiempos = fs.existsSync(path.join(SALIDA, 'tiempos.json'))
   ? JSON.parse(fs.readFileSync(path.join(SALIDA, 'tiempos.json'), 'utf8'))
   : {};
 
-// ─── Cama musical ambiental (sintetizada, sin archivos externos) ──────────────
-// Un acorde de Re mayor sostenido con trémolo lento y reverb: un colchón suave
-// que llena los silencios. Se genera una sola vez y se cachea en salida/.bed.wav.
+// ─── Cama musical (RhythmRocket.mp3) ─────────────────────────────────────────
+// Se normaliza el track muy por debajo de la voz (I=-22 LUFS, mono) una sola
+// vez y se cachea en salida/.bed.wav; después se loopea/recorta por reel y se
+// agacha bajo la locución (sidechain) para que la voz siempre quede por encima.
+const MUSICA = path.join(AQUI, 'RhythmRocket.mp3');
 const BED = path.join(SALIDA, '.bed.wav');
 function generarCama() {
-  const notas = [146.83, 220.0, 293.66, 369.99]; // Re3 · La3 · Re4 · Fa#4
-  const ins = notas.flatMap((f) => ['-f', 'lavfi', '-i', `sine=frequency=${f}:sample_rate=44100`]);
-  const mezcla = notas.map((_, i) => `[${i}]`).join('');
-  const fc =
-    `${mezcla}amix=inputs=${notas.length}:normalize=1,` +
-    `tremolo=f=0.12:d=0.35,` +
-    `aecho=0.8:0.88:900|1600|2200:0.35|0.28|0.2,` +
-    `highpass=f=60,lowpass=f=1500,` +
-    `loudnorm=I=-24:TP=-3,` +
-    `afade=t=in:st=0:d=2.5`;
   execFileSync('ffmpeg', [
-    '-hide_banner', '-loglevel', 'error', '-y', ...ins,
-    '-filter_complex', fc, '-t', '120', '-ac', '1', '-ar', '44100', BED,
+    '-hide_banner', '-loglevel', 'error', '-y', '-i', MUSICA,
+    '-map', '0:a', '-af', 'loudnorm=I=-22:TP=-6,highpass=f=40',
+    '-ac', '1', '-ar', '44100', BED,
   ], { stdio: 'pipe' });
 }
 if (!fs.existsSync(BED)) generarCama();
@@ -99,8 +92,8 @@ for (const webm of webms) {
     `[c3]drawtext=fontfile=${FUENTE}:text='CustOS':fontcolor=white:fontsize=44:x=(w-text_w)/2:y=1750[c4];` +
     `[c4]drawtext=fontfile=${FUENTE_LIGERA}:text='el sistema operativo de tu empresa de seguridad':fontcolor=0x9db2d0:fontsize=24:x=(w-text_w)/2:y=1815[vout]`;
 
-  // Cama musical: suave, y ducked bajo la voz (sidechain) cuando hay locución.
-  const bed = `[${bedIdx}:a]volume=0.6[bedraw]`;
+  // Cama musical: ya viene normalizada baja (I=-22); ducked bajo la voz.
+  const bed = `[${bedIdx}:a]volume=1.0[bedraw]`;
   if (locucion.length) {
     const pistas = locucion
       .map((l, i) => `[${i + 1}:a]adelay=${Math.max(0, Math.round(l.inicio * 1000))}:all=1[a${i}]`)

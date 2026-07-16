@@ -291,8 +291,8 @@ const vozInfo = {}; // texto -> { archivo, dur }
 
 // Cómo se pronuncian las siglas y marcas (solo para el audio, no para el texto).
 const PRONUNCIACION = [
-  [/CustOS GO/g, 'custós gou'],
-  [/CustOS/g, 'custós érp'],
+  [/CustOS GO/g, 'Custos go'],
+  [/CustOS/g, 'Custos'],
   [/ARCA/g, 'arca'],
   [/LSD/g, 'ele ese dé'],
   [/SOC/g, 'soc'],
