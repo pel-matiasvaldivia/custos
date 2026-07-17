@@ -256,6 +256,8 @@ function sql(consulta) {
 const OVERLAY = `
 (() => {
   if (window.__demoOverlay) return; window.__demoOverlay = true;
+  // Evita el modal de onboarding "Bienvenido a CustOS" que taparía el dashboard.
+  try { localStorage.setItem('custos_bienvenida_vista', '1'); } catch (e) {}
   const arm = () => {
     if (!document.body) return setTimeout(arm, 30);
     const cur = document.createElement('div');
@@ -289,8 +291,8 @@ const vozInfo = {}; // texto -> { archivo, dur }
 
 // Cómo se pronuncian las siglas y marcas (solo para el audio, no para el texto).
 const PRONUNCIACION = [
-  [/CustOS GO/g, 'custós gou'],
-  [/CustOS/g, 'custós'],
+  [/CustOS GO/g, 'Custos go'],
+  [/CustOS/g, 'Custos'],
   [/ARCA/g, 'arca'],
   [/LSD/g, 'ele ese dé'],
   [/SOC/g, 'soc'],
