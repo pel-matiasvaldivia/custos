@@ -192,6 +192,40 @@
     .btn:hover,.mod:hover{transform:none}
   }
 </style>
+<style>
+  /* ---------- Demo form ---------- */
+  .demo-form{max-width:620px;margin:0 auto;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(1.3rem,3vw,2rem);box-shadow:var(--shadow)}
+  .df-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+  @media(max-width:560px){.df-row{grid-template-columns:1fr}}
+  .df-field{display:flex;flex-direction:column;gap:.35rem}
+  .df-field>span{font-family:var(--mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .df-field input,.df-field select{
+    font-family:var(--body);font-size:.98rem;color:var(--ink);
+    background:var(--canvas);border:1px solid var(--line);border-radius:10px;padding:.7rem .85rem;width:100%;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .df-field input:focus,.df-field select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(27,87,214,.14);background:#fff}
+  .df-submit{width:100%;justify-content:center;font-size:1.02rem;padding:.85rem;margin-top:.2rem}
+  .df-submit[disabled]{opacity:.6;cursor:progress}
+  .df-mini{font-size:.82rem;color:var(--muted);text-align:center;margin:.9rem auto 0;max-width:none}
+  .df-status{text-align:center;font-weight:600;margin:.8rem 0 0;min-height:1.2em}
+  .df-status.ok{color:var(--signal)}
+  .df-status.err{color:#C6432F}
+  .df-or{margin-top:1.1rem;font-size:.95rem;color:var(--muted)}
+  .df-or a{color:var(--brand);font-weight:600;text-decoration:underline}
+  .demo-form.sent .df-row,.demo-form.sent .df-submit,.demo-form.sent .df-mini{display:none}
+
+  /* ---------- WhatsApp float ---------- */
+  .wa-float{
+    position:fixed;right:20px;bottom:20px;z-index:80;
+    display:inline-flex;align-items:center;gap:.55rem;
+    background:#25D366;color:#0B2E13;font-family:var(--body);font-weight:600;font-size:.95rem;
+    padding:.7rem .95rem;border-radius:999px;box-shadow:0 8px 24px rgba(10,40,20,.28);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .wa-float:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(10,40,20,.34)}
+  @media(max-width:560px){.wa-float .wa-txt{display:none}.wa-float{padding:.85rem;border-radius:50%}}
+</style>
 </head>
 <body>
 
@@ -464,8 +498,54 @@
 <section class="final" id="demo">
   <div class="wrap final-inner reveal">
     <h2>Llevá tu operación a CustOS.</h2>
-    <p>Te mostramos en una demo cómo se ve tu propia operación dentro del sistema, con tus puestos y tus turnos.</p>
-    <a class="btn btn-primary" href="#" style="font-size:1.05rem;padding:.9rem 1.6rem">Pedí una demo</a>
+    <p>En 20 minutos te mostramos cómo se ve tu propia operación dentro del sistema, con tus puestos y tus turnos. Dejanos tus datos y coordinamos.</p>
+
+    <form id="demo-form" class="demo-form" novalidate>
+      <div class="df-row">
+        <label class="df-field">
+          <span>Nombre y apellido</span>
+          <input type="text" name="nombre" required autocomplete="name" placeholder="Juan Pérez">
+        </label>
+        <label class="df-field">
+          <span>Empresa</span>
+          <input type="text" name="empresa" required autocomplete="organization" placeholder="Custodia Andina S.R.L.">
+        </label>
+      </div>
+      <div class="df-row">
+        <label class="df-field">
+          <span>Cantidad de vigiladores</span>
+          <select name="vigiladores" required>
+            <option value="" disabled selected>Elegí un rango</option>
+            <option>Menos de 20</option>
+            <option>20 a 50</option>
+            <option>50 a 100</option>
+            <option>100 a 200</option>
+            <option>Más de 200</option>
+          </select>
+        </label>
+        <label class="df-field">
+          <span>Provincia</span>
+          <input type="text" name="provincia" required placeholder="Mendoza">
+        </label>
+      </div>
+      <div class="df-row">
+        <label class="df-field">
+          <span>WhatsApp</span>
+          <input type="tel" name="whatsapp" required placeholder="+54 261 570 8516">
+        </label>
+        <label class="df-field">
+          <span>Email</span>
+          <input type="email" name="email" required autocomplete="email" placeholder="vos@empresa.com.ar">
+        </label>
+      </div>
+      <!-- honeypot anti-spam: los humanos no lo ven -->
+      <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button type="submit" class="btn btn-primary df-submit">Pedí tu demo</button>
+      <p class="df-mini">Te contactamos por WhatsApp o mail para coordinar. Tus datos quedan solo para esto.</p>
+      <p class="df-status" id="df-status" role="status" aria-live="polite"></p>
+    </form>
+
+    <p class="df-or">o escribinos directo por <a href="#" id="wa-inline" target="_blank" rel="noopener">WhatsApp</a></p>
   </div>
 </section>
 
@@ -505,11 +585,80 @@
   </div>
 </footer>
 
+<!-- WhatsApp flotante -->
+<a class="wa-float" id="wa-float" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2Zm0 18.13a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.11.82.83-3.03-.2-.31a8.23 8.23 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24 2.2 0 4.27.86 5.83 2.42a8.19 8.19 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.25 8.24Zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43-.14 0-.31-.01-.47-.01-.16 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.22-.17-.47-.29Z"/>
+  </svg>
+  <span class="wa-txt">WhatsApp</span>
+</a>
+
 <script>
-  const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  /* ===== CONFIG (editá acá) ===== */
+  const LEADS_EMAIL = 'matiasvaldivia@pymesenlinea.com.ar'; // a dónde llegan los leads (vía FormSubmit)
+  const WHATSAPP = '5492615708516';                        // wa.me: sin +, sin espacios, con 9 de celular
+  const WA_MSG = 'Hola, quiero una demo de CustOS.';
+  const GA4_ID = '';        // pegá tu ID de GA4 (ej: 'G-XXXXXXX') y se activa solo
+  const META_PIXEL_ID = ''; // pegá tu ID de Meta Pixel y se activa solo
+
+  /* ===== WhatsApp links ===== */
+  const waUrl = 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(WA_MSG);
+  ['wa-float','wa-inline'].forEach(function(id){ var el=document.getElementById(id); if(el) el.href=waUrl; });
+
+  /* ===== Analítica (dormida hasta que cargues los IDs arriba) ===== */
+  function trackLead(){
+    if(typeof gtag==='function') gtag('event','generate_lead',{event_category:'demo'});
+    if(typeof fbq==='function') fbq('track','Lead');
+  }
+  if(GA4_ID){
+    var g=document.createElement('script');g.async=true;g.src='https://www.googletagmanager.com/gtag/js?id='+GA4_ID;document.head.appendChild(g);
+    window.dataLayer=window.dataLayer||[];window.gtag=function(){dataLayer.push(arguments)};gtag('js',new Date());gtag('config',GA4_ID);
+  }
+  if(META_PIXEL_ID){
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init',META_PIXEL_ID);fbq('track','PageView');
+  }
+
+  /* ===== Formulario de demo (envío sin backend, vía FormSubmit) ===== */
+  var form=document.getElementById('demo-form');
+  var status=document.getElementById('df-status');
+  if(form){
+    form.addEventListener('submit', async function(e){
+      e.preventDefault();
+      if(form._honey && form._honey.value) return;            // bot
+      if(!form.checkValidity()){ form.reportValidity(); return; }
+      var btn=form.querySelector('.df-submit');
+      btn.disabled=true; status.className='df-status'; status.textContent='Enviando…';
+      var d=Object.fromEntries(new FormData(form).entries());
+      var payload={
+        _subject:'Nueva demo CustOS — '+(d.empresa||'')+' ('+(d.provincia||'')+')',
+        _template:'table', _captcha:'false',
+        Nombre:d.nombre, Empresa:d.empresa, Vigiladores:d.vigiladores,
+        Provincia:d.provincia, WhatsApp:d.whatsapp, Email:d.email
+      };
+      try{
+        var r=await fetch('https://formsubmit.co/ajax/'+LEADS_EMAIL,{
+          method:'POST', headers:{'Content-Type':'application/json', Accept:'application/json'},
+          body:JSON.stringify(payload)
+        });
+        if(!r.ok) throw new Error('http '+r.status);
+        form.classList.add('sent');
+        status.className='df-status ok';
+        status.textContent='¡Listo! Te contactamos para coordinar la demo.';
+        trackLead();
+      }catch(err){
+        btn.disabled=false;
+        status.className='df-status err';
+        status.innerHTML='No se pudo enviar. Escribinos por <a href="'+waUrl+'" target="_blank" rel="noopener" style="text-decoration:underline">WhatsApp</a>.';
+      }
+    });
+  }
+
+  /* ===== Reveal on scroll ===== */
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
   }, {threshold:.14});
-  document.querySelectorAll('.reveal:not(.in)').forEach(el=>io.observe(el));
+  document.querySelectorAll('.reveal:not(.in)').forEach(function(el){ io.observe(el); });
 </script>
 </body>
 </html>

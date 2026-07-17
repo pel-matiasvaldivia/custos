@@ -1,142 +1,116 @@
-name: QA
+name: QA Automation Platform CI
 
-# Plataforma de Quality Assurance completa:
-#  - Levanta el stack real (Postgres con RLS, Redis, MinIO, API Nest, Web Vite)
-#  - Corre Playwright: API + E2E + accesibilidad + visual + resiliencia
-#  - Genera reporte HTML, videos, screenshots, traces y cobertura funcional
-#  - Corre k6 (smoke de carga) contra la API levantada
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - '*rls*'
+      - '*qa*'
   pull_request:
-  workflow_dispatch:
-    inputs:
-      k6_profile:
-        description: "Perfil k6 (smoke|load|stress)"
-        default: "smoke"
+    types: [opened, synchronize, reopened]
 
 jobs:
-  qa:
+  test:
+    name: Run Complete QA Test Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+
     services:
       postgres:
-        image: postgres:16
+        image: postgres:15-alpine
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: custos
-        ports: [ "5432:5432" ]
+          POSTGRES_USER: power_user
+          POSTGRES_DB: custos_db
+          POSTGRES_PASSWORD: supersecreto
+        ports:
+          - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 20
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
       redis:
-        image: redis:7
-        ports: [ "6379:6379" ]
-      # Sin MinIO: bitnami/minio fue retirado de Docker Hub y la imagen oficial
-      # minio/minio no puede usarse como service (exige el comando `server /data`,
-      # que los service containers de Actions no permiten pasar). La API degrada
-      # con un warning y toda la suite pasa sin object storage; los flujos de
-      # adjuntos se cubren en el entorno local/staging con MinIO real.
+        image: redis:alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://custos_app:app_pass@localhost:5432/custos
-      MIGRATE_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/custos
-      JWT_SECRET: qa-ci-secret-0123456789abcdef
-      # La suite hace decenas de logins (setup por rol + tests de auth + k6):
-      # sin esto el rate-limiter de login responde 429 y rompe tests que
-      # esperan 401 (visto en el primer run real del workflow).
-      LOGIN_RATE_LIMIT_MAX: "100000"
-      RATE_LIMIT_MAX: "1000000"
-      APP_SECRET_KEY: qa-ci-app-secret-key-32-chars!!!
-      REDIS_HOST: localhost
-      REDIS_PORT: "6379"
+      DATABASE_URL: postgresql://power_user:supersecreto@localhost:5432/custos_db?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: super_jwt_secret_key_2026!
+      MOBILE_JWT_SECRET: super_mobile_jwt_secret_key_2026!
       MINIO_ENDPOINT: localhost
-      MINIO_PORT: "9000"
-      MINIO_USER: minio
-      MINIO_PASSWORD: minio12345
-      MINIO_BUCKET: custos
-      PORT: "3000"
-      QA_WEB_URL: http://localhost:5173
-      QA_API_URL: http://localhost:3000/api/v1
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      PORT: 3000
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: npm
+          node-style: true
+          node-version: 20
+          cache: 'npm'
 
-      - name: Instalar dependencias
-        run: npm install --include=dev
+      - name: Install Monorepo Dependencies
+        run: npm ci
 
-      - name: Provisionar rol de aplicación (RLS)
+      - name: Generate Prisma Client
         run: |
-          psql postgresql://postgres:postgres@localhost:5432/custos <<'EOSQL'
-          DO $$ BEGIN
-            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'custos_app') THEN
-              CREATE ROLE custos_app LOGIN PASSWORD 'app_pass';
-            END IF;
-          END $$;
-          GRANT USAGE ON SCHEMA public TO custos_app;
-          GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO custos_app;
-          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO custos_app;
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO custos_app;
-          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO custos_app;
-          EOSQL
+          cd apps/api
+          npx prisma generate
 
-      - name: Prisma generate + migraciones + seed
+      - name: Run Prisma Migrations and Seed Database
         run: |
-          npx prisma generate --schema=apps/api/prisma/schema.prisma
-          DATABASE_URL=$MIGRATE_DATABASE_URL npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma
-          cd apps/api && DATABASE_URL=$MIGRATE_DATABASE_URL npx ts-node --transpile-only \
-            --compiler-options '{"module":"commonjs","moduleResolution":"node"}' prisma/seed.ts
+          cd apps/api
+          npx prisma migrate deploy
+          npx prisma db seed
 
-      - name: Levantar API y Web
+      - name: Setup QA Platform Workspace
         run: |
-          (cd apps/api && npm run start:dev > /tmp/api.log 2>&1 &)
-          (cd apps/web && npm run dev > /tmp/web.log 2>&1 &)
-          for i in $(seq 1 60); do
-            curl -sf -o /dev/null http://localhost:3000/api/v1/auth/login -X POST \
-              -H 'Content-Type: application/json' -d '{}' && break || sleep 3
-          done
-          curl -sf -o /dev/null http://localhost:5173/login
-          echo "Stack arriba."
+          cd qa
+          npm ci
 
-      - name: Instalar navegadores Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Suite Playwright (API + E2E + a11y + visual + resiliencia)
-        working-directory: qa
-        run: npx playwright test
-
-      - name: Cobertura funcional por módulo
-        if: always()
-        working-directory: qa
-        run: npm run coverage:funcional || true
-
-      - name: Instalar k6
-        uses: grafana/setup-k6-action@v1
-      - name: k6 (carga)
-        run: k6 run -e PROFILE=${{ github.event.inputs.k6_profile || 'smoke' }} qa/k6/carga.js
-
-      - name: Logs del stack (diagnóstico)
-        if: failure()
+      - name: Install Playwright Browsers
         run: |
-          echo "===== API ====="; tail -100 /tmp/api.log || true
-          echo "===== WEB ====="; tail -50 /tmp/web.log || true
+          cd qa
+          npx playwright install chromium --with-deps
 
-      - name: Publicar artefactos QA (reporte HTML, videos, screenshots, cobertura)
-        if: always()
+      - name: Start CustOS ERP Monorepo Server
+        run: |
+          npm run dev &
+          sleep 10 # Allow background boot time
+
+      - name: Run Playwright Tests (E2E, API, Visual/A11y, Resilience)
+        run: |
+          cd qa
+          npx playwright test
+
+      - name: Setup k6 CLI
+        run: |
+          curl -s https://dl.k6.io/key.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/k6-archive-keyring.gpg >/dev/null
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      - name: Run k6 Load & Stress Tests
+        run: |
+          cd qa
+          k6 run load/stress.js
+
+      - name: Upload Playwright Execution Reports & Videos
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: qa-report
-          path: |
-            qa/reports/html
-            qa/reports/artifacts
-            qa/reports/results.json
-            qa/reports/junit.xml
-            qa/reports/cobertura-funcional.md
-            qa/reports/cobertura-funcional.html
-          retention-days: 14
+          name: playwright-execution-report
+          path: qa/playwright-report/
+          retries-on-error: true
