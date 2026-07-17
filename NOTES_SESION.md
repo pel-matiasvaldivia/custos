@@ -395,3 +395,279 @@ con obtención de CAE en tiempo real.
 - Redis: reusa `REDIS_URL`/`REDIS_HOST`/`REDIS_PORT`. `APP_SECRET_KEY` cifra
   cert/clave (ya documentada). `ioredis` viene transitivo de bullmq.
 - Sin dependencias nuevas: SOAP por XML manual + axios; CSV por parser propio.
+
+---
+
+# Ronda 4 — Plataforma QA Automation completa (2026-07-08)
+
+**Branch:** `claude/erp-qa-automation-x5zh5w`
+**PR:** #88 (en monitoreo CI activo)
+
+## Alcance
+
+Plataforma completa de Quality Assurance construida desde cero analizando el
+código del monorepo (37 controladores, 64 modelos Prisma, frontend React/Vite).
+Workspace `qa/` con Playwright, k6, axe-core, Page Objects, y GitHub Actions CI.
+
+### Estructura de la suite
+
+| Tipo | Archivos | Tests | Descripcion |
+|---|---|---|---|
+| API | 7 specs | ~38 | auth, RBAC, tenant isolation (RLS), CRUD clientes, flujo operativo completo, movil+ARCA, smoke 18 endpoints |
+| E2E | 5 specs | ~26 | login, clientes CRUD, navegacion 16 modulos, cuadrante, RBAC UI |
+| Accesibilidad | 1 spec | 8 | axe-core WCAG 2.1 A/AA en 8 paginas con baseline de regresion |
+| Visual | 1 spec | 3 | Screenshots de sidebar, login, configuracion (zonas estables) |
+| Resiliencia | 1 spec | 11 | offline, API lenta, timeout, 500/401/403, JSON corrupto, doble click, multi-tab, refresh |
+| k6 carga | 1 script | - | smoke (5 VUs, 30s) y load (100 VUs, 10 min) |
+| k6 estres | 1 script | - | 6 escenarios concurrentes hasta 2000 VUs |
+
+**Total: 105 tests Playwright + 2 scripts k6**
+**Cobertura funcional: 23/23 modulos (100%)**
+
+### Procesos criticos cubiertos E2E (API)
+
+`operacion-flujo.spec.ts` — 10 tests seriales:
+alta cliente -> alta objetivo -> alta puesto -> alta vigilador -> crear esquema
+4x2 -> asignar vigilador -> consultar cuadrante (desde/hasta) -> consultar
+cobertura -> registrar novedad -> finalizar asignacion (vigente_hasta)
+
+### CI: `.github/workflows/qa.yml`
+
+Stack completo en GitHub Actions: Postgres 16 (con RLS + custos_app role) +
+Redis 7 + API NestJS + Web Vite. Ejecuta Playwright (6 projects: setup, api,
+e2e, a11y, visual, resilience) + cobertura funcional + k6 smoke. Publica
+artefactos: reporte HTML, videos, screenshots, traces, junit.xml, cobertura.
+
+---
+
+## Bugs y hallazgos detectados
+
+### QA-BUG-01 — ClientesPage crashea con datos corruptos (ALTA) — NO RESUELTO
+
+**Que detecta:** cuando la API devuelve un shape inesperado (JSON corrupto o
+campos faltantes), el componente `ClientesPage` del frontend crashea con:
+- `Cannot read properties of undefined (reading 'filter')`
+- `Cannot read properties of null (reading 'toLowerCase')`
+
+**Causa raiz:** el render de la lista de clientes no tiene defensa contra datos
+con shape inesperado. Falta validacion/fallback en el `.filter()` y `.toLowerCase()`
+sobre campos que pueden ser undefined/null.
+
+**Donde arreglarlo:** `apps/web/src/pages/clients/ClientesPage.tsx` (o el
+componente que renderiza la lista de clientes). Agregar optional chaining y/o
+valores por defecto en el map/filter de los datos de la API.
+
+**Estado en QA:** test marcado con `test.fail()` en
+`qa/tests/resilience/red-y-errores.spec.ts` — el test pasa como "expected
+failure" (no rompe la suite) pero rastrea el bug. Cuando se corrija el codigo,
+quitar el `test.fail()` para que el test valide la correccion.
+
+### QA-BUG-02 — Deuda de accesibilidad WCAG en todas las paginas (MEDIA) — NO RESUELTO
+
+**Que detecta:** axe-core encuentra violaciones en las 8 paginas auditadas:
+- `button-name`: botones de icono sin texto accesible (aria-label faltante)
+- `color-contrast`: contraste insuficiente entre texto y fondo
+- `label` / `select-name`: los `<label>` no estan asociados a sus inputs (falta `htmlFor`)
+
+**Donde arreglarlo:** componentes reutilizables del frontend:
+- Botones de icono: agregar `aria-label` descriptivo
+- Labels de formulario: agregar `htmlFor` que apunte al `id` del input
+- Contraste: ajustar colores en el tema CSS/Tailwind
+
+**Estado en QA:** las violaciones existentes estan registradas en
+`qa/tests/a11y/baseline.json`. El gate de accesibilidad solo falla ante
+violaciones NUEVAS que no esten en el baseline. Para regenerar el baseline
+despues de corregir: `QA_A11Y_UPDATE=1 npx playwright test --project=a11y`.
+
+### QA-OBS-01 — Contratos de API documentados (INFO) — OBSERVACION
+
+Comportamientos del API descubiertos y documentados por los tests:
+- `PUT /clientes/:id` (no PATCH) — la API usa PUT para actualizar clientes
+- `GET /cuadrante/asignaciones` exige `?objetivoId=` obligatorio (400 sin el)
+- `GET /liquidaciones` exige `?desde=&hasta=` obligatorio (400 sin ellos)
+- `GET /cuadrante/objetivos/:id` exige `?desde=&hasta=` obligatorio
+- `GET /vigilantes` NO acepta `?busqueda=` (PaginationDto sin ese campo +
+  forbidNonWhitelisted -> 400; los clientes SI lo tienen via FindClientesDto)
+
+No son bugs sino contratos del API que los consumidores deben respetar.
+Quedan documentados para referencia de frontend y QA.
+
+### QA-OBS-02 — Rate limiting funcional (INFO) — OBSERVACION
+
+El rate-limiter de login (`LOGIN_RATE_LIMIT_MAX`) funciona correctamente y
+devuelve 429 cuando se supera el limite. Los entornos de test/CI deben elevarlo
+(hecho en `qa.yml` con `LOGIN_RATE_LIMIT_MAX=100000` y `RATE_LIMIT_MAX=1000000`).
+
+---
+
+## Problemas de CI resueltos (4 iteraciones)
+
+| # | Problema | Causa | Fix | Commit |
+|---|---|---|---|---|
+| 1 | bitnami/minio image pull fail | Imagen retirada de Docker Hub | Removido MinIO service; API degrada gracefully | `1a00f86` |
+| 2 | dump.rdb untracked file | Redis background save en CI | Eliminado + agregado a .gitignore | `7d10893` |
+| 3 | Test movil 429 en vez de 401 | Rate limiter sin elevar en CI | LOGIN_RATE_LIMIT_MAX + RATE_LIMIT_MAX en workflow env | `eacb9d9` |
+| 4 | k6 http_req_failed 18.54% | vigilantes?busqueda= rechazado por forbidNonWhitelisted | Removido query param invalido de k6 scripts | `f62451f` |
+
+---
+
+## Resumen de estado
+
+- **105 tests Playwright:** todos pasan (incluyendo QA-BUG-01 como expected failure)
+- **23/23 modulos cubiertos (100%):** supera el objetivo de >90%
+- **QA-BUG-01 (ALTA):** pendiente de corregir en el frontend (ClientesPage)
+- **QA-BUG-02 (MEDIA):** pendiente de corregir en el frontend (accesibilidad)
+- **CI:** en monitoreo activo, esperando resultado de commit `f62451f`
+
+---
+
+# Ronda 5 — Importación de nómina ARCA rota con CSV/XLSX reales (2026-07-08)
+
+**Branch:** `claude/arca-watcher-csv-import-a0tw7h`
+
+## Bug reportado
+Al importar la nómina exportada desde ARCA ("Consulta Nómina",
+`Nomina_30717284638_202605_000.csv/.xlsx`), el modal devolvía
+"0 vigiladores importados" con "Fila N: sin CUIL o nombre válidos" para
+TODAS las filas.
+
+## Causas raíz (verificadas con los archivos reales del usuario)
+1. **Preámbulo del export:** el archivo real trae 4 líneas antes de la
+   cabecera (`CUIT:`, `Período`, `Secuencia:`, `Contribuyente:`); la cabecera
+   real ("CUIL,Apellido y Nombre,…") está en la fila 5. `parsearCsv` tomaba la
+   fila 1 como cabecera → ninguna fila de datos encontraba la columna CUIL.
+2. **XLSX sin soporte:** el controller hacía `buffer.toString('utf8')` sobre
+   el binario (un xlsx es un ZIP) y el input del modal ni aceptaba `.xlsx`.
+3. **Orden del nombre:** en el export real "Apellido y Nombre" viene como
+   "NOMBRES APELLIDO" (`CLAUDIO WALTER MENDOZA`); la heurística sin coma
+   tomaba el PRIMER token como apellido → quedaba "CLAUDIO, WALTER MENDOZA".
+
+## Fix
+- `util/csv.util.ts`: nueva `filasDesdeMatriz` (compartida CSV/XLSX) que
+  detecta la fila de cabecera buscando la columna CUIL (fallback: columnas de
+  nombre, y si no, fila 1 como antes); devuelve `FilaConLinea` con el número
+  de línea ORIGINAL del archivo para mensajes de error útiles. El separador
+  se autodetecta sobre la línea de cabecera (contar sobre todo el archivo
+  engaña: los decimales usan coma, "834975,75").
+- `services/nomina.service.ts`: `importarNomina` recibe el Buffer + nombre;
+  detecta xlsx por magia ZIP (`PK`) o extensión y lo parsea con **exceljs**
+  (ya era dependencia; celdas numéricas/fecha/richText → texto); `.xls` viejo
+  (BIFF) se rechaza con mensaje claro. Split sin coma corregido: último token
+  = apellido.
+- `arca-integration.controller.ts`: pasa `archivo.buffer` + `originalname`.
+- `ImportarNominaModal.tsx`: `accept` suma `.xlsx` y el texto menciona Excel.
+
+## Verificación
+- Specs nuevos: `csv.util.spec.ts` + `nomina.service.spec.ts` (13 tests, con
+  la estructura real del export, xlsx generado con exceljs, `.xls` rechazado,
+  duplicados omitidos, número de fila en errores) → 13/13 passing.
+- Corrida real contra los DOS archivos subidos por el usuario (CSV y XLSX,
+  prisma mockeado): **13/13 vigiladores importados, 0 errores**, apellidos y
+  DNI derivados correctos en ambos.
+- `tsc --noEmit` API y web → 0 errores. Suite completa API: solo falla el
+  preexistente `vigilante.service.spec.ts › update` (documentado en Ronda 1,
+  ya fallaba en main).
+
+---
+
+# Ronda 6 — Asignación automática de turnos repetidos en el cuadrante (2026-07-10)
+
+**Branch:** `claude/arca-watcher-csv-import-a0tw7h` (continuación de la sesión ARCA)
+
+## Bug reportado
+En el Cuadrante Operativo todos los vigiladores del puesto tenían el MISMO
+horario (mañanas juntas, tardes juntas y francos superpuestos): los turnos se
+"repintaban" y quedaban bandas del servicio sin cubrir.
+
+## Causa raíz
+El modal "Afectar vigilador" (`AfectarVigiladorModal.tsx`) crea las
+asignaciones sin `posicion_ciclo`, y `crearAsignacionEsquema` aplicaba
+`dto.posicion_ciclo ?? 0`: con la misma fecha ancla, TODOS los vigiladores
+del puesto arrancaban el ciclo en el mismo día → idéntica rotación. (El
+asistente "Armar puesto" ya desfasaba bien con `posicion_ciclo: i`; el flujo
+manual no.)
+
+## Fix
+- `cuadrante.domain.ts`: nueva función pura `elegirPosicionCiclo(nuevo,
+  existentes, desde)`: genera los turnos concretos de cada posición candidata
+  del ciclo sobre un horizonte que cubre el patrón combinado (mcm de los
+  ciclos, acotado a 84 días) y elige la de MENOR superposición horaria con
+  las asignaciones ya activas del puesto (a igualdad, la menor posición).
+  Con un ciclo 2M-2T-2F elige 0/2/4 → cada día queda 1 mañana + 1 tarde y
+  los francos repartidos. Determinística.
+- `cuadrante.service.ts` (`crearAsignacionEsquema`): si el DTO no trae
+  `posicion_ciclo`, lo calcula con las asignaciones activas del puesto
+  (cualquier esquema). Una posición explícita se respeta igual que antes.
+- `AfectarVigiladorModal.tsx`: leyenda explicando que la posición del ciclo
+  se calcula sola para cubrir el servicio sin repetir horarios.
+
+## Verificación
+- Specs nuevos: 5 en `cuadrante.domain.spec.ts` (segundo vigilador → pos 2,
+  tercero → pos 4 con cobertura M+T diaria comprobada, ciclo lleno,
+  esquema 12×12) y 3 en `cuadrante.service.spec.ts` (primera asignación → 0,
+  segunda desfasada, posición explícita respetada). Suite cuadrante:
+  45/45 passing, también con `TZ=America/Argentina/Buenos_Aires`.
+- `tsc --noEmit` API y web → 0 errores.
+
+## Nota operativa
+Las asignaciones YA creadas con el horario duplicado no se corrigen solas:
+hay que finalizarlas (borra los turnos futuros PLANIFICADA) y volver a
+afectar a los vigiladores, o rearmar el puesto con "Armar puesto".
+
+---
+
+# Ronda 7 — Feriados pagables, flujo LSD completo y adelanto móvil opcional (2026-07-11)
+
+Decisiones del usuario sobre el informe del recap:
+punto 1 → toggle de configuración; punto 2 → resolver completo;
+punto 3 (homologación ARCA real) → nada por ahora; punto 4 → toggle IDEM punto 1.
+
+## 1. Recargo por feriado trabajado (opcional por tenant)
+- `ReglaLaboral.pagar_recargo_feriado` (default false) +
+  `LiquidacionItem.hh_feriado` (migración `20260711100000`).
+- `LiquidacionesService.computar`: cruza los turnos con la tabla `feriados`
+  por la fecha de `inicio_plan` (mismo criterio que la conciliación, así lo
+  facturado y lo pagado clasifican igual); `hh_feriado` SIEMPRE se computa e
+  informa; el recargo (`recargo_feriado_pct`, default 100%) solo suma al bruto
+  si el toggle está activo. Persistido en `cerrar`; columna en el PDF y en la
+  tabla de la página (con asterisco si no se paga).
+- LSD: concepto informativo `HS FERIADO` (código 100030) en los F02.
+- Config: nuevo `GET/PUT config/reglas-laborales`
+  (`tenant/reglas-laborales.controller.ts`) + pestaña **Configuración →
+  Liquidación** (`ReglasLiquidacionTab.tsx`) con el toggle y el %.
+
+## 2. Flujo LSD completo
+- El backend YA tenía cerrar/historial/obtener (la nota de la Ronda ARCA
+  estaba desactualizada); lo que faltaba era la UI: `LiquidacionesPage` ahora
+  muestra **Liquidaciones cerradas** (período, modo, total, fecha) con botón
+  **LSD (ARCA)** por fila (usa `arcaService.descargarLsd`, que ya existía).
+  El historial se refresca al cerrar un período.
+
+## 3. Homologación ARCA — sin cambios (decisión del usuario).
+
+## 4. Solicitud de adelanto desde el móvil (opcional por tenant)
+- `ReglaLaboral.adelanto_movil_habilitado` (default false), editable en la
+  misma pestaña de configuración.
+- Móvil: con el toggle activo, `listarNovedadTipos` vuelve a incluir
+  ADELANTO_SUELDO y el modal pide **monto y cuotas (1-6)**; `crearNovedad`
+  valida server-side y crea la novedad marcada
+  `[SOLICITUD ADELANTO monto=X cuotas=N]` — **sin tocar el ledger**.
+- Oficina: `POST novedades/:id/adelanto/aprobar|rechazar` (ADMIN/GERENCIA).
+  Aprobar crea la fila `adelantos` VIGENTE (novedad_id) y marca la novedad
+  `[ADELANTO APROBADO ...]`; idempotente (re-aprobar → 400). Rechazar solo
+  marca `[ADELANTO RECHAZADO ...]`. `NovedadesPage` muestra el banner
+  "Solicitud pendiente" con ambos botones.
+- `NovedadService.create` (web) ahora IGNORA las descripciones
+  `[SOLICITUD ADELANTO...]` para el ledger (solo `[ADELANTO ...]` directo de
+  oficina lo crea, como antes).
+
+## Verificación
+- Unit: `liquidaciones.service.spec.ts` nuevo (3 tests: toggle on/off y día
+  común; horarios TZ-safe). Suite API: 108 passed + el preexistente de
+  vigilante.
+- E2E live (stack completo local): PUT/GET reglas OK; computar devuelve
+  `paga_feriado` y `hh_feriado`; cerrar persiste; `exportar-lsd-txt` del ID
+  cerrado genera F01/F02 OK; solicitud de adelanto NO toca ledger, aprobar
+  crea el adelanto (50000/2 cuotas VIGENTE), re-aprobar da 400.
+- QA Playwright: 105/105 (baseline visual de Configuración regenerado por la
+  pestaña nueva). `tsc --noEmit` API y web → 0 errores.

@@ -16,7 +16,7 @@ export const ClientesPage = () => {
     setLoading(true);
     try {
       const data = await clienteService.getAll();
-      setClientes(data);
+      setClientes(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error al cargar clientes:', error);
     } finally {
@@ -29,9 +29,10 @@ export const ClientesPage = () => {
   }, []);
 
   const filtrados = clientes.filter((c) => {
+    if (!c) return false;
     const q = busqueda.toLowerCase();
     return (
-      c.razon_social.toLowerCase().includes(q) ||
+      (c.razon_social || '').toLowerCase().includes(q) ||
       (c.nombre_fantasia || '').toLowerCase().includes(q) ||
       (c.cuit || '').toLowerCase().includes(q)
     );

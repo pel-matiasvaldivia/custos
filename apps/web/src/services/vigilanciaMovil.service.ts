@@ -124,13 +124,19 @@ export const vigilanciaMovilService = {
     descripcion: string,
     prioridad: string,
     adjuntos: { blob: Blob; filename: string }[],
+    adelanto?: { monto: number; cuotas: number },
   ) => {
     const files: OutboxFile[] = adjuntos.map((a) => ({
       field: 'media',
       filename: a.filename,
       blob: a.blob,
     }));
-    return enqueue('novedad', '/mobile/novedades', conActor({ tipo, descripcion, prioridad }), files);
+    const payload: Record<string, unknown> = { tipo, descripcion, prioridad };
+    if (adelanto) {
+      payload.monto = adelanto.monto;
+      payload.cuotas = adelanto.cuotas;
+    }
+    return enqueue('novedad', '/mobile/novedades', conActor(payload), files);
   },
 
   solicitarRelevo: async (turnoOriginalId: string, motivo?: string) => {

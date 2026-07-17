@@ -305,9 +305,10 @@ function UsuarioModal({ modal, onClose, onSuccess }: ModalProps) {
             </p>
           ) : modal.tipo === 'password' ? (
             <div>
-              <label className="block text-sm font-medium text-navy mb-1">Nueva contraseña</label>
+              <label htmlFor="usr-new-password" className="block text-sm font-medium text-navy mb-1">Nueva contraseña</label>
               <div className="relative">
                 <input
+                  id="usr-new-password"
                   className="input w-full pr-10"
                   type={showPw ? 'text' : 'password'}
                   value={password}
@@ -316,7 +317,7 @@ function UsuarioModal({ modal, onClose, onSuccess }: ModalProps) {
                   required
                   autoFocus
                 />
-                <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">
+                <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">
                   {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -324,8 +325,9 @@ function UsuarioModal({ modal, onClose, onSuccess }: ModalProps) {
           ) : (
             <>
               <div>
-                <label className="block text-sm font-medium text-navy mb-1">Nombre</label>
+                <label htmlFor="usr-nombre" className="block text-sm font-medium text-navy mb-1">Nombre</label>
                 <input
+                  id="usr-nombre"
                   className="input w-full"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
@@ -335,8 +337,9 @@ function UsuarioModal({ modal, onClose, onSuccess }: ModalProps) {
               </div>
               {modal.tipo === 'crear' && (
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-1">Email <span className="text-red-500">*</span></label>
+                  <label htmlFor="usr-email" className="block text-sm font-medium text-navy mb-1">Email <span className="text-red-500">*</span></label>
                   <input
+                    id="usr-email"
                     className="input w-full"
                     type="email"
                     value={email}
@@ -347,9 +350,10 @@ function UsuarioModal({ modal, onClose, onSuccess }: ModalProps) {
               )}
               {modal.tipo === 'crear' && (
                 <div>
-                  <label className="block text-sm font-medium text-navy mb-1">Contraseña <span className="text-red-500">*</span></label>
+                  <label htmlFor="usr-password" className="block text-sm font-medium text-navy mb-1">Contraseña <span className="text-red-500">*</span></label>
                   <div className="relative">
                     <input
+                      id="usr-password"
                       className="input w-full pr-10"
                       type={showPw ? 'text' : 'password'}
                       value={password}
@@ -357,15 +361,16 @@ function UsuarioModal({ modal, onClose, onSuccess }: ModalProps) {
                       placeholder="Mínimo 8 caracteres"
                       required
                     />
-                    <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">
+                    <button type="button" onClick={() => setShowPw((v) => !v)} aria-label={showPw ? 'Ocultar contraseña' : 'Mostrar contraseña'} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted">
                       {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
               )}
               <div>
-                <label className="block text-sm font-medium text-navy mb-1">Perfil <span className="text-red-500">*</span></label>
+                <label htmlFor="usr-role" className="block text-sm font-medium text-navy mb-1">Perfil <span className="text-red-500">*</span></label>
                 <select
+                  id="usr-role"
                   className="input w-full"
                   value={role}
                   onChange={(e) => setRole(e.target.value as RolTenant)}

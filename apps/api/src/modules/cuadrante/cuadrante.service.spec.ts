@@ -108,3 +108,96 @@ describe('CuadranteService.cerrarPeriodo', () => {
     );
   });
 });
+
+describe('CuadranteService.crearAsignacionEsquema (posición de ciclo automática)', () => {
+  let service: CuadranteService;
+  const mockPrisma: any = {
+    puesto: { findFirst: jest.fn() },
+    vigilador: { findFirst: jest.fn() },
+    esquemaTurno: { findFirst: jest.fn() },
+    asignacionEsquema: { findMany: jest.fn(), create: jest.fn() },
+  };
+  const mockAuditoria = { registrar: jest.fn() };
+
+  // Ciclo 6 días: 2 mañanas, 2 tardes, 2 francos.
+  const DEFINICION = {
+    dias_ciclo: 6,
+    dias: [
+      { tipo: 'TRABAJO', bloques: [{ hora_inicio: '06:00', duracion_horas: 12 }] },
+      { tipo: 'TRABAJO', bloques: [{ hora_inicio: '06:00', duracion_horas: 12 }] },
+      { tipo: 'TRABAJO', bloques: [{ hora_inicio: '18:00', duracion_horas: 12 }] },
+      { tipo: 'TRABAJO', bloques: [{ hora_inicio: '18:00', duracion_horas: 12 }] },
+      { tipo: 'FRANCO' },
+      { tipo: 'FRANCO' },
+    ],
+  };
+  const ESQUEMA_DB = {
+    id: 'esq-1',
+    dias_ciclo: 6,
+    definicion: DEFINICION,
+  };
+
+  const dto = {
+    puesto_id: '11111111-1111-1111-1111-111111111111',
+    vigilador_id: '22222222-2222-2222-2222-222222222222',
+    esquema_id: 'esq-1',
+    fecha_ancla: '2026-07-01',
+    vigente_desde: '2026-07-01',
+  } as any;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        CuadranteService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: AuditoriaService, useValue: mockAuditoria },
+      ],
+    }).compile();
+    service = module.get<CuadranteService>(CuadranteService);
+    jest.clearAllMocks();
+
+    mockPrisma.puesto.findFirst.mockResolvedValue({ id: dto.puesto_id });
+    mockPrisma.vigilador.findFirst.mockResolvedValue({
+      id: dto.vigilador_id,
+      estado: 'ACTIVO',
+    });
+    mockPrisma.esquemaTurno.findFirst.mockResolvedValue(ESQUEMA_DB);
+    mockPrisma.asignacionEsquema.create.mockImplementation(
+      async ({ data }: any) => ({ id: 'asig-nueva', ...data }),
+    );
+    // La generación de turnos se prueba aparte; acá interesa la posición.
+    jest
+      .spyOn(service, 'generarCuadrante')
+      .mockResolvedValue({ generados: 0, creados: 0, rechazados: [] });
+  });
+
+  it('el primer vigilador del puesto arranca en posición 0', async () => {
+    mockPrisma.asignacionEsquema.findMany.mockResolvedValue([]);
+    await service.crearAsignacionEsquema('t1', dto);
+    expect(mockPrisma.asignacionEsquema.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ posicion_ciclo: 0 }),
+    });
+  });
+
+  it('el segundo vigilador queda desfasado para no repetir horarios', async () => {
+    mockPrisma.asignacionEsquema.findMany.mockResolvedValue([
+      {
+        posicion_ciclo: 0,
+        fecha_ancla: new Date('2026-07-01'),
+        esquema: ESQUEMA_DB,
+      },
+    ]);
+    await service.crearAsignacionEsquema('t1', dto);
+    expect(mockPrisma.asignacionEsquema.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ posicion_ciclo: 2 }),
+    });
+  });
+
+  it('respeta una posición de ciclo explícita', async () => {
+    await service.crearAsignacionEsquema('t1', { ...dto, posicion_ciclo: 5 });
+    expect(mockPrisma.asignacionEsquema.findMany).not.toHaveBeenCalled();
+    expect(mockPrisma.asignacionEsquema.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ posicion_ciclo: 5 }),
+    });
+  });
+});

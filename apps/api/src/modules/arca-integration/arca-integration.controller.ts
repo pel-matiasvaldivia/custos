@@ -52,7 +52,8 @@ export class ArcaIntegrationController {
     }
     return this.nomina.importarNomina(
       req.user.tenantId,
-      archivo.buffer.toString('utf8'),
+      archivo.buffer,
+      archivo.originalname ?? '',
     );
   }
 
